@@ -1,0 +1,135 @@
+<div class="department-list-container">
+    <!-- 頁面標題與操作區 -->
+    <div class="page-header d-flex justify-content-between align-items-center mb-4">
+        <h2 class="page-title fw-bold mb-0">
+            <i class="bi bi-building me-2 text-primary"></i>
+            部門主檔管理
+        </h2>
+        <div class="header-actions d-flex gap-2">
+            @if (selectedDepartments().length > 0 && hasDeletePermission()) {
+            <button type="button" class="btn btn-outline-danger" (click)="onBulkDelete()" aria-label="批量刪除">
+                <i class="bi bi-trash me-1"></i>
+                刪除選中項目 ({{ selectedDepartments().length }})
+            </button>
+            }
+            @if (hasCreatePermission()) {
+            <button type="button" class="btn btn-outline-secondary" (click)="exportData()" aria-label="匯出資料">
+                <i class="bi bi-download me-1"></i>
+                匯出
+            </button>
+            <button type="button" class="btn btn-primary" (click)="onCreateNew()" aria-label="新增部門">
+                <i class="bi bi-plus-circle me-1"></i>
+                新增部門
+            </button>
+            }
+        </div>
+    </div>
+
+    <!-- 搜尋與篩選區 -->
+    <app-search-filter [config]="searchFilterConfig()" [searchKeyword]="searchKeyword()" [pageSize]="pageSize()"
+        [totalCount]="total()" [loading]="loading()" [filterValues]="currentFilterValues()"
+        (searchChanged)="onSearchChange($event)" (filterChanged)="onFilterChange($event)"
+        (pageSizeChanged)="onPageSizeChange($event)" (searchCleared)="clearSearch()">
+    </app-search-filter>
+
+    <!-- 載入狀態 -->
+    @if (loading()) {
+    <app-loading-state [config]="loadingConfig()"></app-loading-state>
+    }
+
+    <!-- 錯誤訊息 -->
+    @if (!loading() && error()) {
+    <app-error-message [config]="errorConfig()" (errorDismissed)="clearError()"></app-error-message>
+    }
+
+    <!-- 資料表格 -->
+    @if (!loading() && !error() && departments().length > 0) {
+    <div class="table-container card">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <app-table-header [config]="tableHeaderConfig()" (sortChanged)="onTableSort($event)"
+                        (selectAllChanged)="onTableSelectAll($event)">
+                    </app-table-header>
+                </thead>
+                <tbody>
+                    <app-table-body [config]="tableBodyConfig()" [selectedItems]="selectedDepartments()"
+                        (itemSelected)="onTableItemSelected($event)" (rowClicked)="onTableRowClicked($event)">
+                    </app-table-body>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    }
+
+    <!-- 模板定義 -->
+    <ng-template #codeTemplate let-department>
+        <span [innerHTML]="department.dept_code | highlight:searchKeyword()"></span>
+    </ng-template>
+
+    <ng-template #nameTemplate let-department>
+        <span [innerHTML]="department.dept_name | highlight:searchKeyword()"></span>
+    </ng-template>
+
+    <ng-template #levelTemplate let-department>
+        <span class="badge bg-info">{{ department.dept_level }}</span>
+    </ng-template>
+
+    <ng-template #managerIdTemplate let-department>
+        <span [innerHTML]="department.manager_id || '未指派' | highlight:searchKeyword()"></span>
+    </ng-template>
+
+    <ng-template #parentTemplate let-department>
+        <span [innerHTML]="(department.parent_dept_name || '無') | highlight:searchKeyword()"></span>
+    </ng-template>
+
+    <ng-template #statusTemplate let-department>
+        <app-status-badge [config]="getStatusConfig(department)" (statusToggled)="onToggleStatus(department)"
+            [ariaLabel]="'切換 ' + department.dept_name + ' 的狀態'">
+        </app-status-badge>
+    </ng-template>
+
+    <!-- <ng-template #timeTemplate let-department>
+        <span [innerHTML]="department.create_time | highlight:searchKeyword()"></span>
+    </ng-template> -->
+
+    <ng-template #timeTemplate let-department>
+        {{ department.create_time | date:'yyyy/MM/dd HH:mm' }}
+    </ng-template>
+
+    <ng-template #actionsTemplate let-department>
+        <app-action-button-group [config]="getActionConfig(department)" (viewClicked)="onActionView(department)"
+            (editClicked)="onActionEdit(department)" (deleteClicked)="onActionDelete(department)">
+        </app-action-button-group>
+    </ng-template>
+
+    <!-- 空狀態 -->
+    @if (!loading() && !error() && departments().length === 0) {
+    <app-empty-state [config]="emptyStateConfig()" (actionClicked)="onEmptyStateAction($event)"></app-empty-state>
+    }
+
+    <!-- 分頁控制 -->
+    @if (!loading() && !error() && departments().length > 0 && totalPages() > 1) {
+    <app-pagination [config]="paginationConfig()" (pageChanged)="onPageChange($event)">
+    </app-pagination>
+    }
+
+    <!-- 表單模態視窗 -->
+    @if (showForm()) {
+    <app-department-form [mode]="formMode()" [department]="selectedDepartment()" (saved)="onFormSaved($event)"
+        (cancelled)="onFormCancelled()">
+    </app-department-form>
+    }
+
+    <!-- 檢視模態視窗 -->
+    @if (showView()) {
+    <app-department-view [department]="selectedDepartment()!" (closed)="onViewClosed()">
+    </app-department-view>
+    }
+
+    <!-- 批量刪除確認模態框 -->
+    <app-confirmation-modal [config]="bulkDeleteConfirmConfig()" [show]="showBulkDeleteConfirm()"
+        [loading]="bulkDeleteLoading()" (confirmed)="confirmBulkDelete()"
+        (cancelled)="showBulkDeleteConfirm.set(false)">
+    </app-confirmation-modal>
+</div>

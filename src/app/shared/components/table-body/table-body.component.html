@@ -1,0 +1,22 @@
+@for (item of config().data; track getTrackByFn()(i, item); let i = $index) {
+<tr [class]="getRowClass(item)" (click)="onRowClick(item)">
+    <!-- 選擇欄位 -->
+    @if (config().showSelectColumn) {
+    <td class="text-center" style="width: 5%;">
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" [checked]="isSelected(item)"
+                (change)="onItemSelect(item, $event)" [id]="'checkbox-' + i" (click)="$event.stopPropagation()">
+        </div>
+    </td>
+    }
+
+    <!-- 資料欄位 -->
+    @for (column of config().columns; track column.key) {
+    <td [class]="getAlignClass(column)" [class]="column.cssClass || ''" [style]="getColumnStyle(column)">
+        <ng-container [ngTemplateOutlet]="column.template!"
+            [ngTemplateOutletContext]="{ $implicit: item, column: column, index: i }">
+        </ng-container>
+    </td>
+    }
+</tr>
+}

@@ -1,0 +1,133 @@
+@use "../../../../styles/variables" as *;
+@use "sass:color";
+
+.status-badge {
+    border-radius: 1rem;
+    font-size: $text-caption;
+    font-weight: $font-weight-medium;
+    padding: 0.25rem 0.75rem;
+    border: none;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    &.btn-sm {
+        font-size: 0.75rem;
+        padding: 0.125rem 0.5rem;
+
+        i {
+            font-size: 0.5rem;
+        }
+    }
+
+    &.btn-lg {
+        font-size: $text-body-md;
+        padding: 0.375rem 1rem;
+
+        i {
+            font-size: 0.7rem;
+        }
+    }
+
+    &.clickable {
+        cursor: pointer;
+
+        &.btn-success {
+            background-color: $badge-success-bg;
+            color: white;
+
+            &:hover:not(:disabled) {
+                background-color: color.mix(black, $badge-success-bg, 10%);
+                transform: scale(1.05);
+            }
+        }
+
+        &.btn-secondary {
+            background-color: $badge-gray-bg;
+            color: $brand-accent;
+
+            &:hover:not(:disabled) {
+                background-color: color.mix(black, $badge-gray-bg, 10%);
+                transform: scale(1.05);
+            }
+        }
+
+        &:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+    }
+
+    &.non-clickable {
+        cursor: default;
+
+        &.btn-success {
+            background-color: rgba($badge-success-bg, 0.15);
+            color: $badge-success-bg;
+            border: 1px solid rgba($badge-success-bg, 0.3);
+        }
+
+        &.btn-secondary {
+            background-color: rgba($badge-gray-bg, 0.15);
+            color: $brand-gray;
+            border: 1px solid rgba($badge-gray-bg, 0.3);
+        }
+    }
+
+    i {
+        font-size: 0.6rem;
+        margin-right: 0.25rem;
+    }
+}
+
+// 支援不同的狀態變體
+.status-badge-warning {
+    @extend .status-badge;
+    background-color: $badge-warning-bg;
+    color: white;
+
+    &.clickable:hover:not(:disabled) {
+        background-color: color.mix(black, $badge-warning-bg, 10%);
+    }
+
+    &.non-clickable {
+        background-color: rgba($badge-warning-bg, 0.15);
+        color: $badge-warning-bg;
+        border: 1px solid rgba($badge-warning-bg, 0.3);
+    }
+}
+
+.status-badge-danger {
+    @extend .status-badge;
+    background-color: $badge-danger-bg;
+    color: white;
+
+    &.clickable:hover:not(:disabled) {
+        background-color: color.mix(black, $badge-danger-bg, 10%);
+    }
+
+    &.non-clickable {
+        background-color: rgba($badge-danger-bg, 0.15);
+        color: $badge-danger-bg;
+        border: 1px solid rgba($badge-danger-bg, 0.3);
+    }
+}
+
+.status-badge-info {
+    @extend .status-badge;
+    background-color: $badge-info-bg;
+    color: white;
+
+    &.clickable:hover:not(:disabled) {
+        background-color: color.mix(black, $badge-info-bg, 10%);
+    }
+
+    &.non-clickable {
+        background-color: rgba($badge-info-bg, 0.15);
+        color: $badge-info-bg;
+        border: 1px solid rgba($badge-info-bg, 0.3);
+    }
+}

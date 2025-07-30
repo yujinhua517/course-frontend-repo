@@ -1,0 +1,627 @@
+// 1. 引入 SCSS 變數，僅變數建議 as *，其餘建議保留命名空間
+@use "../../../../styles/variables" as *;
+
+// 2. 引入 header/sidebar 樣式，保留 namespace，避免全域污染
+@use './_header.scss' as header;
+@use './_sidebar.scss' as sidebar;
+
+
+// 讓 main 區域可獨立滾動
+.main-scrollable {
+    overflow-y: auto;
+    max-height: calc(100vh - 72px); // 假設 header 高度約 72px
+}
+
+// Sidebar 漢堡選單圓形外框現代化樣式
+.sidebar-hamburger {
+    min-width: 48px;
+    min-height: 48px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: $btn-gradient;
+    color: #fff;
+    border: none;
+    box-shadow: $brand-shadow-btn;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    font-size: 1.5rem;
+    padding: 0;
+
+    &:hover,
+    &:focus {
+        background: $btn-gradient-hover;
+        color: #fff;
+        box-shadow: $brand-shadow-btn-hover;
+        transform: scale(1.1) translateY(-2px);
+    }
+
+    &:active {
+        transform: scale(0.95);
+    }
+
+    i {
+        transition: $icon-transition;
+        color: #fff;
+
+        &:hover {
+            color: $brand-light;
+            transform: scale($icon-hover-scale);
+        }
+    }
+}
+
+// =============================
+//  Main 內容區塊（僅覆蓋 main page 特有細節）
+// =============================
+body,
+.main-layout {
+    font-family: $brand-font;
+    background: $brand-bg;
+    color: $brand-secondary;
+    // min-height: 100vh;
+}
+
+// =============================
+//  Main page 專用 class 樣式
+// =============================
+
+.btn,
+.modern-btn,
+.btn-icon {
+    background: $btn-gradient;
+    color: #fff;
+    border-radius: 0.75rem;
+    font-weight: $font-weight-semibold;
+    box-shadow: $brand-shadow-btn;
+    border: none;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 48px;
+    min-height: 48px;
+    font-size: $text-body-md;
+    padding: 0.5rem 1.2rem;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: left 0.5s ease;
+    }
+
+    &:hover,
+    &:focus {
+        background: $btn-gradient-hover;
+        color: #fff;
+        box-shadow: $brand-shadow-btn-hover;
+        transform: translateY(-2px) scale(1.02);
+
+        &::before {
+            left: 100%;
+        }
+    }
+
+    &:active {
+        transform: translateY(0) scale(0.98);
+    }
+
+    // 按鈕變體
+    &.btn-secondary {
+        background: $btn-gradient-secondary;
+
+        &:hover {
+            background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+        }
+    }
+
+    &.btn-success {
+        background: $btn-gradient-success;
+
+        &:hover {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+        }
+    }
+
+    &.btn-warning {
+        background: $btn-gradient-warning;
+
+        &:hover {
+            background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+        }
+    }
+
+    &.btn-danger {
+        background: $btn-gradient-danger;
+
+        &:hover {
+            background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+        }
+    }
+}
+
+.sparkline-visit {
+    background: $sparkline-visit-gradient;
+    border-radius: 0.75rem;
+    min-height: 32px;
+    position: relative;
+    overflow: hidden;
+
+    &::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
+        animation: sparkle 2s ease-in-out infinite;
+    }
+}
+
+.sparkline-user {
+    background: $sparkline-user-gradient;
+    border-radius: 0.75rem;
+    min-height: 32px;
+    position: relative;
+    overflow: hidden;
+
+    &::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
+        animation: sparkle 2s ease-in-out infinite 0.5s;
+    }
+}
+
+.sparkline-revenue {
+    background: $sparkline-revenue-gradient;
+    border-radius: 0.75rem;
+    min-height: 32px;
+    position: relative;
+    overflow: hidden;
+
+    &::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
+        animation: sparkle 2s ease-in-out infinite 1s;
+    }
+}
+
+@keyframes sparkle {
+    0% {
+        transform: translateX(-100%) translateY(-100%) rotate(45deg);
+    }
+
+    50% {
+        transform: translateX(100%) translateY(100%) rotate(45deg);
+    }
+
+    100% {
+        transform: translateX(-100%) translateY(-100%) rotate(45deg);
+    }
+}
+
+.dropdown-toggle {
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 0.5rem 1rem;
+    border-radius: 0.75rem;
+    background: $brand-glass;
+    border: 1px solid rgba(59, 130, 246, 0.1);
+
+    &:hover,
+    &:focus {
+        background: $btn-gradient;
+        color: #fff;
+        transform: translateY(-1px);
+        box-shadow: $brand-shadow-btn;
+        border-color: $brand-info;
+    }
+}
+
+.rounded-3 {
+    border-radius: 1.25rem !important;
+}
+
+.rounded-4 {
+    border-radius: 2rem !important;
+}
+
+.modern-card {
+    border-radius: 2rem;
+    background: $brand-glass;
+    box-shadow: $brand-shadow-card;
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: $btn-gradient;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    &:hover {
+        box-shadow: $brand-shadow-card-hover;
+        transform: translateY(-8px) scale(1.02);
+        border-color: rgba(59, 130, 246, 0.2);
+
+        &::before {
+            opacity: 1;
+        }
+    }
+}
+
+.card-header {
+    background: $btn-gradient;
+    color: #fff;
+    font-weight: $font-weight-extrabold;
+    font-size: $text-body-lg;
+    border-radius: 2rem 2rem 0 0;
+    padding: 1.25rem 1.75rem;
+    position: relative;
+    overflow: hidden;
+
+    &::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: left 0.6s ease;
+    }
+
+    &:hover::after {
+        left: 100%;
+    }
+}
+
+.card-footer {
+    background: linear-gradient(135deg, $brand-glass 0%, rgba(255, 255, 255, 0.95) 100%);
+    border-radius: 0 0 2rem 2rem;
+    padding: 1.25rem 1.75rem;
+    border-top: 1px solid rgba(59, 130, 246, 0.1);
+}
+
+.badge.bg-info {
+    background: $badge-info-bg;
+    color: #fff;
+    font-weight: $font-weight-bold;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    box-shadow: $brand-shadow-badge;
+}
+
+.badge.bg-warning {
+    background: $badge-warning-bg;
+    color: #fff;
+    font-weight: $font-weight-bold;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    box-shadow: $brand-shadow-badge;
+}
+
+.badge.bg-pink {
+    background: $badge-pink-bg;
+    color: #fff;
+    font-weight: $font-weight-bold;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    box-shadow: $brand-shadow-badge;
+}
+
+.badge.bg-gray {
+    background: $badge-gray-bg;
+    color: #fff;
+    font-weight: $font-weight-bold;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    box-shadow: $brand-shadow-badge;
+}
+
+// 新增 badge 狀態色
+.badge.bg-success {
+    background: $badge-success-bg;
+    color: #fff;
+    font-weight: $font-weight-bold;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    box-shadow: $brand-shadow-badge;
+}
+
+.badge.bg-danger {
+    background: $badge-danger-bg;
+    color: #fff;
+    font-weight: $font-weight-bold;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    box-shadow: $brand-shadow-badge;
+}
+
+// 通知/訊息 icon badge dropdown/tooltip
+.btn-icon {
+    min-width: 48px;
+    min-height: 48px;
+    font-size: 1.2rem;
+    position: relative;
+    cursor: pointer;
+    border-radius: 50%;
+    background: $btn-gradient;
+    color: #fff;
+    border: 2px solid rgba(59, 130, 246, 0.2);
+    transition: $icon-transition;
+    box-shadow: $brand-shadow-btn;
+
+    &:hover,
+    &:focus {
+        background: $btn-gradient-hover;
+        transform: scale(1.1) translateY(-2px);
+        box-shadow: $brand-shadow-btn-hover;
+        border-color: $brand-info;
+    }
+
+    &:hover .badge,
+    &:focus .badge {
+        filter: brightness(1.1);
+        transform: scale(1.1);
+    }
+
+    .badge {
+        position: absolute;
+        top: -2px;
+        right: -2px;
+        width: 1.8em;
+        height: 1.8em;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: $font-weight-bold;
+        padding: 0;
+        border-radius: 50%;
+        background: $badge-danger-bg;
+        color: #fff;
+        box-shadow: $brand-shadow-badge;
+        border: 2px solid #fff;
+        transition: all 0.2s ease;
+    }
+}
+
+// header sticky RWD
+@media (max-width: 991.98px) {
+    .main-layout .header {
+        position: sticky;
+        top: 0;
+        z-index: 1040;
+        padding: 0.5rem 1rem;
+        min-height: 56px;
+        box-shadow: 0 2px 8px rgba($brand-accent, 0.08);
+    }
+}
+
+// Sidebar icon-only
+@media (max-width: 575.98px) {
+    .main-layout .sidebar.icon-only {
+        width: 64px;
+        min-width: 64px;
+        max-width: 64px;
+        padding: 0.5rem 0;
+
+        .nav-link {
+            justify-content: center;
+            gap: 0;
+            font-size: 0;
+
+            i {
+                font-size: 1.5em;
+                margin: 0;
+            }
+        }
+
+        .sidebar-user,
+        .sidebar-section-title,
+        .sidebar-brand span {
+            display: none;
+        }
+    }
+}
+
+// 表單 focus/錯誤提示
+input:focus,
+select:focus,
+textarea:focus {
+    border-color: $brand-primary;
+    box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+    outline: none;
+    background: rgba(248, 250, 252, 0.8);
+}
+
+input.is-invalid,
+select.is-invalid,
+textarea.is-invalid {
+    border-color: $brand-danger;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+    background: rgba(254, 242, 242, 0.8);
+}
+
+// 按鈕 touch 區域加大
+.btn,
+.modern-btn,
+.btn-icon {
+    min-width: 48px;
+    min-height: 48px;
+    font-size: $text-body-md;
+    padding: 0.75rem 1.5rem;
+
+    @media (hover: none) and (pointer: coarse) {
+        min-width: 56px;
+        min-height: 56px;
+        font-size: $text-body-lg;
+    }
+}
+
+// =============================
+//  動畫延遲 樣式區塊（可全域共用）
+// =============================
+.animate__delay-1s {
+    animation-delay: 0.2s;
+}
+
+.animate__delay-2s {
+    animation-delay: 0.4s;
+}
+
+.animate__delay-3s {
+    animation-delay: 0.6s;
+}
+
+.animate__delay-4s {
+    animation-delay: 0.8s;
+}
+
+// =============================
+//  RWD 斷點設計區塊（僅覆蓋 main page 特有細節）
+// =============================
+
+// --- 小螢幕（手機）: <576px ---
+@media (max-width: 575.98px) {
+    .main-layout {
+        flex-direction: column;
+        min-height: 100vh;
+    }
+
+    .main-layout .sidebar {
+        // 僅覆蓋 main page 需要的 sidebar RWD 細節
+        position: fixed;
+        width: 100vw;
+        max-width: 100vw;
+        border-radius: 0 2rem 2rem 0;
+        z-index: 1052;
+        pointer-events: none;
+        visibility: hidden;
+        height: 100vh;
+        min-height: 0;
+        max-height: 100vh;
+        overflow-y: auto;
+
+        &.show {
+            transform: translateX(0);
+            pointer-events: auto;
+            visibility: visible;
+        }
+    }
+
+    .main-layout .header {
+        padding: 0.5rem 1rem;
+        min-height: 56px;
+    }
+
+    .main-layout .card {
+        border-radius: 0.75rem;
+    }
+
+    .main-layout main {
+        flex: 1 1 auto;
+        min-height: 0;
+        padding: 1rem !important;
+    }
+
+    .main-layout .flex-grow-1 {
+        flex-grow: 1 !important;
+        min-height: 0;
+    }
+
+    .main-layout .row.g-4>[class^="col-"] {
+        margin-bottom: 1rem;
+    }
+}
+
+// 中螢幕（平板）: ≥576px 且 <992px
+@media (min-width: 576px) and (max-width: 991.98px) {
+    .main-layout {
+        flex-direction: column;
+        flex: 1 1 auto;
+        min-height: 100vh;
+    }
+
+    .main-layout main {
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+
+    .main-layout .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 60vw;
+        min-width: 180px;
+        max-width: 320px;
+        z-index: 1051;
+        transform: translateX(-100%);
+        box-shadow: 2px 0 16px 0 rgba(30, 41, 59, 0.08);
+        transition: transform 0.2s cubic-bezier(.4, 0, .2, 1);
+        height: 100vh;
+        min-height: 0;
+        max-height: 100vh;
+        overflow-y: auto;
+
+        &.show {
+            transform: translateX(0);
+        }
+
+        .sidebar-toggle {
+            display: block;
+        }
+    }
+
+    .main-layout .header {
+        position: sticky;
+        top: 0;
+        z-index: 1040;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+
+    .main-layout .flex-grow-1 {
+        flex-grow: 1 !important;
+        min-height: 0;
+    }
+}
+
+// 大螢幕（桌機）: ≥992px
+@media (min-width: 992px) {
+    .main-layout {
+        flex-direction: row;
+        min-height: 100vh;
+    }
+
+    .main-layout .sidebar {
+        position: relative;
+    }
+}

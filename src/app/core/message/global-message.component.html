@@ -1,0 +1,39 @@
+<div class="global-message-container" role="region" aria-label="Notifications">
+    @for (message of messages(); track message.id) {
+    <div class="alert global-message" [class]="getAlertClass(message.type)" role="alert"
+        [attr.aria-live]="message.type === MessageType.ERROR ? 'assertive' : 'polite'"
+        [attr.aria-label]="message.title || 'Notification'">
+        <div class="message-content">
+            <div class="message-icon">
+                <i [class]="getIconClass(message.type)" aria-hidden="true"></i>
+            </div>
+
+            <div class="message-body">
+                @if (message.title) {
+                <h6 class="message-title">{{ message.title }}</h6>
+                }
+                <p class="message-text">{{ message.content }}</p>
+
+                @if (message.actions && message.actions.length > 0) {
+                <div class="message-actions">
+                    @for (action of message.actions; track $index) {
+                    <button type="button" class="btn btn-sm" [class]="'btn-' + (action.style || 'primary')"
+                        (click)="onAction(action.action, message.id)">
+                        {{ action.label }}
+                    </button>
+                    }
+                </div>
+                }
+            </div>
+
+            @if (message.dismissible) {
+            <button type="button" class="btn-close" aria-label="關閉通知" (click)="onDismiss(message.id)"></button>
+            }
+        </div>
+
+        <div class="message-timestamp">
+            <small class="text-muted">{{ message.timestamp | date:'HH:mm:ss' }}</small>
+        </div>
+    </div>
+    }
+</div>

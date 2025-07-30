@@ -1,0 +1,217 @@
+// 共用模態樣式
+// 可以在其他元件中使用 @use "shared/styles/modal" as modal;
+
+@use "sass:color";
+@use "variables" as *;
+
+// 模態背景遮罩
+@mixin modal-backdrop {
+    background-color: rgba(0, 0, 0, 0.5);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1040;
+}
+
+// 基本模態樣式
+@mixin modal-base {
+    z-index: 1050;
+
+    .modal-dialog {
+        margin: 2rem auto;
+        max-width: 700px;
+    }
+
+    .modal-content {
+        border: none;
+        border-radius: 1rem;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        font-family: $brand-font;
+    }
+}
+
+// 模態標題樣式
+@mixin modal-header($bg-color: $brand-primary) {
+    background: linear-gradient(135deg, $bg-color 0%, color.mix(white, $bg-color, 10%) 100%);
+    color: white;
+    border-radius: 1rem 1rem 0 0;
+    padding: 1.5rem 2rem;
+    border-bottom: none;
+
+    .modal-title {
+        font-size: $text-heading-sm;
+        font-weight: $font-weight-bold;
+        margin: 0;
+
+        i {
+            color: rgba(255, 255, 255, 0.9);
+        }
+    }
+
+    .btn-close {
+        filter: invert(1) grayscale(100%) brightness(200%);
+        opacity: 0.8;
+
+        &:hover {
+            opacity: 1;
+        }
+    }
+}
+
+// 模態內容樣式
+@mixin modal-body {
+    padding: 2rem;
+    background: $brand-bg;
+}
+
+// 模態按鈕區域樣式
+@mixin modal-footer {
+    background: $brand-bg-secondary;
+    border-radius: 0 0 1rem 1rem;
+    padding: 1.5rem 2rem;
+    border-top: 1px solid rgba($brand-gray, 0.1);
+    gap: 0.75rem;
+    justify-content: flex-end;
+}
+
+// 模態按鈕樣式
+@mixin modal-buttons {
+    .btn {
+        border-radius: 0.5rem;
+        font-weight: $font-weight-medium;
+        padding: 0.75rem 1.5rem;
+        font-size: $text-body-md;
+        border: none;
+        transition: all 0.2s ease;
+
+        i {
+            font-size: 0.9rem;
+        }
+
+        &.btn-secondary {
+            background-color: $brand-gray;
+            color: white;
+
+            &:hover:not(:disabled) {
+                background-color: color.mix(black, $brand-gray, 10%);
+                transform: translateY(-1px);
+                box-shadow: $brand-shadow-btn-hover;
+            }
+        }
+
+        &.btn-primary {
+            background: linear-gradient(135deg, $brand-primary 0%, color.mix(black, $brand-primary, 10%) 100%);
+            color: white;
+
+            &:hover:not(:disabled) {
+                background: linear-gradient(135deg, color.mix(black, $brand-primary, 15%) 0%, color.mix(black, $brand-primary, 25%) 100%);
+                transform: translateY(-1px);
+                box-shadow: $brand-shadow-btn-hover;
+            }
+        }
+
+        &:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        .spinner-border-sm {
+            width: 1rem;
+            height: 1rem;
+        }
+    }
+}
+
+// 模態響應式設計
+@mixin modal-responsive {
+    @media (max-width: 768px) {
+        .modal-dialog {
+            margin: 1rem;
+            max-width: none;
+        }
+
+        .modal-header,
+        .modal-body,
+        .modal-footer {
+            padding: 1.25rem;
+        }
+
+        .modal-footer {
+            flex-direction: column-reverse;
+            gap: 0.5rem;
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    }
+}
+
+// 模態動畫
+@mixin modal-animations {
+    &.fade.show {
+        animation: modalSlideIn 0.3s ease-out;
+    }
+
+    @keyframes modalSlideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-50px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+}
+
+// 背景動畫
+@mixin backdrop-animations {
+    &.fade.show {
+        animation: backdropFadeIn 0.3s ease-out;
+    }
+
+    @keyframes backdropFadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+}
+
+// 完整模態樣式組合
+@mixin complete-modal($header-color: $brand-primary) {
+    .modal-backdrop {
+        @include modal-backdrop;
+        @include backdrop-animations;
+    }
+
+    .modal {
+        @include modal-base;
+        @include modal-animations;
+
+        .modal-header {
+            @include modal-header($header-color);
+        }
+
+        .modal-body {
+            @include modal-body;
+        }
+
+        .modal-footer {
+            @include modal-footer;
+            @include modal-buttons;
+        }
+    }
+
+    @include modal-responsive;
+}

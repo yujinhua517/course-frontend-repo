@@ -1,0 +1,41 @@
+@import 'bootstrap/dist/css/bootstrap.min.css';
+@import 'bootstrap-icons/font/bootstrap-icons.css';
+
+.login-bg {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #e0e7ff 0%, #f0fdfa 100%);
+}
+
+.login-card {
+  border-radius: 1.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  padding: 2rem 1.5rem;
+  margin: 2rem auto;
+}
+
+.brand-icon {
+  width: 48px;
+  height: 48px;
+  font-size: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.brand-title {
+  color: #2563eb;
+  font-weight: 700;
+  font-size: 1.6rem;
+  letter-spacing: 1px;
+}
+
+.input-group-text,
+.form-control {
+  border-top-right-radius: 0rem !important;
+  border-bottom-right-radius: 0rem !important;
+}
+
+@media (max-width: 576px) {
+  .login-card {
+    padding: 1rem 0.5rem;
+    margin: 1rem auto;
+  }
+}

@@ -1,0 +1,5 @@
+@use "../../../../../styles/form-controls" as form;
+
+// 使用共用表單樣式
+@include form.form-styles;
+@include form.form-responsive;

@@ -1,0 +1,268 @@
+@use "../../../../styles/variables" as *;
+@use "sass:color";
+
+// 確保表格主體使用固定佈局 - 重要：讓組件真正作為 table 的一部分
+:host {
+    display: contents !important;
+}
+
+// 或者如果上面不起作用，使用這個：
+// :host {
+//     display: table-row-group;
+//     width: 100%;
+// }
+
+// 表格主體樣式 - 與 competency-list 原始樣式保持一致
+// 注意：由於使用 display: contents，hover 樣式需要在 page 層級設定
+tbody tr {
+    &.table-active {
+        background-color: rgba($brand-primary, 0.05) !important;
+
+        td {
+            border-color: rgba($brand-primary, 0.1);
+        }
+    }
+}
+
+td {
+    padding: 0.5rem 0.75rem;
+    vertical-align: middle;
+    border-bottom: 1px solid rgba($brand-gray, 0.05);
+    font-size: $text-caption;
+    box-sizing: border-box;
+
+    &.text-primary {
+        color: $brand-primary !important;
+        font-weight: $font-weight-medium;
+    }
+
+    &.fw-medium {
+        font-weight: $font-weight-medium;
+    }
+
+    &.text-muted {
+        color: $brand-text-secondary;
+    }
+
+    &.small {
+        font-size: $text-caption;
+    }
+
+    // 狀態徽章樣式
+    .status-badge {
+        border-radius: 1rem;
+        font-size: $text-caption;
+        font-weight: $font-weight-medium;
+        padding: 0.25rem 0.75rem;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &.btn-success {
+            background-color: $badge-success-bg;
+            color: white;
+
+            &:hover {
+                background-color: color.mix(black, $badge-success-bg, 10%);
+                transform: scale(1.05);
+            }
+        }
+
+        &.btn-secondary {
+            background-color: $badge-gray-bg;
+            color: $brand-accent;
+
+            &:hover {
+                background-color: color.mix(black, $badge-gray-bg, 10%);
+                transform: scale(1.05);
+            }
+        }
+
+        i {
+            font-size: 0.6rem;
+        }
+    }
+
+    // 按鈕群組樣式
+    .btn-group {
+        .btn {
+            border-radius: 0.375rem;
+            padding: 0.375rem 0.5rem;
+            font-size: $text-body-sm;
+            border: 1px solid;
+            transition: all 0.2s ease;
+
+            &:not(:last-child) {
+                margin-right: 0.25rem;
+            }
+
+            &.btn-outline-primary {
+                color: $brand-primary;
+                border-color: rgba($brand-primary, 0.3);
+
+                &:hover {
+                    background-color: $brand-primary;
+                    border-color: $brand-primary;
+                    color: white;
+                    transform: translateY(-1px);
+                }
+            }
+
+            &.btn-outline-secondary {
+                color: $brand-gray;
+                border-color: rgba($brand-gray, 0.3);
+
+                &:hover {
+                    background-color: $brand-gray;
+                    border-color: $brand-gray;
+                    color: white;
+                    transform: translateY(-1px);
+                }
+            }
+
+            &.btn-outline-danger {
+                color: $brand-danger;
+                border-color: rgba($brand-danger, 0.3);
+
+                &:hover {
+                    background-color: $brand-danger;
+                    border-color: $brand-danger;
+                    color: white;
+                    transform: translateY(-1px);
+                }
+            }
+        }
+    }
+}
+
+// 選擇框樣式
+.form-check {
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    .form-check-input {
+        margin: 0;
+        cursor: pointer;
+
+        &:checked {
+            background-color: $brand-primary;
+            border-color: $brand-primary;
+        }
+
+        &:focus {
+            border-color: $brand-primary;
+            box-shadow: 0 0 0 0.2rem rgba($brand-primary, 0.25);
+        }
+
+        &:indeterminate {
+            background-color: $brand-primary;
+            border-color: $brand-primary;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='M6 10h8'/%3e%3c/svg%3e");
+        }
+    }
+}
+
+// 文字對齊
+.text-center {
+    text-align: center;
+}
+
+.text-end {
+    text-align: end;
+}
+
+// 欄位寬度強制控制
+td {
+    &[style*="width"] {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        box-sizing: border-box !important;
+    }
+
+    &[style*="width: 5%"] {
+        min-width: 50px;
+        max-width: 5%;
+        width: 5% !important;
+    }
+
+    &[style*="width: 8%"] {
+        min-width: 60px;
+        max-width: 8%;
+        width: 8% !important;
+    }
+
+    &[style*="width: 12%"] {
+        min-width: 80px;
+        max-width: 12%;
+        width: 12% !important;
+    }
+
+    &[style*="width: 15%"] {
+        min-width: 80px;
+        max-width: 15%;
+        width: 15% !important;
+    }
+
+    &[style*="width: 18%"] {
+        min-width: 100px;
+        max-width: 18%;
+        width: 18% !important;
+    }
+
+    &[style*="width: 20%"] {
+        min-width: 100px;
+        max-width: 20%;
+        width: 20% !important;
+    }
+
+    &[style*="width: 25%"] {
+        min-width: 120px;
+        max-width: 25%;
+        width: 25% !important;
+    }
+
+    &[style*="width: 30%"] {
+        min-width: 120px;
+        max-width: 30%;
+        width: 30% !important;
+    }
+
+    &[style*="width: 10%"] {
+        min-width: 80px;
+        max-width: 10%;
+        width: 10% !important;
+    }
+}
+
+// 響應式設計
+@media (max-width: 768px) {
+    td {
+        padding: 0.75rem 0.5rem;
+        font-size: $text-body-sm;
+
+        // 確保寬度在小螢幕也固定
+        &[style*="width: 5%"] {
+            min-width: 50px;
+            max-width: 5%;
+            width: 5% !important;
+        }
+    }
+
+    .btn-group {
+        flex-direction: column;
+        width: 100%;
+
+        .btn {
+            border-radius: 0.375rem !important;
+            margin-right: 0 !important;
+            margin-bottom: 0.25rem;
+
+            &:last-child {
+                margin-bottom: 0;
+            }
+        }
+    }
+}

@@ -1,0 +1,281 @@
+@use "../../../../styles/variables" as *;
+
+// =============================
+//  Sidebar 樣式區塊
+// =============================
+.sidebar {
+    width: 230px;
+    min-width: 230px;
+    max-width: 230px;
+    flex-shrink: 0;
+    background: $brand-light;
+    box-shadow: $brand-shadow-card;
+    backdrop-filter: blur(20px);
+    border-right: 1px solid rgba(59, 130, 246, 0.1);
+    transition: all 0.3s cubic-bezier(.4, 0, .2, 1);
+    z-index: 101;
+    padding-bottom: 1.2rem;
+    padding-right: 0.8rem;
+    padding-left: 0.8rem;
+    position: relative;
+    overflow-y: auto;
+    max-height: 100vh;
+
+    &-user {
+        background: $brand-glass;
+        backdrop-filter: blur(20px);
+        box-shadow: $brand-shadow-card;
+        border-radius: 0rem 0rem 1.5rem 1.5rem;
+        text-align: center;
+        margin: 1rem 0.5rem;
+        padding: 1.2rem 0.5rem 1rem 0.5rem;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        position: relative;
+
+        &::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: $btn-gradient;
+            border-radius: 1.5rem 1.5rem 0 0;
+        }
+
+        .user-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: 2px solid rgba(59, 130, 246, 0.15);
+            margin-bottom: 0.7rem;
+        }
+
+        .user-name {
+            font-size: $text-body-sm;
+            font-weight: $font-weight-bold;
+            color: $brand-accent;
+            margin-bottom: 0.25rem;
+        }
+
+        .user-role {
+            font-size: $text-body-sm;
+            color: $brand-secondary;
+            font-weight: $font-weight-medium;
+        }
+    }
+
+    &-section-title {
+        color: #fff;
+        background: linear-gradient(135deg, $brand-accent 0%, $brand-info 100%);
+        border-bottom: none;
+        padding: 0.5rem 0.8rem;
+        font-size: $text-body-sm;
+        font-weight: $font-weight-extrabold;
+        letter-spacing: 0.1em;
+        border-radius: 0.5rem;
+        margin: 2rem 0rem 1rem 0rem;
+        box-shadow: $brand-shadow-btn;
+        text-transform: uppercase;
+        position: relative;
+        overflow: hidden;
+
+        &::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        &:hover::before {
+            left: 100%;
+        }
+    }
+
+    .nav-link {
+        color: $brand-accent;
+        background: transparent;
+        border-radius: 0.5rem;
+        margin: 0.15rem 0.15rem;
+        padding: 0.25rem;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        font-weight: $font-weight-medium;
+        font-size: 0.75rem;
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: $brand-primary;
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+        }
+
+        &.active {
+            background: $btn-gradient;
+            color: #fff !important;
+            font-weight: $font-weight-bold;
+            box-shadow: $brand-shadow-btn;
+            transform: translateX(8px);
+
+            &::before {
+                content: '';
+                position: absolute;
+                left: -4px;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 4px;
+                height: 60%;
+                background: $brand-info;
+                border-radius: 0 2px 2px 0;
+            }
+
+            i {
+                color: #fff;
+                transform: scale(1.1);
+            }
+        }
+
+        i {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            font-size: 1.1rem;
+            color: $brand-info;
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 0.75rem;
+            transition: $icon-transition;
+            flex-shrink: 0;
+
+            &:hover {
+                color: $icon-hover;
+                transform: scale($icon-hover-scale);
+                background: rgba(59, 130, 246, 0.2);
+            }
+        }
+    }
+
+    &.icon-only {
+        width: 48px;
+        min-width: 48px;
+        max-width: 48px;
+        padding: 0.5rem 0;
+
+        .nav-link {
+            justify-content: center;
+            gap: 0;
+            margin: 0.25rem 0.5rem;
+            padding: 0.75rem;
+
+            i {
+                font-size: 1.2rem;
+                margin: 0;
+                width: 36px;
+                height: 36px;
+            }
+
+            span {
+                display: none;
+            }
+        }
+
+        .sidebar-user,
+        .sidebar-section-title,
+        .sidebar-brand span {
+            display: none;
+        }
+    }
+
+    .icon-primary,
+    .icon-accent,
+    .icon-info,
+    .icon-success,
+    .icon-danger,
+    .icon-warning,
+    .icon-pink {
+        transition: $icon-transition;
+        cursor: pointer;
+
+        &:hover {
+            color: $icon-hover;
+            transform: scale($icon-hover-scale);
+        }
+    }
+
+    .sidebar-toggle {
+        min-width: 48px;
+        min-height: 48px;
+        font-size: 1.1rem;
+        padding: 0.5rem 1.2rem;
+        color: #fff;
+        background: $brand-accent;
+        border: 2px solid $brand-primary;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 8px rgba($brand-accent, 0.12);
+        cursor: pointer;
+        transition: background 0.15s, color 0.15s, box-shadow 0.15s, transform 0.15s, outline 0.15s;
+        z-index: 1100;
+        width: 48px;
+        height: 48px;
+
+        &:hover,
+        &:focus {
+            background: $brand-primary;
+            color: #fff;
+            box-shadow: 0 8px 24px rgba($brand-primary, 0.18);
+            outline: 2px solid $brand-info;
+            transform: scale(1.08);
+        }
+
+        min-width: 48px;
+        min-height: 48px;
+        padding: 0;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: $btn-gradient;
+        color: #fff;
+        border: 2px solid $brand-primary;
+        transition: background 0.18s,
+        color 0.18s,
+        box-shadow 0.18s,
+        transform 0.18s;
+        box-shadow: $brand-shadow-btn;
+        position: relative;
+        cursor: pointer;
+        font-size: 1.2rem;
+
+        &:hover,
+        &:focus {
+            background: $btn-gradient-hover;
+            color: #fff;
+            box-shadow: $brand-shadow-btn-hover;
+            outline: 2px solid $brand-info;
+            transform: scale(1.07);
+        }
+
+        i {
+            transition: color 0.18s, transform 0.18s;
+            color: #fff;
+            cursor: pointer;
+
+            &:hover {
+                color: $icon-hover;
+                transform: scale(1.15);
+            }
+        }
+
+    }
+}

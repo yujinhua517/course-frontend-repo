@@ -1,0 +1,95 @@
+<!-- 分頁控制 -->
+@if (showPagination()) {
+<div class="pagination-wrapper mt-4">
+
+    <!-- 分頁統計資訊 -->
+    @if (config().showTotalCount !== false) {
+    <div class="pagination-info text-muted small mb-2 text-center">
+        {{ totalCountText() }}
+    </div>
+    }
+
+    <!-- 分頁導航 -->
+    <nav [attr.aria-label]="ariaLabel()" class="pagination-nav">
+        <ul class="pagination justify-content-center mb-0">
+
+            <!-- 第一頁按鈕 -->
+            @if (config().showFirstLast !== false) {
+            <li class="page-item" [class.disabled]="!hasPreviousPage() || config().disabled">
+                <button class="page-link" (click)="onFirstPage()" [disabled]="!hasPreviousPage() || config().disabled"
+                    aria-label="第一頁" title="第一頁">
+                    <i class="bi bi-chevron-double-left" aria-hidden="true"></i>
+                </button>
+            </li>
+            }
+
+            <!-- 上一頁按鈕 -->
+            @if (config().showPrevNext !== false) {
+            <li class="page-item" [class.disabled]="!hasPreviousPage() || config().disabled">
+                <button class="page-link" (click)="onPreviousPage()"
+                    [disabled]="!hasPreviousPage() || config().disabled" aria-label="上一頁" title="上一頁">
+                    <i class="bi bi-chevron-left" aria-hidden="true"></i>
+                </button>
+            </li>
+            }
+
+            <!-- 頁碼按鈕 -->
+            @for (page of pageNumbers(); track page) {
+            @if (isEllipsis(page)) {
+            <!-- 省略號 -->
+            <li class="page-item disabled" aria-hidden="true">
+                <span class="page-link">{{ page }}</span>
+            </li>
+            } @else {
+            <!-- 頁碼 -->
+            <li class="page-item" [class.active]="isCurrentPage(page)" [class.disabled]="config().disabled">
+                <button class="page-link" (click)="onPageChange(+page)" [disabled]="config().disabled"
+                    [attr.aria-label]="getPageAriaLabel(page)" [attr.aria-current]="getAriaCurrent(page)"
+                    [title]="'第 ' + page + ' 頁'">
+                    {{ page }}
+                </button>
+            </li>
+            }
+            }
+
+            <!-- 下一頁按鈕 -->
+            @if (config().showPrevNext !== false) {
+            <li class="page-item" [class.disabled]="!hasNextPage() || config().disabled">
+                <button class="page-link" (click)="onNextPage()" [disabled]="!hasNextPage() || config().disabled"
+                    aria-label="下一頁" title="下一頁">
+                    <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                </button>
+            </li>
+            }
+
+            <!-- 最後一頁按鈕 -->
+            @if (config().showFirstLast !== false) {
+            <li class="page-item" [class.disabled]="!hasNextPage() || config().disabled">
+                <button class="page-link" (click)="onLastPage()" [disabled]="!hasNextPage() || config().disabled"
+                    aria-label="最後一頁" title="最後一頁">
+                    <i class="bi bi-chevron-double-right" aria-hidden="true"></i>
+                </button>
+            </li>
+            }
+
+        </ul>
+    </nav>
+
+    <!-- 每頁筆數選擇器 -->
+    @if (config().showPageSize !== false && config().pageSizeOptions && config().pageSizeOptions!.length > 1) {
+    <div class="page-size-selector mt-3 d-flex justify-content-center align-items-center">
+        <label for="pageSizeSelect" class="form-label me-2 mb-0 text-muted small">
+            每頁顯示：
+        </label>
+        <select id="pageSizeSelect" class="form-select form-select-sm" style="width: auto;" [value]="config().pageSize"
+            (change)="onPageSizeChange($event)" [disabled]="config().disabled" aria-label="選擇每頁顯示筆數">
+
+            @for (size of (config().pageSizeOptions || []); track size) {
+            <option [value]="size">{{ size }} 筆</option>
+            }
+        </select>
+    </div>
+    }
+
+</div>
+}

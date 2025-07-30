@@ -1,0 +1,93 @@
+// ========================# 陰影系統
+$brand-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+$brand-shadow-card-hover: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+$brand-shadow-btn: 0 1px 2px rgba(0, 0, 0, 0.05);
+$brand-shadow-btn-hover: 0 2px 4px rgba(0, 0, 0, 0.1);
+$brand-shadow-badge: 0 1px 2px rgba(0, 0, 0, 0.05);
+$brand-shadow-modal: 0 10px 25px rgba(0, 0, 0, 0.15), 0 4px 10px rgba(0, 0, 0, 0.1);
+$brand-shadow-text: none; //  主色系與配色設計
+// =============================
+
+// 核心品牌色
+$brand-primary: #4873cf; // 現代藍（主色）
+$brand-secondary: #475261; // 中性灰
+$brand-accent: #1e293b; // 深灰（強調）
+$brand-light: #cdd5e6; // 淺灰
+$brand-neutral: #6b7280; // 中性色
+
+// 功能色彩
+$brand-info: #4873cf; // 資訊藍
+$brand-success: #22c55e; // 成功綠
+$brand-warning: #eab308; // 警告黃
+$brand-danger: #ef4444; // 危險紅
+$brand-pink: #ec4899; // 粉紅
+$brand-purple: #8b5cf6; // 紫色
+$brand-gray: #6b7280; // 中性灰
+$brand-text: #fff;
+
+// 文字顏色系統
+$brand-text-primary: #1f2937; // 主要文字色
+$brand-text-secondary: #6b7280; // 次要文字色
+$brand-text-tertiary: #9ca3af; // 第三級文字色
+
+// 背景系統
+$brand-bg: #ffffff; // 純白背景
+$brand-bg-solid: #f8fafc; // 淺灰背景
+$brand-bg-secondary: #f1f5f9; // 次要背景
+$brand-glass: rgba(248, 250, 255, 0.95); // 輕微透明背景
+$brand-glass-dark: rgba(30, 41, 59, 0.90); // 深色背景
+
+// 陰影系統
+$brand-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+$brand-shadow-card-hover: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+$brand-shadow-btn: 0 1px 2px rgba(0, 0, 0, 0.05);
+$brand-shadow-btn-hover: 0 2px 4px rgba(0, 0, 0, 0.1);
+$brand-shadow-badge: 0 1px 2px rgba(0, 0, 0, 0.05);
+$brand-shadow-text: none;
+
+// 字體系統
+$brand-font: 'Inter', 'Noto Sans TC', 'Microsoft JhengHei', system-ui, sans-serif;
+
+// sparkline 漸層
+$sparkline-visit-gradient: #4873cf;
+$sparkline-user-gradient: #22c55e;
+$sparkline-revenue-gradient: #eab308;
+
+// 按鈕系統
+$btn-gradient: #4873cf;
+$btn-gradient-hover: #1d4ed8;
+$btn-gradient-secondary: #64748b;
+$btn-gradient-success: #22c55e;
+$btn-gradient-warning: #eab308;
+$btn-gradient-danger: #ef4444;
+
+// badge 狀態色
+$badge-info-bg: #2563eb;
+$badge-success-bg: #22c55e;
+$badge-danger-bg: #ef4444;
+$badge-warning-bg: #eab308;
+$badge-pink-bg: #ec4899;
+$badge-gray-bg: #cedaea;
+
+// icon 互動色彩系統
+$icon-hover: #2563eb;
+$icon-hover-scale: 1.05;
+$icon-transition: all 0.15s ease;
+
+// 文字層級系統
+$text-heading-xl: 2.5rem; // 48px
+$text-heading-lg: 2rem; // 32px
+$text-heading-md: 1.5rem; // 24px
+$text-heading-sm: 1.25rem; // 20px
+$text-lg: 1.125rem; // 18px
+$text-body-lg: 1.125rem; // 18px
+$text-body-md: 1rem; // 16px
+$text-body-sm: 0.875rem; // 14px
+$text-caption: 0.75rem; // 12px
+
+// 字重系統
+$font-weight-normal: 400;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
+$font-weight-bold: 700;
+$font-weight-extrabold: 800;

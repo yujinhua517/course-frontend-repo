@@ -1,0 +1,134 @@
+<div class="main-layout d-flex">
+    <!-- Sidebar -->
+    <nav class="sidebar" tabindex="0" aria-label="主選單" [class.show]="sidebarOpen()" [class.icon-only]="isIconOnly">
+        <div class="sidebar-brand d-flex align-items-center justify-content-between px-3 py-3 border-bottom">
+            <div class="d-flex align-items-center gap-2">
+                <img src="/assets/images/logo.png" alt="品牌 Logo" class="brand-logo" width="32" height="32" />
+                <span class="fw-bold fs-5 text-secondary">精誠資訊</span>
+            </div>
+            <button type="button" class="sidebar-toggle d-lg-none ms-2" aria-label="收合側邊欄"
+                (click)="sidebarOpen.set(false)">
+                <i class="bi bi-chevron-left icon-accent"></i>
+            </button>
+        </div>
+        <div class="sidebar-user d-flex flex-column align-items-center py-4 border-bottom-0">
+            <img src="https://i.pravatar.cc/48" alt="用戶頭像" class="rounded-circle mb-2" width="48" height="48" />
+            <span class="fw-semibold fs-6">{{ getUserDisplayName() }}</span>
+            <span class="text-secondary fs-7">{{ getUserRole() }}</span>
+        </div>
+        <div class="sidebar-section-title px-3 pt-1 pb-1 text-uppercase fs-7 fw-bold">功能</div>
+        <ul class="nav flex-column mb-2">
+            <li class="nav-item mb-1">
+                <a class="nav-link" routerLink="/home" routerLinkActive="active"
+                    (click)="debugSidebarClick('首頁 link click'); sidebarOpen.set(false)">
+                    <i class="bi bi-house icon-accent me-2"></i>首頁
+                </a>
+            </li>
+            <li class="nav-item mb-1">
+                <a class="nav-link" routerLink="/competency" routerLinkActive="active"
+                    (click)="debugSidebarClick('職能主檔'); sidebarOpen.set(false)">
+                    <i class="bi bi-person-workspace icon-accent me-2"></i>職能主檔
+                </a>
+            </li>
+            <li class="nav-item mb-1">
+                <a class="nav-link" routerLink="/employee" routerLinkActive="active"
+                    (click)="debugSidebarClick('員工主檔'); sidebarOpen.set(false)">
+                    <i class="bi bi-people icon-accent me-2"></i>員工主檔
+                </a>
+            </li>
+            <li class="nav-item mb-1">
+                <a class="nav-link" routerLink="/department" routerLinkActive="active"
+                    (click)="debugSidebarClick('部門主檔'); sidebarOpen.set(false)">
+                    <i class="bi bi-building icon-accent me-2"></i>部門主檔
+                </a>
+            </li>
+            <li class="nav-item mb-1">
+                <a class="nav-link" routerLink="/settings" routerLinkActive="active"
+                    (click)="debugSidebarClick('設定 link click'); sidebarOpen.set(false)">
+                    <i class="bi bi-gear icon-accent me-2"></i>設定
+                </a>
+            </li>
+        </ul>
+        <div class="sidebar-section-title px-3 pt-1 pb-1 text-uppercase fs-7 fw-bold">其他</div>
+        <ul class="nav flex-column mb-2">
+            <li class="nav-item mb-1">
+                <a class="nav-link" href="#"><i class="bi bi-info-circle icon-info me-2"></i>關於</a>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="flex-grow-1 d-flex flex-column">
+        <!-- Header -->
+        <header
+            class="header main-header px-4 py-3 d-flex align-items-center justify-content-between shadow-sm position-sticky top-0">
+            <div class="d-flex align-items-center gap-3">
+                <button type="button" class="sidebar-hamburger d-lg-none p-0 me-2" aria-label="展開選單"
+                    (click)="sidebarOpen.set(true)">
+                    <i class="bi bi-list fs-2 icon-accent"></i>
+                </button>
+                <span class="fs-5 fw-bold main-title">課程系統</span>
+                <!-- <span class="vr mx-3 d-none d-md-inline"></span> -->
+                <!-- <span class="fs-6 fw-semibold d-none d-md-inline text-secondary">主頁</span> -->
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <div class="position-relative">
+                    <button type="button" class="btn-icon" aria-label="通知"
+                        (click)="showNotificationDropdown = !showNotificationDropdown">
+                        <i class="bi bi-bell fs-5 icon-accent"></i>
+                        <span class="badge">3</span>
+                    </button>
+                    <div *ngIf="showNotificationDropdown" class="notification-dropdown">
+                        <div class="fw-bold mb-2">通知</div>
+                        <div class="small text-secondary">您有 3 則新通知</div>
+                        <ul class="list-unstyled mt-2 mb-0">
+                            <li class="mb-2"><i class="bi bi-info-circle icon-info me-1"></i> 系統維護通知</li>
+                            <li class="mb-2"><i class="bi bi-check-circle icon-success me-1"></i> 任務已完成</li>
+                            <li><i class="bi bi-exclamation-circle icon-warning me-1"></i> 帳號安全提醒</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="position-relative">
+                    <button type="button" class="btn-icon" aria-label="訊息" (mouseenter)="showMessageTooltip = true"
+                        (mouseleave)="showMessageTooltip = false">
+                        <i class="bi bi-envelope fs-5 icon-accent"></i>
+                        <span class="badge">5</span>
+                    </button>
+                    <div *ngIf="showMessageTooltip" class="notification-tooltip">
+                        您有 5 則新訊息
+                    </div>
+                </div>
+                <div class="dropdown" [class.show]="dropdownOpen">
+                    <button type="button"
+                        class="dropdown-toggle rounded-3 shadow-sm user-dropdown-btn d-flex align-items-center gap-2"
+                        id="userDropdown" aria-label="用戶選單" [attr.aria-expanded]="dropdownOpen"
+                        (click)="dropdownOpen = !dropdownOpen" (focusout)="dropdownOpen = false" tabindex="0">
+                        <img src="https://i.pravatar.cc/32" alt="avatar" class="rounded-circle" width="32"
+                            height="32" />
+                        <span class="d-none d-md-inline text-secondary">{{ getUserDisplayName() }}</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-lg rounded-3" [class.show]="dropdownOpen"
+                        aria-labelledby="userDropdown">
+                        <li><a class="dropdown-item" href="#"
+                                (click)="onProfileClick(); $event.preventDefault(); dropdownOpen = false;">
+                                <i class="bi bi-person me-2"></i>個人設定
+                            </a></li>
+                        <li>
+                            <hr class="dropdown-divider" />
+                        </li>
+                        <li><a class="dropdown-item text-danger" href="#"
+                                (mousedown)="onLogout(); $event.preventDefault(); dropdownOpen = false;">
+                                <i class="bi bi-box-arrow-right me-2"></i>登出
+                            </a></li>
+                    </ul>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main -->
+        <main class="flex-grow-1 p-3 p-md-4 animate__animated animate__fadeIn main-scrollable">
+            <router-outlet></router-outlet>
+            <!-- Dashboard/Placeholder Widgets -->
+        </main>
+    </div>
+</div>

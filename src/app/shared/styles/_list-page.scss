@@ -1,0 +1,137 @@
+// 共用列表頁面樣式
+// 可以在列表頁面中使用 @use "../../shared/styles/list-page" as list;
+
+@use "sass:color";
+@use "../../../styles/variables" as *;
+
+// 頁面容器基本樣式
+@mixin page-container {
+    padding: 1.5rem;
+    font-family: $brand-font;
+
+    @media (max-width: 768px) {
+        padding: 1rem;
+    }
+}
+
+// 頁面標題區域樣式
+@mixin page-header {
+    .page-header {
+        margin-bottom: 2rem;
+
+        .page-title {
+            color: $brand-accent;
+            font-size: $text-heading-md;
+            font-weight: $font-weight-bold;
+
+            i {
+                color: $brand-primary;
+            }
+        }
+
+        .header-actions {
+            gap: 0.75rem;
+
+            .btn {
+                border-radius: 0.5rem;
+                font-weight: $font-weight-medium;
+                box-shadow: $brand-shadow-btn;
+                transition: all 0.2s ease;
+
+                &:hover {
+                    box-shadow: $brand-shadow-btn-hover;
+                    transform: translateY(-1px);
+                }
+
+                &.btn-primary {
+                    background: $btn-gradient;
+                    border-color: $btn-gradient;
+
+                    &:hover {
+                        background: $btn-gradient-hover;
+                        border-color: $btn-gradient-hover;
+                    }
+                }
+
+                &.btn-outline-secondary {
+                    color: $brand-gray;
+                    border-color: rgba($brand-gray, 0.3);
+
+                    &:hover {
+                        background-color: $brand-gray;
+                        border-color: $brand-gray;
+                        color: white;
+                    }
+                }
+            }
+        }
+
+        // 響應式設計
+        @media (max-width: 768px) {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+
+            .header-actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
+        }
+    }
+}
+
+// 表格容器樣式
+@mixin table-container {
+    .table-container {
+        background: $brand-bg;
+        border: 1px solid rgba($brand-gray, 0.1);
+        border-radius: 0.75rem;
+        box-shadow: $brand-shadow-card;
+        overflow: hidden;
+
+        .table-responsive {
+            overflow-x: auto;
+
+            &::-webkit-scrollbar {
+                height: 6px;
+            }
+
+            &::-webkit-scrollbar-track {
+                background: rgba($brand-gray, 0.1);
+            }
+
+            &::-webkit-scrollbar-thumb {
+                background: rgba($brand-primary, 0.3);
+                border-radius: 3px;
+            }
+        }
+
+        .table {
+            margin-bottom: 0;
+            table-layout: fixed !important;
+            width: 100% !important;
+            border-collapse: collapse !important;
+        }
+
+        // 響應式設計
+        @media (max-width: 768px) {
+            .table-responsive {
+                border-radius: 0.5rem;
+
+                .table {
+                    font-size: $text-body-sm;
+                    table-layout: fixed !important;
+                    width: 100% !important;
+                    border-collapse: collapse !important;
+                }
+            }
+        }
+    }
+}
+
+// 完整列表頁面樣式
+@mixin complete-list-page {
+    @include page-container;
+    @include page-header;
+    @include table-container;
+}

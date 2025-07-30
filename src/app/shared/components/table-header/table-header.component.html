@@ -1,0 +1,24 @@
+<tr>
+    <!-- 全選欄位 -->
+    @if (config().showSelectColumn) {
+    <th scope="col" class="text-center" style="width: 5%;">
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" [checked]="config().isAllSelected ?? false"
+                [indeterminate]="config().isPartiallySelected ?? false" (change)="onSelectAll($event)" id="selectAll"
+                aria-label="全選">
+        </div>
+    </th>
+    }
+
+    <!-- 資料欄位 -->
+    @for (column of config().columns; track column.key) {
+    <th scope="col" [class]="getAlignClass(column)" [class.sortable-header]="column.sortable"
+        [class]="column.cssClass || ''" [style]="getColumnStyle(column)" [attr.aria-sort]="column.sortable && config().sortBy === column.key ? 
+    (config().sortDirection === 'asc' ? 'ascending' : 'descending') : null" (click)="onSort(column)">
+        {{ column.label }}
+        @if (column.sortable) {
+        <i class="bi {{ getSortIcon(column) }} ms-1" [attr.aria-hidden]="true"></i>
+        }
+    </th>
+    }
+</tr>

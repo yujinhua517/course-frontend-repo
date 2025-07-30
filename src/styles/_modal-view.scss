@@ -1,0 +1,109 @@
+// 共享的模態檢視樣式
+// 用於 Department, Employee, Competency 檢視組件
+
+@use "variables" as *;
+@use "sass:color";
+
+.modal-backdrop {
+    background-color: rgba(0, 0, 0, 0.5);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1040;
+}
+
+.modal {
+    z-index: 1050;
+
+    .modal-dialog {
+        margin: 2rem auto;
+        max-width: 700px;
+    }
+
+    .modal-content {
+        border: none;
+        border-radius: 1rem;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        font-family: $brand-font;
+    }
+
+    .modal-header {
+        background: linear-gradient(135deg, $brand-info 0%, color.mix(white, $brand-info, 10%) 100%);
+        color: white;
+        border-radius: 1rem 1rem 0 0;
+        padding: 1.5rem 2rem;
+        border-bottom: none;
+
+        .modal-title {
+            font-size: $text-heading-sm;
+            font-weight: $font-weight-bold;
+            margin: 0;
+
+            i {
+                color: rgba(255, 255, 255, 0.9);
+            }
+        }
+
+        .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+            opacity: 0.8;
+
+            &:hover {
+                opacity: 1;
+            }
+        }
+    }
+
+    .modal-body {
+        padding: 2rem;
+        background: $brand-bg;
+
+        // 由於現在使用 InfoDisplay 組件，移除了重複的 info-section 樣式
+        // InfoDisplay 組件有自己的樣式系統
+    }
+
+    .modal-footer {
+        background: $brand-bg;
+        border-top: 1px solid rgba($brand-gray, 0.1);
+        border-radius: 0 0 1rem 1rem;
+        padding: 1.5rem 2rem;
+
+        .btn {
+            border-radius: 0.5rem;
+            font-weight: $font-weight-medium;
+            padding: 0.75rem 1.5rem;
+            transition: all 0.2s ease;
+
+            &.btn-secondary {
+                background: rgba($brand-gray, 0.1);
+                border-color: rgba($brand-gray, 0.2);
+                color: $brand-gray;
+
+                &:hover {
+                    background: rgba($brand-gray, 0.15);
+                    border-color: rgba($brand-gray, 0.3);
+                    color: color.mix(black, $brand-gray, 20%);
+                    transform: translateY(-1px);
+                }
+            }
+        }
+    }
+}
+
+// 響應式設計
+@media (max-width: 768px) {
+    .modal {
+        .modal-dialog {
+            margin: 1rem;
+            max-width: calc(100% - 2rem);
+        }
+
+        .modal-header,
+        .modal-body,
+        .modal-footer {
+            padding: 1rem 1.5rem;
+        }
+    }
+}

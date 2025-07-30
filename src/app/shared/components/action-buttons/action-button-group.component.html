@@ -1,0 +1,17 @@
+<div class="btn-group" [class.btn-group-vertical]="config().orientation === 'vertical'" role="group"
+    [attr.aria-label]="'操作 ' + (config().itemName || '項目')">
+
+    @for (button of config().buttons; track button.type) {
+    @if (shouldShowButton(button)) {
+    <button type="button" [class]="getButtonClasses(button)" [disabled]="button.disabled"
+        [attr.aria-label]="getAriaLabel(button)" (click)="onButtonClick(button)">
+        @if (getButtonConfig(button).icon) {
+        <i [class]="getButtonConfig(button).icon"></i>
+        }
+        @if (button.text && config().size !== 'sm') {
+        <span class="ms-1">{{ button.text }}</span>
+        }
+    </button>
+    }
+    }
+</div>

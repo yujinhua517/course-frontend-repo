@@ -1,0 +1,154 @@
+<app-base-modal [config]="modalConfig()" [loading]="loading()" [show]="true" (closed)="onCancel()"
+    (backdropClicked)="onCancel()">
+
+    <!-- 表單內容 -->
+    <form id="departmentForm" [formGroup]="departmentForm()" (ngSubmit)="onSubmit()" novalidate slot="body">
+        <!-- 錯誤訊息 -->
+        @if (error()) {
+        <div class="alert alert-danger d-flex align-items-center mb-3" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <div>{{ error() }}</div>
+            <button type="button" class="btn-close ms-auto" (click)="error.set(null)" aria-label="關閉錯誤訊息">
+            </button>
+        </div>
+        }
+
+        <div class="row g-3">
+            <!-- 部門代碼 -->
+            <div class="col-md-6">
+                <label for="dept_code" class="form-label required">
+                    <i class="bi bi-hash me-1"></i>
+                    部門代碼
+                </label>
+                <input type="text" id="dept_code" class="form-control" [class.is-invalid]="isFieldInvalid('dept_code')"
+                    formControlName="dept_code" placeholder="請輸入部門代碼（如：IT, HR）" [readonly]="isEditMode()" maxlength="20"
+                    aria-describedby="dept_code_help dept_code_error">
+                <div id="dept_code_help" class="form-text">
+                    @if (isEditMode()) {
+                    編輯模式下部門代碼不可修改
+                    } @else {
+                    建議使用簡短且具意義的代碼，如 IT, HR, FIN
+                    }
+                </div>
+                @if (getFieldError('dept_code'); as error) {
+                <div id="dept_code_error" class="invalid-feedback">{{ error }}</div>
+                }
+            </div>
+
+            <!-- 部門名稱 -->
+            <div class="col-md-6">
+                <label for="dept_name" class="form-label required">
+                    <i class="bi bi-building me-1"></i>
+                    部門名稱
+                </label>
+                <input type="text" id="dept_name" class="form-control" [class.is-invalid]="isFieldInvalid('dept_name')"
+                    formControlName="dept_name" placeholder="請輸入部門名稱" maxlength="100"
+                    aria-describedby="dept_name_help dept_name_error">
+                <div id="dept_name_help" class="form-text">完整的部門名稱，如資訊技術部</div>
+                @if (getFieldError('dept_name'); as error) {
+                <div id="dept_name_error" class="invalid-feedback">{{ error }}</div>
+                }
+            </div>
+
+            <!-- 部門層級 -->
+            <div class="col-md-6">
+                <label for="dept_level" class="form-label required">
+                    <i class="bi bi-diagram-3 me-1"></i>
+                    部門層級
+                </label>
+                <select id="dept_level" class="form-select" [class.is-invalid]="isFieldInvalid('dept_level')"
+                    formControlName="dept_level" aria-describedby="dept_level_help dept_level_error">
+                    <option value="">請選擇部門層級</option>
+                    @for (option of levelOptions; track option.value) {
+                    <option [value]="option.value">{{ option.label }}</option>
+                    }
+                </select>
+                <div id="dept_level_help" class="form-text">選擇適當的部門層級分類</div>
+                @if (getFieldError('dept_level'); as error) {
+                <div id="dept_level_error" class="invalid-feedback">{{ error }}</div>
+                }
+            </div>
+
+            <!-- 上級部門 -->
+            <div class="col-md-6">
+                <label for="parent_dept_id" class="form-label">
+                    <i class="bi bi-arrow-up-circle me-1"></i>
+                    上級部門
+                </label>
+                <!-- <select id="parent_dept_id" class="form-select" [class.is-invalid]="isFieldInvalid('parent_dept_id')"
+                    formControlName="parent_dept_id" aria-describedby="parent_dept_help parent_dept_error">
+                    <option [value]="null">無上級部門（頂層部門）</option>
+                    @for (dept of parentDepartments(); track dept.dept_id) {
+                    <option [value]="dept.dept_id">{{ dept.dept_name }} ({{ dept.dept_code }})</option>
+                    }
+                </select> -->
+                <select id="parent_dept_id" class="form-select" [class.is-invalid]="isFieldInvalid('parent_dept_id')"
+                    formControlName="parent_dept_id" aria-describedby="parent_dept_help parent_dept_error">
+                    <option [value]="null">無上級部門（頂層部門）</option>
+                    @for (dept of filteredParentDepartments(); track dept.dept_id) {
+                    <option [value]="dept.dept_id">{{ dept.dept_name }} ({{ dept.dept_code }})</option>
+                    }
+                </select>
+                <div id="parent_dept_help" class="form-text">選擇此部門的直屬上級部門</div>
+                @if (getFieldError('parent_dept_id'); as error) {
+                <div id="parent_dept_error" class="invalid-feedback">{{ error }}</div>
+                }
+            </div>
+
+            <!-- 主管員工 -->
+            <div class="col-md-6">
+                <label for="manager_emp_id" class="form-label">
+                    <i class="bi bi-person-badge me-1"></i>
+                    部門主管
+                </label>
+                <select id="manager_emp_id" class="form-select" [class.is-invalid]="isFieldInvalid('manager_emp_id')"
+                    formControlName="manager_emp_id" aria-describedby="manager_emp_help manager_emp_error">
+                    <option [value]="null">無主管</option>
+                    @for (emp of employees(); track emp.emp_id) {
+                    <option [value]="emp.emp_id">{{ emp.emp_name }} ({{ emp.emp_code }})</option>
+                    }
+                </select>
+                <div id="manager_emp_help" class="form-text">選擇擔任此部門主管的員工</div>
+                @if (getFieldError('manager_emp_id'); as error) {
+                <div id="manager_emp_error" class="invalid-feedback">{{ error }}</div>
+                }
+            </div>
+
+            <!-- 啟用狀態 -->
+            <div class="col-md-6">
+                <label for="is_active" class="form-label required">
+                    <i class="bi bi-power me-1"></i>
+                    部門狀態
+                </label>
+                <select id="is_active" class="form-select" [class.is-invalid]="isFieldInvalid('is_active')"
+                    formControlName="is_active" aria-describedby="is_active_help is_active_error">
+                    <option [value]="true">啟用 - 正常運作的部門</option>
+                    <option [value]="false">停用 - 暫時停止運作的部門</option>
+                </select>
+                <div id="is_active_help" class="form-text">
+                    停用的部門將不會出現在部門選單中
+                </div>
+                @if (getFieldError('is_active'); as error) {
+                <div id="is_active_error" class="invalid-feedback">{{ error }}</div>
+                }
+            </div>
+        </div>
+    </form>
+
+    <!-- 按鈕區域 -->
+    <div slot="footer">
+        <button type="button" class="btn btn-secondary" (click)="onCancel()" [disabled]="loading()">
+            <i class="bi bi-x-circle me-1"></i>
+            取消
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="departmentForm().invalid || loading()"
+            form="departmentForm">
+            @if (loading()) {
+            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+            }
+            <i class="bi bi-check-circle me-1" [class.d-none]="loading()"></i>
+            {{ submitButtonText() }}
+        </button>
+    </div>
+
+</app-base-modal>

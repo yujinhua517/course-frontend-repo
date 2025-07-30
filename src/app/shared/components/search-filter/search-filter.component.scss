@@ -1,0 +1,155 @@
+@use 'sass:map';
+@use '../../../../styles/variables' as vars;
+
+.search-section {
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    box-shadow: var(--bs-box-shadow-sm);
+    transition: box-shadow 0.15s ease-in-out;
+    background: vars.$brand-bg-secondary;
+
+    &:hover {
+        box-shadow: var(--bs-box-shadow);
+    }
+
+    .card-body {
+        padding: 1.5rem;
+    }
+
+    .form-label {
+        color: var(--bs-body-color);
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+    }
+
+    .form-control,
+    .form-select {
+        border: 1px solid var(--bs-border-color);
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+
+        &:focus {
+            border-color: var(--bs-primary);
+            box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25);
+        }
+
+        &:disabled {
+            background-color: var(--bs-secondary-bg);
+            opacity: 0.65;
+        }
+    }
+
+    .input-group {
+        .form-control {
+            border-right: 0;
+
+            &:focus {
+                z-index: 3;
+            }
+        }
+
+        .btn {
+            border-left: 0;
+            z-index: 2;
+
+            &.btn-outline-search {
+                color: var(--bs-primary);
+                border-color: var(--bs-border-color);
+                background-color: var(--bs-body-bg);
+
+                &:hover:not(:disabled) {
+                    color: var(--bs-white);
+                    background-color: var(--bs-primary);
+                    border-color: var(--bs-primary);
+                }
+
+                &:focus {
+                    box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25);
+                }
+            }
+
+            &.btn-outline-clear {
+                color: var(--bs-secondary);
+                border-color: var(--bs-border-color);
+                background-color: var(--bs-body-bg);
+
+                &:hover:not(:disabled) {
+                    color: var(--bs-white);
+                    background-color: var(--bs-secondary);
+                    border-color: var(--bs-secondary);
+                }
+
+                &:focus {
+                    box-shadow: 0 0 0 0.2rem rgba(var(--bs-secondary-rgb), 0.25);
+                }
+            }
+
+            &:disabled {
+                opacity: 0.65;
+                cursor: not-allowed;
+            }
+        }
+    }
+
+    .text-muted {
+        color: var(--bs-secondary-color) !important;
+        font-size: 0.875rem;
+        line-height: 1.2;
+    }
+
+    // 響應式設計
+    @media (max-width: 768px) {
+        .card-body {
+            padding: 1rem;
+        }
+
+        .row>.col-md-2,
+        .row>.col-md-4 {
+            margin-bottom: 1rem;
+        }
+
+        .text-end {
+            text-align: start !important;
+        }
+    }
+
+    // 載入狀態樣式
+    &.loading {
+
+        .form-control,
+        .form-select,
+        .btn {
+            pointer-events: none;
+        }
+    }
+
+    // 動畫效果
+    .form-control,
+    .form-select,
+    .btn {
+        transition: all 0.2s ease-in-out;
+    }
+
+    // 高對比模式支援
+    @media (prefers-contrast: high) {
+
+        .form-control,
+        .form-select {
+            border-width: 2px;
+        }
+
+        .btn {
+            border-width: 2px;
+            font-weight: 600;
+        }
+    }
+
+    // 減少動畫模式支援
+    @media (prefers-reduced-motion: reduce) {
+
+        .form-control,
+        .form-select,
+        .btn {
+            transition: none;
+        }
+    }
+}

@@ -1,0 +1,163 @@
+<app-base-modal [config]="modalConfig()" [loading]="loading()" [show]="true" (closed)="onCancel()"
+    (backdropClicked)="onCancel()">
+
+    <!-- 表單內容 -->
+    <form id="competencyForm" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate slot="body">
+        <!-- 錯誤訊息 -->
+        @if (error()) {
+        <div class="alert alert-danger d-flex align-items-center mb-3" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <div>{{ error() }}</div>
+            <button type="button" class="btn-close ms-auto" (click)="clearError()" aria-label="關閉錯誤訊息">
+            </button>
+        </div>
+        }
+
+        <div class="row g-3">
+            <!-- 職能代碼 -->
+            <div class="col-md-6">
+                <label for="job_role_code" class="form-label required">
+                    <i class="bi bi-hash me-1"></i>
+                    職能代碼
+                </label>
+                <input type="text" id="job_role_code" class="form-control"
+                    [class.is-invalid]="isFieldInvalid('job_role_code')" formControlName="job_role_code"
+                    placeholder="請輸入職能代碼" [readonly]="isEditMode()" maxlength="20"
+                    aria-describedby="job_role_code_help job_role_code_error">
+                <div id="job_role_code_help" class="form-text">
+                    @if (isEditMode()) {
+                    編輯模式下職能代碼不可修改
+                    } @else {
+                    建議使用簡短且具意義的代碼，如 DEV001
+                    }
+                </div>
+                @if (getFieldError('job_role_code'); as error) {
+                <div id="job_role_code_error" class="invalid-feedback">{{ error }}</div>
+                }
+            </div>
+
+            <!-- 職能名稱 -->
+            <div class="col-md-6">
+                <label for="job_role_name" class="form-label required">
+                    <i class="bi bi-person-badge me-1"></i>
+                    職能名稱
+                </label>
+                <input type="text" id="job_role_name" class="form-control"
+                    [class.is-invalid]="isFieldInvalid('job_role_name')" formControlName="job_role_name"
+                    placeholder="請輸入職能名稱" maxlength="100" aria-describedby="job_role_name_help job_role_name_error">
+                <div id="job_role_name_help" class="form-text">
+                    清楚描述此職能的名稱，如「前端開發工程師」
+                </div>
+                @if (getFieldError('job_role_name'); as error) {
+                <div id="job_role_name_error" class="invalid-feedback">{{ error }}</div>
+                }
+            </div>
+
+            <!-- 狀態 -->
+            <div class="col-md-6">
+                <label for="is_active" class="form-label required">
+                    <i class="bi bi-toggle-on me-1"></i>
+                    狀態
+                </label>
+                <select id="is_active" class="form-select" [class.is-invalid]="isFieldInvalid('is_active')"
+                    formControlName="is_active" aria-describedby="is_active_help is_active_error">
+                    <option value="true">啟用</option>
+                    <option value="false">停用</option>
+                </select>
+                <div id="is_active_help" class="form-text">
+                    選擇職能的啟用狀態
+                </div>
+                @if (getFieldError('is_active'); as error) {
+                <div id="is_active_error" class="invalid-feedback">{{ error }}</div>
+                }
+            </div>
+
+            <!-- 職能描述 -->
+            <div class="col-12">
+                <label for="description" class="form-label">
+                    <i class="bi bi-file-text me-1"></i>
+                    職能描述
+                </label>
+                <textarea id="description" class="form-control" [class.is-invalid]="isFieldInvalid('description')"
+                    formControlName="description" placeholder="請輸入職能的詳細描述..." rows="4" maxlength="500"
+                    aria-describedby="description_help description_error"></textarea>
+                <div id="description_help" class="form-text">
+                    詳細說明此職能的工作內容與職責（可選填，最多 500 字）
+                </div>
+                @if (getFieldError('description'); as error) {
+                <div id="description_error" class="invalid-feedback">{{ error }}</div>
+                }
+            </div>
+        </div>
+
+        <!-- 系統欄位說明（編輯模式） -->
+        @if (isEditMode() && competency()) {
+        <div class="system-fields mt-4">
+            <h6 class="text-muted mb-3">
+                <i class="bi bi-info-circle me-1"></i>
+                系統資訊
+            </h6>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="system-field">
+                        <div class="system-field-label">
+                            <i class="bi bi-person me-1"></i>
+                            建立者
+                        </div>
+                        <div class="system-field-value">{{ competency()!.create_user }}</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="system-field">
+                        <div class="system-field-label">
+                            <i class="bi bi-clock me-1"></i>
+                            建立時間
+                        </div>
+                        <div class="system-field-value">
+                            {{ competency()!.create_time | date:'yyyy/MM/dd HH:mm:ss' }}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="system-field">
+                        <div class="system-field-label">
+                            <i class="bi bi-person-check me-1"></i>
+                            最後更新者
+                        </div>
+                        <div class="system-field-value">{{ competency()!.update_user }}</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="system-field">
+                        <div class="system-field-label">
+                            <i class="bi bi-clock-history me-1"></i>
+                            最後更新時間
+                        </div>
+                        <div class="system-field-value">
+                            {{ competency()!.update_time | date:'yyyy/MM/dd HH:mm:ss' }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        }
+    </form>
+
+    <!-- 按鈕區域 -->
+    <div slot="footer">
+        <button type="button" class="btn btn-secondary" (click)="onCancel()" [disabled]="loading()">
+            <i class="bi bi-x-circle me-1"></i>
+            取消
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="loading() || form.invalid" form="competencyForm">
+            @if (loading()) {
+            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+            處理中...
+            } @else {
+            <i class="bi bi-check-circle me-1"></i>
+            {{ submitButtonText() }}
+            }
+        </button>
+    </div>
+
+</app-base-modal>

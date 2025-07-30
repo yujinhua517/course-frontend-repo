@@ -1,0 +1,158 @@
+@use "../../../../../styles/_variables" as *;
+// =============================
+//  首頁專屬樣式
+// =============================
+
+.main-title {
+    font-size: $text-heading-lg;
+    font-weight: $font-weight-extrabold;
+    color: $brand-accent;
+    letter-spacing: 0.025em;
+    text-shadow: $brand-shadow-text;
+    margin-bottom: 1.5rem;
+    background: linear-gradient(135deg, $brand-accent 0%, $brand-primary 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.card-title {
+    font-size: $text-heading-sm;
+    font-weight: $font-weight-bold;
+    color: $brand-secondary;
+    letter-spacing: 0.02em;
+    margin-bottom: 1rem;
+}
+
+.modern-card {
+    border-radius: 1.5rem;
+    background: $brand-glass;
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: $brand-shadow-card;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+
+    &:hover {
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: $brand-shadow-card-hover;
+        border-color: rgba(59, 130, 246, 0.2);
+    }
+}
+
+.modern-btn {
+    background: $btn-gradient;
+    color: #fff;
+    border: none;
+    border-radius: 0.75rem;
+    padding: 0.75rem 1.5rem;
+    font-size: $text-body-md;
+    font-weight: $font-weight-semibold;
+    letter-spacing: 0.025em;
+    box-shadow: $brand-shadow-btn;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 120px;
+    min-height: 48px;
+
+    &:hover,
+    &:focus {
+        background: $btn-gradient-hover;
+        transform: translateY(-2px) scale(1.05);
+        box-shadow: $brand-shadow-btn-hover;
+        color: #fff;
+    }
+
+    &:active {
+        transform: translateY(0) scale(0.98);
+    }
+}
+
+.chart-placeholder {
+    min-height: 200px;
+    font-size: $text-body-lg;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(16, 185, 129, 0.05) 100%);
+    border-radius: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: $brand-secondary;
+    font-weight: $font-weight-medium;
+    border: 2px dashed rgba(59, 130, 246, 0.2);
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: linear-gradient(45deg, transparent, rgba(59, 130, 246, 0.1), transparent);
+        animation: shimmer 3s ease-in-out infinite;
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        transform: translateX(-100%) translateY(-100%) rotate(45deg);
+    }
+
+    50% {
+        transform: translateX(100%) translateY(100%) rotate(45deg);
+    }
+
+    100% {
+        transform: translateX(-100%) translateY(-100%) rotate(45deg);
+    }
+}
+
+// 首頁特定的統計卡片樣式
+.stats-card {
+    background: $brand-glass;
+    border-radius: 1.25rem;
+    padding: 1.5rem;
+    box-shadow: $brand-shadow-card;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: $btn-gradient;
+    }
+
+    .stats-number {
+        font-size: $text-heading-lg;
+        font-weight: $font-weight-extrabold;
+        color: $brand-accent;
+        margin-bottom: 0.5rem;
+    }
+
+    .stats-label {
+        font-size: $text-body-sm;
+        color: $brand-secondary;
+        font-weight: $font-weight-medium;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+    }
+
+    .stats-trend {
+        font-size: $text-body-sm;
+        font-weight: $font-weight-semibold;
+        margin-top: 0.5rem;
+
+        &.positive {
+            color: $brand-success;
+        }
+
+        &.negative {
+            color: $brand-danger;
+        }
+    }
+}

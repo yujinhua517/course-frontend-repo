@@ -1,0 +1,256 @@
+<app-base-modal [config]="modalConfig()" [loading]="loading()" [show]="true" (closed)="onCancel()"
+    (backdropClicked)="onCancel()">
+
+    <!-- 表單內容 -->
+    <form id="employeeForm" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate slot="body">
+        <!-- 錯誤訊息 -->
+        @if (error()) {
+        <div class="alert alert-danger d-flex align-items-center mb-3" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <div>{{ error() }}</div>
+            <button type="button" class="btn-close ms-auto" (click)="clearError()" aria-label="關閉錯誤訊息">
+            </button>
+        </div>
+        }
+
+        <div class="row g-3">
+            <!-- 員工工號 -->
+            <div class="col-md-6">
+                <label for="emp_code" class="form-label required">
+                    <i class="bi bi-hash me-1"></i>
+                    員工工號
+                </label>
+                <input type="text" id="emp_code" class="form-control" [class.is-invalid]="isFieldInvalid('emp_code')"
+                    formControlName="emp_code" placeholder="請輸入員工工號" [readonly]="isEditMode()" maxlength="20"
+                    aria-describedby="emp_code_help emp_code_error">
+                <div id="emp_code_help" class="form-text">
+                    @if (isEditMode()) {
+                    編輯模式下員工工號不可修改
+                    } @else {
+                    建議使用簡短且具意義的工號，如 EMP001
+                    }
+                </div>
+                @if (getFieldError('emp_code'); as error) {
+                <div id="emp_code_error" class="invalid-feedback">{{ error }}</div>
+                }
+            </div>
+
+            <!-- 員工姓名 -->
+            <div class="col-md-6">
+                <label for="emp_name" class="form-label required">
+                    <i class="bi bi-person me-1"></i>
+                    員工姓名
+                </label>
+                <input type="text" id="emp_name" class="form-control" [class.is-invalid]="isFieldInvalid('emp_name')"
+                    formControlName="emp_name" placeholder="請輸入員工姓名" maxlength="50"
+                    aria-describedby="emp_name_help emp_name_error">
+                <div id="emp_name_help" class="form-text">
+                    請輸入員工的真實姓名
+                </div>
+                @if (getFieldError('emp_name'); as error) {
+                <div id="emp_name_error" class="invalid-feedback">{{ error }}</div>
+                }
+            </div>
+
+            <!-- 電子郵件 -->
+            <div class="col-md-6">
+                <label for="emp_email" class="form-label">
+                    <i class="bi bi-envelope me-1"></i>
+                    電子郵件
+                </label>
+                <input type="email" id="emp_email" class="form-control" [class.is-invalid]="isFieldInvalid('emp_email')"
+                    formControlName="emp_email" placeholder="請輸入電子郵件" maxlength="100"
+                    aria-describedby="emp_email_help emp_email_error">
+                <div id="emp_email_help" class="form-text">
+                    可選填，請輸入有效的電子郵件地址
+                </div>
+                @if (getFieldError('emp_email'); as error) {
+                <div id="emp_email_error" class="invalid-feedback">{{ error }}</div>
+                }
+            </div>
+
+            <!-- 聯絡電話 -->
+            <div class="col-md-6">
+                <label for="emp_phone" class="form-label">
+                    <i class="bi bi-telephone me-1"></i>
+                    聯絡電話
+                </label>
+                <input type="tel" id="emp_phone" class="form-control" [class.is-invalid]="isFieldInvalid('emp_phone')"
+                    formControlName="emp_phone" placeholder="請輸入聯絡電話" maxlength="20"
+                    aria-describedby="emp_phone_help emp_phone_error">
+                <div id="emp_phone_help" class="form-text">
+                    可選填，請輸入有效的電話號碼
+                </div>
+                @if (getFieldError('emp_phone'); as error) {
+                <div id="emp_phone_error" class="invalid-feedback">{{ error }}</div>
+                }
+            </div>
+
+            <!-- 所屬部門 -->
+            <div class="col-md-6">
+                <label for="dept_id" class="form-label required">
+                    <i class="bi bi-building me-1"></i>
+                    所屬部門
+                </label>
+                <select id="dept_id" class="form-select" [class.is-invalid]="isFieldInvalid('dept_id')"
+                    formControlName="dept_id" aria-describedby="dept_id_help dept_id_error">
+                    <option value="">請選擇部門</option>
+                    @for (dept of departments(); track dept.dept_id) {
+                    <option [value]="dept.dept_id">{{ dept.dept_name }}</option>
+                    }
+                </select>
+                <div id="dept_id_help" class="form-text">
+                    請選擇員工所屬的部門
+                </div>
+                @if (getFieldError('dept_id'); as error) {
+                <div id="dept_id_error" class="invalid-feedback">{{ error }}</div>
+                }
+            </div>
+
+            <!-- 職稱 -->
+            <div class="col-md-6">
+                <label for="job_title" class="form-label">
+                    <i class="bi bi-person-badge me-1"></i>
+                    職稱
+                </label>
+                <input type="text" id="job_title" class="form-control" [class.is-invalid]="isFieldInvalid('job_title')"
+                    formControlName="job_title" placeholder="請輸入職稱" maxlength="50"
+                    aria-describedby="job_title_help job_title_error">
+                <div id="job_title_help" class="form-text">
+                    可選填，如「前端工程師」、「專案經理」等
+                </div>
+                @if (getFieldError('job_title'); as error) {
+                <div id="job_title_error" class="invalid-feedback">{{ error }}</div>
+                }
+            </div>
+
+            <!-- 到職日 -->
+            <div class="col-md-6">
+                <label for="hire_date" class="form-label">
+                    <i class="bi bi-calendar-plus me-1"></i>
+                    到職日
+                </label>
+                <input type="date" id="hire_date" class="form-control" [class.is-invalid]="isFieldInvalid('hire_date')"
+                    formControlName="hire_date" aria-describedby="hire_date_help hire_date_error">
+                <div id="hire_date_help" class="form-text">
+                    可選填，員工的到職日期
+                </div>
+                @if (getFieldError('hire_date'); as error) {
+                <div id="hire_date_error" class="invalid-feedback">{{ error }}</div>
+                }
+            </div>
+
+            <!-- 離職日 -->
+            <div class="col-md-6">
+                <label for="resign_date" class="form-label">
+                    <i class="bi bi-calendar-minus me-1"></i>
+                    離職日
+                </label>
+                <input type="date" id="resign_date" class="form-control"
+                    [class.is-invalid]="isFieldInvalid('resign_date')" formControlName="resign_date"
+                    aria-describedby="resign_date_help resign_date_error">
+                <div id="resign_date_help" class="form-text">
+                    可選填，如員工已離職請填入離職日期
+                </div>
+                @if (getFieldError('resign_date'); as error) {
+                <div id="resign_date_error" class="invalid-feedback">{{ error }}</div>
+                }
+            </div>
+
+            <!-- 在職狀態 -->
+            <div class="col-md-6">
+                <label for="is_active" class="form-label required">
+                    <i class="bi bi-toggle-on me-1"></i>
+                    在職狀態
+                </label>
+                <select id="is_active" class="form-select" [class.is-invalid]="isFieldInvalid('is_active')"
+                    formControlName="is_active" aria-describedby="is_active_help is_active_error">
+                    <option value="true">在職</option>
+                    <option value="false">離職</option>
+                </select>
+                <div id="is_active_help" class="form-text">
+                    選擇員工的在職狀態
+                </div>
+                @if (getFieldError('is_active'); as error) {
+                <div id="is_active_error" class="invalid-feedback">{{ error }}</div>
+                }
+            </div>
+        </div>
+
+        <!-- 系統欄位說明（編輯模式） -->
+        @if (isEditMode() && employee()) {
+        <div class="system-fields mt-4">
+            <h6 class="text-muted mb-3">
+                <i class="bi bi-info-circle me-1"></i>
+                系統資訊
+            </h6>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="system-field">
+                        <div class="system-field-label">
+                            <i class="bi bi-person me-1"></i>
+                            建立者
+                        </div>
+                        <div class="system-field-value">{{ employee()!.create_user }}</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="system-field">
+                        <div class="system-field-label">
+                            <i class="bi bi-clock me-1"></i>
+                            建立時間
+                        </div>
+                        <div class="system-field-value">
+                            {{ employee()!.create_time | date:'yyyy/MM/dd HH:mm:ss' }}
+                        </div>
+                    </div>
+                </div>
+                @if (employee()!.update_user) {
+                <div class="col-md-6">
+                    <div class="system-field">
+                        <div class="system-field-label">
+                            <i class="bi bi-person-check me-1"></i>
+                            最後更新者
+                        </div>
+                        <div class="system-field-value">{{ employee()!.update_user }}</div>
+                    </div>
+                </div>
+                }
+                @if (employee()!.update_time) {
+                <div class="col-md-6">
+                    <div class="system-field">
+                        <div class="system-field-label">
+                            <i class="bi bi-clock-history me-1"></i>
+                            最後更新時間
+                        </div>
+                        <div class="system-field-value">
+                            {{ employee()!.update_time | date:'yyyy/MM/dd HH:mm:ss' }}
+                        </div>
+                    </div>
+                </div>
+                }
+            </div>
+        </div>
+        }
+    </form>
+
+    <!-- 按鈕區域 -->
+    <div slot="footer">
+        <!-- <button type="button" class="btn btn-secondary" style="margin-right: 10px;" (click)="onCancel()"
+            [disabled]="loading()"> -->
+        <button type="button" class="btn btn-secondary" (click)="onCancel()" [disabled]="loading()">
+            <i class="bi bi-x-circle me-1"></i>
+            取消
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="loading() || form.invalid" form="employeeForm">
+            @if (loading()) {
+            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+            處理中...
+            } @else {
+            <i class="bi bi-check-circle me-1"></i>
+            {{ submitButtonText() }}
+            }
+        </button>
+    </div>
+
+</app-base-modal>

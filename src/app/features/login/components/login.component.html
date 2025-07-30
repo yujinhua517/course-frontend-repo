@@ -1,0 +1,71 @@
+<div class="login-bg">
+    <div class="container d-flex align-items-center justify-content-center min-vh-100">
+        <div class="card login-card shadow-lg w-100" style="max-width: 400px;">
+            <div class="card-body p-4">
+                <div class="text-center mb-4">
+                    <span
+                        class="brand-icon bg-primary bg-gradient text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-2"
+                        style="width:48px;height:48px;">
+                        <i class="bi bi-shield-lock fs-3"></i>
+                    </span>
+                    <h2 class="mb-0 fw-bold brand-title">登入系統</h2>
+                </div>
+                <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" autocomplete="off" aria-label="登入表單">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">帳號</label>
+                        <div class="input-group has-validation">
+                            <span class="input-group-text" id="user-addon"><i class="bi bi-person"></i></span>
+                            <input id="username" type="text" class="form-control" formControlName="username"
+                                aria-label="帳號" aria-describedby="user-addon"
+                                [class.is-invalid]="loginForm.get('username')?.invalid && loginForm.get('username')?.touched"
+                                autocomplete="username" placeholder="請輸入帳號:admin">
+                            @if (loginForm.get('username')?.invalid && loginForm.get('username')?.touched) {
+                            <div class="invalid-feedback">請輸入帳號</div>
+                            }
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">密碼</label>
+                        <div class="input-group has-validation">
+                            <span class="input-group-text" id="pwd-addon"><i class="bi bi-lock"></i></span>
+                            <input id="password" [type]="showPassword() ? 'text' : 'password'" class="form-control"
+                                formControlName="password" aria-label="密碼" aria-describedby="pwd-addon pwd-toggle"
+                                [class.is-invalid]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
+                                autocomplete="current-password" placeholder="請輸入密碼:1234">
+                            <button type="button" class="btn btn-outline-secondary" id="pwd-toggle"
+                                (click)="togglePassword()" [attr.aria-label]="showPassword() ? '隱藏密碼' : '顯示密碼'">
+                                <i class="bi" [ngClass]="showPassword() ? 'bi-eye-slash' : 'bi-eye'"></i>
+                            </button>
+                            @if (loginForm.get('password')?.invalid && loginForm.get('password')?.touched) {
+                            <div class="invalid-feedback">請輸入密碼</div>
+                            }
+                        </div>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="rememberMe" [checked]="rememberMe()"
+                            (change)="onRememberMeToggle($event)" name="rememberMe">
+                        <label class="form-check-label" for="rememberMe">記住我</label>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <a href="#" (click)="onForgotPassword($event)" class="link-secondary small">忘記密碼？</a>
+                    </div>
+                    <!-- @if (success()) {
+                    <div class="alert alert-success py-2 mb-3 animate__animated animate__fadeIn" role="alert"
+                        aria-live="polite">登入成功！歡迎回來。</div>
+                    }
+                    @if (error()) {
+                    <div class="alert alert-danger py-2 mb-3 animate__animated animate__shakeX" role="alert"
+                        aria-live="assertive">{{ error() }}</div>
+                    } -->
+                    <button type="submit" class="btn btn-primary w-100 d-flex align-items-center justify-content-center"
+                        [disabled]="loading()" aria-label="登入">
+                        @if (loading()) {
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        }
+                        <span>{{ loading() ? '登入中...' : '登入' }}</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

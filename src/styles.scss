@@ -1,0 +1,30 @@
+/* You can add global styles to this file, and also import other style files */
+@use './styles/variables' as *;
+@use 'bootstrap/scss/bootstrap' as *;
+
+html,
+body {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    font-family: Roboto, "Helvetica Neue", sans-serif;
+}
+
+//display: contents 完全打破了 CSS 隔離
+//需要使用全域樣式
+
+// 全域表格 hover 效果（因為 display: contents 打破了組件隔離）
+.competency-list-container .table tbody tr:hover {
+    // background-color: #ffff00 !important;
+    background-color: rgba($brand-primary, 0.1) !important;
+    transition: background-color 0.2s ease !important;
+}
+
+// 更通用的選擇器
+table tbody tr:hover {
+    // background-color: #ffff00 !important;
+    background-color: rgba($brand-primary, 0.1) !important;
+    transition: background-color 0.2s ease !important;
+}
