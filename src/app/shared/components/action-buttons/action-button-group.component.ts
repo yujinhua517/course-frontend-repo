@@ -81,7 +81,11 @@ export class ActionButtonGroupComponent {
         return `${buttonConfig.text} ${itemName}`;
     }
 
-    onButtonClick(button: ActionButton): void {
+    onButtonClick(button: ActionButton, event: Event): void {
+        // 阻止事件冒泡，避免觸發父級的點擊事件（如表格行點擊）
+        event.stopPropagation();
+        event.preventDefault();
+        
         if (button.disabled) return;
 
         switch (button.type) {

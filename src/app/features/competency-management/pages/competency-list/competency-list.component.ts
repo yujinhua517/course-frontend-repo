@@ -487,10 +487,12 @@ export class CompetencyListComponent implements OnInit {
     onDelete(competency: Competency): void {
         if (confirm(`確定要刪除職能「${competency.job_role_name}」嗎？`)) {
             this.competencyService.deleteCompetency(competency.job_role_code).subscribe({
-                next: (success) => {
-                    if (success) {
+                next: (response) => {
+                    if (response.code === 200) {
                         this.competencyStore.removeCompetency(competency.job_role_code);
                         alert('職能已成功刪除');
+                    } else {
+                        alert(response.message || '刪除失敗');
                     }
                 },
                 error: (error) => {
@@ -502,19 +504,25 @@ export class CompetencyListComponent implements OnInit {
     }
 
     onToggleStatus(competency: Competency): void {
-        const targetStatus = competency.is_active ? '停用' : '啟用';
-        if (!confirm(`確定要將「${competency.job_role_name}」的狀態切換至「${targetStatus}」嗎？`)) {
+        const targetStatus = !competency.is_active;
+        const statusText = targetStatus ? '啟用' : '停用';
+        
+        if (!confirm(`確定要將「${competency.job_role_name}」的狀態切換至「${statusText}」嗎？`)) {
             return;
         }
 
-        this.competencyService.toggleActiveStatus(competency.job_role_code).subscribe({
-            next: (updatedCompetency) => {
-                if (updatedCompetency) {
+        this.competencyService.batchUpdateCompetencyStatus([competency.job_role_code], targetStatus).subscribe({
+            next: (response) => {
+                if (response.code === 200) {
+                    // 更新本地狀態
+                    const updatedCompetency = { ...competency, is_active: targetStatus };
                     this.competencyStore.updateCompetency(updatedCompetency);
-                    alert(`職能「${updatedCompetency.job_role_name}」的狀態已更新為：${updatedCompetency.is_active ? '啟用' : '停用'}`);
+                    alert(`職能「${competency.job_role_name}」的狀態已更新為：${statusText}`);
+                } else {
+                    alert(response.message || '狀態更新失敗');
                 }
             },
-            error: (error) => {
+            error: (error: any) => {
                 console.error('Toggle status error:', error);
                 alert('狀態更新失敗，請稍後再試');
             }
@@ -621,21 +629,21 @@ export class CompetencyListComponent implements OnInit {
 
         // 使用服務的批量刪除方法
         this.competencyService.bulkDeleteCompetencies(selectedCodes).subscribe({
-            next: (success) => {
-                if (success) {
+            next: (response) => {
+                if (response.code === 200 && response.data > 0) {
                     // 清除選中狀態
                     this.selectedCompetencies.set([]);
                     // 重新載入資料
                     this.loadCompetencies();
-                    console.log('批量刪除成功');
+                    alert(`已成功刪除 ${response.data} 個職能`);
                 } else {
-                    console.error('批量刪除失敗');
+                    alert(response.message || '批量刪除失敗');
                 }
                 this.bulkDeleteLoading.set(false);
             },
             error: (error) => {
                 console.error('批量刪除失敗:', error);
-                // 可以在這裡顯示錯誤訊息給用戶
+                alert('批量刪除失敗，請稍後再試');
                 this.bulkDeleteLoading.set(false);
             }
         });

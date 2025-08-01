@@ -62,9 +62,6 @@ export class MainPageComponent {
         const currentUser = this.user();
         if (!currentUser) return '訪客';
 
-        if (currentUser.firstName && currentUser.lastName) {
-            return `${currentUser.firstName} ${currentUser.lastName}`;
-        }
         return currentUser.username || '用戶';
     }
 

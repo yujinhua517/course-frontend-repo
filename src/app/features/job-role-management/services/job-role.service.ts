@@ -3,21 +3,21 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, of, delay, map } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import {
-    Competency,
-    CompetencyCreateDto,
-    CompetencyUpdateDto,
-    CompetencySearchParams,
+    JobRole,
+    JobRoleCreateDto,
+    JobRoleUpdateDto,
+    JobRoleSearchParams,
     ApiResponse,
     PagerDto,
-    CompetencyListResponse
-} from '../models/competency.model';
+    JobRoleListResponse
+} from '../models/job-role.model';
 
 @Injectable({
     providedIn: 'root'
 })
-export class CompetencyService {
+export class JobRoleService {
     private http = inject(HttpClient);
-    private useMockData = false; // 設為 false 時切換至真實 API
+    private useMockData = true; // 臨時使用 Mock 資料來檢查前端邏輯
     private apiUrl = `${environment.apiBaseUrl}/job-roles`;
 
     // Signals
@@ -25,8 +25,9 @@ export class CompetencyService {
     error = signal<string | null>(null);
 
     // Mock 資料
-    private mockCompetencies: Competency[] = [
+    private mockJobRoles: JobRole[] = [
         {
+            job_role_id: 1,
             job_role_code: 'DEV001',
             job_role_name: '前端開發工程師',
             description: '負責前端使用者介面開發與維護',
@@ -37,6 +38,7 @@ export class CompetencyService {
             update_user: 'admin'
         },
         {
+            job_role_id: 2,
             job_role_code: 'DEV002',
             job_role_name: '後端開發工程師',
             description: '負責後端系統架構設計與 API 開發',
@@ -47,6 +49,7 @@ export class CompetencyService {
             update_user: 'admin'
         },
         {
+            job_role_id: 3,
             job_role_code: 'DEV003',
             job_role_name: '全端開發工程師',
             description: '具備前後端開發能力的工程師',
@@ -57,6 +60,7 @@ export class CompetencyService {
             update_user: 'admin'
         },
         {
+            job_role_id: 4,
             job_role_code: 'TEST001',
             job_role_name: '軟體測試工程師',
             description: '負責軟體品質保證與測試',
@@ -67,6 +71,7 @@ export class CompetencyService {
             update_user: 'admin'
         },
         {
+            job_role_id: 5,
             job_role_code: 'DEVOPS001',
             job_role_name: 'DevOps 工程師',
             description: '負責 CI/CD 流程與基礎設施管理',
@@ -77,6 +82,7 @@ export class CompetencyService {
             update_user: 'admin'
         },
         {
+            job_role_id: 6,
             job_role_code: 'PM001',
             job_role_name: '專案經理',
             description: '負責專案規劃與執行管理',
@@ -87,6 +93,7 @@ export class CompetencyService {
             update_user: 'admin'
         },
         {
+            job_role_id: 7,
             job_role_code: 'UI001',
             job_role_name: 'UI/UX 設計師',
             description: '負責使用者介面與體驗設計',
@@ -97,6 +104,7 @@ export class CompetencyService {
             update_user: 'admin'
         },
         {
+            job_role_id: 8,
             job_role_code: 'SA001',
             job_role_name: '系統分析師',
             description: '負責系統需求分析與設計',
@@ -107,6 +115,7 @@ export class CompetencyService {
             update_user: 'admin'
         },
         {
+            job_role_id: 9,
             job_role_code: 'DB001',
             job_role_name: '資料庫管理師',
             description: '負責資料庫規劃與管理',
@@ -117,6 +126,7 @@ export class CompetencyService {
             update_user: 'admin'
         },
         {
+            job_role_id: 10,
             job_role_code: 'SEC001',
             job_role_name: '資安工程師',
             description: '負責資訊安全與風險評估',
@@ -131,63 +141,48 @@ export class CompetencyService {
     /**
      * 分頁查詢職務列表
      */
-    getCompetencies(params?: CompetencySearchParams): Observable<CompetencyListResponse> {
+    getJobRoles(params?: JobRoleSearchParams): Observable<JobRoleListResponse> {
         if (this.useMockData) {
-            return this.getMockCompetencies(params);
+            return this.getMockJobRoles(params);
         }
 
         // 真實 API 呼叫
-        let httpParams = new HttpParams();
+        const requestBody: any = {
+            page_index: params?.page_index || 0,
+            page_size: params?.page_size || 10,
+            pageable: true
+        };
         
+        // 搜尋條件
+        if (params?.keyword) {
+            requestBody.keyword = params.keyword;
+        }
         if (params?.job_role_code) {
-            httpParams = httpParams.set('jobRoleCode', params.job_role_code);
+            requestBody.job_role_code = params.job_role_code;
         }
         if (params?.job_role_name) {
-            httpParams = httpParams.set('jobRoleName', params.job_role_name);
+            requestBody.job_role_name = params.job_role_name;
         }
         if (params?.is_active !== undefined) {
-            httpParams = httpParams.set('isActive', params.is_active.toString());
+            requestBody.is_active = params.is_active;
         }
-        if (params?.page !== undefined) {
-            httpParams = httpParams.set('page', params.page.toString());
-        }
-        if (params?.pageSize !== undefined) {
-            httpParams = httpParams.set('size', params.pageSize.toString());
-        }
-        if (params?.sortBy) {
-            httpParams = httpParams.set('sortBy', params.sortBy);
+        
+        // 排序參數
+        if (params?.sort_column) {
+            requestBody.sort_column = params.sort_column;
         }
         if (params?.sort_direction) {
-            httpParams = httpParams.set('sortDir', params.sort_direction);
+            requestBody.sort_direction = params.sort_direction;
         }
 
-        return this.http.get<ApiResponse<any>>(`${this.apiUrl}`, { params: httpParams })
-            .pipe(
-                map(response => ({
-                    code: response.code,
-                    message: response.message,
-                    data: {
-                        data_list: response.data.content,
-                        total_records: response.data.totalElements,
-                        first_index_in_page: response.data.page * response.data.size + 1,
-                        last_index_in_page: Math.min((response.data.page + 1) * response.data.size, response.data.totalElements),
-                        pageable: true,
-                        // 額外的分頁資訊
-                        totalPages: response.data.totalPages,
-                        page: response.data.page,
-                        size: response.data.size,
-                        hasNext: response.data.hasNext,
-                        hasPrevious: response.data.hasPrevious
-                    } as PagerDto<Competency>
-                }))
-            );
+        return this.http.post<ApiResponse<PagerDto<JobRole>>>(`${this.apiUrl}/query`, requestBody);
     }
 
     /**
      * Mock 資料查詢實現
      */
-    private getMockCompetencies(params?: CompetencySearchParams): Observable<CompetencyListResponse> {
-        let filteredData = [...this.mockCompetencies];
+    private getMockJobRoles(params?: JobRoleSearchParams): Observable<JobRoleListResponse> {
+        let filteredData = [...this.mockJobRoles];
 
         // 搜尋篩選
         if (params?.keyword) {
@@ -211,10 +206,10 @@ export class CompetencyService {
         }
 
         // 排序
-        if (params?.sortBy) {
+        if (params?.sort_column && params?.sort_direction) {
             filteredData.sort((a, b) => {
-                const aValue = (a as any)[params.sortBy!];
-                const bValue = (b as any)[params.sortBy!];
+                const aValue = (a as any)[params.sort_column!];
+                const bValue = (b as any)[params.sort_column!];
 
                 if (aValue === undefined || bValue === undefined) return 0;
 
@@ -227,8 +222,8 @@ export class CompetencyService {
         }
 
         // 分頁
-        const page = params?.page || 0;
-        const pageSize = params?.pageSize || 10;
+        const page = params?.page_index || 0;
+        const pageSize = params?.page_size || 10;
         const startIndex = page * pageSize;
         const endIndex = startIndex + pageSize;
         const paginatedData = filteredData.slice(startIndex, endIndex);
@@ -236,7 +231,7 @@ export class CompetencyService {
         const totalRecords = filteredData.length;
         const totalPages = Math.ceil(totalRecords / pageSize);
         
-        const result: CompetencyListResponse = {
+        const result: JobRoleListResponse = {
             code: 200,
             message: '查詢成功',
             data: {
@@ -245,6 +240,8 @@ export class CompetencyService {
                 first_index_in_page: startIndex + 1,
                 last_index_in_page: Math.min(endIndex, totalRecords),
                 pageable: true,
+                sort_column: params?.sort_column,
+                sort_direction: params?.sort_direction,
                 // 額外資訊
                 totalPages,
                 page,
@@ -260,30 +257,30 @@ export class CompetencyService {
     /**
      * 查詢所有啟用的職務列表
      */
-    getActiveCompetencies(): Observable<ApiResponse<Competency[]>> {
+    getActiveJobRoles(): Observable<ApiResponse<JobRole[]>> {
         if (this.useMockData) {
-            const activeCompetencies = this.mockCompetencies.filter(c => c.is_active);
+            const activeJobRoles = this.mockJobRoles.filter(c => c.is_active);
             return of({
                 code: 200,
                 message: '查詢成功',
-                data: activeCompetencies
+                data: activeJobRoles
             }).pipe(delay(300));
         }
 
-        return this.http.get<ApiResponse<Competency[]>>(`${this.apiUrl}/active`);
+        return this.http.get<ApiResponse<JobRole[]>>(`${this.apiUrl}/active`);
     }
 
     /**
-     * 根據職務代碼查詢職務詳情
+     * 根據 ID 獲取職務
      */
-    getCompetencyByCode(jobRoleCode: string): Observable<ApiResponse<Competency>> {
+    getJobRoleById(id: number): Observable<ApiResponse<JobRole>> {
         if (this.useMockData) {
-            const competency = this.mockCompetencies.find(c => c.job_role_code === jobRoleCode);
-            if (competency) {
+            const jobRole = this.mockJobRoles.find(c => c.job_role_id === id);
+            if (jobRole) {
                 return of({
                     code: 200,
                     message: '查詢成功',
-                    data: competency
+                    data: jobRole
                 }).pipe(delay(300));
             } else {
                 return of({
@@ -294,16 +291,40 @@ export class CompetencyService {
             }
         }
 
-        return this.http.get<ApiResponse<Competency>>(`${this.apiUrl}/${jobRoleCode}`);
+        return this.http.get<ApiResponse<JobRole>>(`${this.apiUrl}/find/${id}`);
+    }
+
+    /**
+     * 根據職務代碼查詢職務詳情
+     */
+    getJobRoleByCode(jobRoleCode: string): Observable<ApiResponse<JobRole>> {
+        if (this.useMockData) {
+            const jobRole = this.mockJobRoles.find(c => c.job_role_code === jobRoleCode);
+            if (jobRole) {
+                return of({
+                    code: 200,
+                    message: '查詢成功',
+                    data: jobRole
+                }).pipe(delay(300));
+            } else {
+                return of({
+                    code: 404,
+                    message: '職務不存在',
+                    data: null as any
+                }).pipe(delay(300));
+            }
+        }
+
+        return this.http.get<ApiResponse<JobRole>>(`${this.apiUrl}/code/${jobRoleCode}`);
     }
 
     /**
      * 創建職務
      */
-    createCompetency(dto: CompetencyCreateDto, createUser: string = 'system'): Observable<ApiResponse<Competency>> {
+    createJobRole(dto: JobRoleCreateDto, createUser: string = 'system'): Observable<ApiResponse<JobRole>> {
         if (this.useMockData) {
             // 檢查代碼是否已存在
-            const exists = this.mockCompetencies.some(c => c.job_role_code === dto.job_role_code);
+            const exists = this.mockJobRoles.some(c => c.job_role_code === dto.job_role_code);
             if (exists) {
                 return of({
                     code: 400,
@@ -312,35 +333,42 @@ export class CompetencyService {
                 }).pipe(delay(300));
             }
 
-            const newCompetency: Competency = {
-                ...dto,
+            const newJobRole: JobRole = {
+                job_role_id: this.mockJobRoles.length + 1,
+                job_role_code: dto.job_role_code,
+                job_role_name: dto.job_role_name,
+                description: dto.description,
+                is_active: dto.is_active ?? true,
                 create_time: new Date().toISOString(),
                 create_user: createUser,
                 update_time: new Date().toISOString(),
                 update_user: createUser
             };
 
-            this.mockCompetencies.push(newCompetency);
+            this.mockJobRoles.push(newJobRole);
             
             return of({
                 code: 200,
                 message: '創建成功',
-                data: newCompetency
+                data: newJobRole
             }).pipe(delay(300));
         }
 
-        let httpParams = new HttpParams();
-        httpParams = httpParams.set('createUser', createUser);
+        // 真實 API 呼叫 - 使用 POST /create 端點
+        const requestBody = {
+            ...dto,
+            create_user: createUser
+        };
 
-        return this.http.post<ApiResponse<Competency>>(`${this.apiUrl}`, dto, { params: httpParams });
+        return this.http.post<ApiResponse<JobRole>>(`${this.apiUrl}/create`, requestBody);
     }
 
     /**
      * 更新職務
      */
-    updateCompetency(jobRoleCode: string, dto: CompetencyUpdateDto, updateUser: string = 'system'): Observable<ApiResponse<Competency>> {
+    updateJobRole(dto: JobRoleUpdateDto, updateUser: string = 'system'): Observable<ApiResponse<JobRole>> {
         if (this.useMockData) {
-            const index = this.mockCompetencies.findIndex(c => c.job_role_code === jobRoleCode);
+            const index = this.mockJobRoles.findIndex(c => c.job_role_id === dto.job_role_id);
             if (index === -1) {
                 return of({
                     code: 404,
@@ -349,34 +377,40 @@ export class CompetencyService {
                 }).pipe(delay(300));
             }
 
-            const updatedCompetency: Competency = {
-                ...this.mockCompetencies[index],
-                ...dto,
+            const updatedJobRole: JobRole = {
+                ...this.mockJobRoles[index],
+                job_role_code: dto.job_role_code,
+                job_role_name: dto.job_role_name,
+                description: dto.description,
+                is_active: dto.is_active ?? this.mockJobRoles[index].is_active,
                 update_time: new Date().toISOString(),
                 update_user: updateUser
             };
 
-            this.mockCompetencies[index] = updatedCompetency;
+            this.mockJobRoles[index] = updatedJobRole;
             
             return of({
                 code: 200,
                 message: '更新成功',
-                data: updatedCompetency
+                data: updatedJobRole
             }).pipe(delay(300));
         }
 
-        let httpParams = new HttpParams();
-        httpParams = httpParams.set('updateUser', updateUser);
+        // 真實 API 呼叫 - 使用 POST /update 端點
+        const requestBody = {
+            ...dto,
+            update_user: updateUser
+        };
 
-        return this.http.put<ApiResponse<Competency>>(`${this.apiUrl}/${jobRoleCode}`, dto, { params: httpParams });
+        return this.http.post<ApiResponse<JobRole>>(`${this.apiUrl}/update`, requestBody);
     }
 
     /**
      * 刪除職務
      */
-    deleteCompetency(jobRoleCode: string): Observable<ApiResponse<void>> {
+    deleteJobRole(jobRoleId: number): Observable<ApiResponse<void>> {
         if (this.useMockData) {
-            const index = this.mockCompetencies.findIndex(c => c.job_role_code === jobRoleCode);
+            const index = this.mockJobRoles.findIndex(c => c.job_role_id === jobRoleId);
             if (index === -1) {
                 return of({
                     code: 404,
@@ -385,7 +419,7 @@ export class CompetencyService {
                 }).pipe(delay(300));
             }
 
-            this.mockCompetencies.splice(index, 1);
+            this.mockJobRoles.splice(index, 1);
             
             return of({
                 code: 200,
@@ -394,20 +428,24 @@ export class CompetencyService {
             }).pipe(delay(300));
         }
 
-        return this.http.delete<ApiResponse<void>>(`${this.apiUrl}/${jobRoleCode}`);
+        // 真實 API 呼叫 - 使用 POST /delete 端點
+        const requestBody = {
+            job_role_id: jobRoleId
+        };
+
+        return this.http.post<ApiResponse<void>>(`${this.apiUrl}/delete`, requestBody);
     }
 
     /**
-     * 批量更新職務狀態
+     * 批量更新職務狀態 (簡化版本)
      */
-    batchUpdateCompetencyStatus(jobRoleCodes: string[], isActive: boolean, updateUser: string = 'system'): Observable<ApiResponse<number>> {
+    batchUpdateJobRoleStatus(jobRoleCodes: string[], isActive: boolean): Observable<ApiResponse<number>> {
         if (this.useMockData) {
             let updatedCount = 0;
-            this.mockCompetencies.forEach(competency => {
-                if (jobRoleCodes.includes(competency.job_role_code)) {
-                    competency.is_active = isActive;
-                    competency.update_time = new Date().toISOString();
-                    competency.update_user = updateUser;
+            this.mockJobRoles.forEach(jobRole => {
+                if (jobRoleCodes.includes(jobRole.job_role_code)) {
+                    jobRole.is_active = isActive;
+                    jobRole.update_time = new Date().toISOString();
                     updatedCount++;
                 }
             });
@@ -419,49 +457,24 @@ export class CompetencyService {
             }).pipe(delay(300));
         }
 
-        let httpParams = new HttpParams();
-        jobRoleCodes.forEach(code => {
-            httpParams = httpParams.append('jobRoleCodes', code);
-        });
-        httpParams = httpParams.set('isActive', isActive.toString());
-        httpParams = httpParams.set('updateUser', updateUser);
+        const requestBody = {
+            job_role_codes: jobRoleCodes,
+            is_active: isActive
+        };
 
-        return this.http.put<ApiResponse<number>>(`${this.apiUrl}/batch-status`, {}, { params: httpParams });
+        return this.http.post<ApiResponse<number>>(`${this.apiUrl}/batch-status`, requestBody);
     }
 
     /**
-     * 獲取職務統計資訊
+     * 批量刪除職務 (簡化版本)
      */
-    getCompetencyStatistics(): Observable<ApiResponse<{ totalCount: number; activeCount: number; inactiveCount: number; }>> {
-        if (this.useMockData) {
-            const totalCount = this.mockCompetencies.length;
-            const activeCount = this.mockCompetencies.filter(c => c.is_active).length;
-            const inactiveCount = totalCount - activeCount;
-            
-            return of({
-                code: 200,
-                message: '查詢成功',
-                data: {
-                    totalCount,
-                    activeCount,
-                    inactiveCount
-                }
-            }).pipe(delay(300));
-        }
-
-        return this.http.get<ApiResponse<{ totalCount: number; activeCount: number; inactiveCount: number; }>>(`${this.apiUrl}/statistics`);
-    }
-
-    /**
-     * 批量刪除職務
-     */
-    bulkDeleteCompetencies(jobRoleCodes: string[]): Observable<ApiResponse<number>> {
+    bulkDeleteJobRoles(jobRoleCodes: string[]): Observable<ApiResponse<number>> {
         if (this.useMockData) {
             let deletedCount = 0;
             jobRoleCodes.forEach(code => {
-                const index = this.mockCompetencies.findIndex(c => c.job_role_code === code);
+                const index = this.mockJobRoles.findIndex(c => c.job_role_code === code);
                 if (index !== -1) {
-                    this.mockCompetencies.splice(index, 1);
+                    this.mockJobRoles.splice(index, 1);
                     deletedCount++;
                 }
             });
@@ -473,56 +486,10 @@ export class CompetencyService {
             }).pipe(delay(300));
         }
 
-        // 如果有真實的批量刪除 API，可以在這裡實現
-        // 目前使用迴圈逐一刪除
-        const deleteRequests = jobRoleCodes.map(code => 
-            this.http.delete<ApiResponse<void>>(`${this.apiUrl}/${code}`)
-        );
+        const requestBody = {
+            job_role_codes: jobRoleCodes
+        };
 
-        return new Observable(observer => {
-            let completedCount = 0;
-            let successCount = 0;
-
-            deleteRequests.forEach(request => {
-                request.subscribe({
-                    next: (response) => {
-                        if (response.code === 200) {
-                            successCount++;
-                        }
-                        completedCount++;
-                        
-                        if (completedCount === deleteRequests.length) {
-                            observer.next({
-                                code: 200,
-                                message: `已刪除 ${successCount} 個職務`,
-                                data: successCount
-                            });
-                            observer.complete();
-                        }
-                    },
-                    error: (error) => {
-                        completedCount++;
-                        
-                        if (completedCount === deleteRequests.length) {
-                            observer.next({
-                                code: 200,
-                                message: `已刪除 ${successCount} 個職務`,
-                                data: successCount
-                            });
-                            observer.complete();
-                        }
-                    }
-                });
-            });
-
-            if (deleteRequests.length === 0) {
-                observer.next({
-                    code: 200,
-                    message: '沒有選擇要刪除的職務',
-                    data: 0
-                });
-                observer.complete();
-            }
-        });
+        return this.http.post<ApiResponse<number>>(`${this.apiUrl}/batch-delete`, requestBody);
     }
 }

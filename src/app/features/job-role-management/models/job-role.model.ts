@@ -1,46 +1,46 @@
-export interface Competency {
+export interface JobRole {
+    job_role_id?: number; // 新增主鍵欄位
     job_role_code: string;
     job_role_name: string;
     description?: string;
     is_active: boolean; // 修改為 boolean 類型
-    create_time: string; // 修改為 string 類型
-    create_user: string;
-    update_time: string; // 修改為 string 類型
-    update_user: string;
+    create_time?: string; // 修改為 string 類型，可選
+    create_user?: string; // 可選
+    update_time?: string; // 修改為 string 類型，可選
+    update_user?: string; // 可選
 }
 
-export interface CompetencyCreateDto {
+export interface JobRoleCreateDto {
     job_role_code: string;
     job_role_name: string;
     description?: string;
-    is_active: boolean; // 修改為 boolean 類型
+    is_active?: boolean; // 修改為 boolean 類型，可選
+    create_user?: string; // 新增建立者欄位
 }
 
-export interface CompetencyUpdateDto {
+export interface JobRoleUpdateDto {
+    job_role_id: number; // 新增主鍵欄位，更新時必需
     job_role_code: string;
     job_role_name: string;
     description?: string;
-    is_active: boolean; // 修改為 boolean 類型
+    is_active?: boolean; // 修改為 boolean 類型，可選
+    update_user?: string; // 新增更新者欄位
 }
 
-export interface CompetencySearchParams {
+export interface JobRoleSearchParams {
+    job_role_id?: number;
     job_role_code?: string;
     job_role_name?: string;
     description?: string;
-    is_active?: boolean; // 修改為 boolean 類型
-    // 搜尋相關參數
+    is_active?: boolean;
+    // 搜尋參數
     keyword?: string;
     // 排序參數
-    sortBy?: string;
     sort_column?: string;
     sort_direction?: string;
-    // 分頁參數
-    page?: number;
-    pageSize?: number;
-    // 分頁參數 (匹配後端 PageBean)
-    total_records?: number;
-    first_index_in_page?: number;
-    last_index_in_page?: number;
+    // 分頁參數 (統一使用後端格式)
+    page_index?: number;
+    page_size?: number;
     pageable?: boolean;
 }
 
@@ -69,4 +69,4 @@ export interface PagerDto<T> {
 }
 
 // 回應類型
-export type CompetencyListResponse = ApiResponse<PagerDto<Competency>>;
+export type JobRoleListResponse = ApiResponse<PagerDto<JobRole>>;

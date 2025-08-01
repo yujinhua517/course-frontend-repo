@@ -117,12 +117,12 @@ export class EmployeeViewComponent {
             },
             {
                 label: '建立者',
-                value: this.employee().create_user || '系統',
+                value: this.employee().create_user || '無',
                 icon: 'person-plus'
             },
             {
                 label: '更新者',
-                value: this.employee().update_user || '系統',
+                value: this.employee().update_user || '無',
                 icon: 'person-gear'
             }
         ]

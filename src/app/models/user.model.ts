@@ -27,12 +27,14 @@ export interface Permission {
 }
 
 export enum RoleName {
-    SUPER_ADMIN = 'SUPER_ADMIN',
+    // SUPER_ADMIN = 'SUPER_ADMIN',
     ADMIN = 'ADMIN',
     MANAGER = 'MANAGER',
-    INSTRUCTOR = 'INSTRUCTOR',
-    EMPLOYEE = 'EMPLOYEE',
-    GUEST = 'GUEST'
+    USER = 'USER',
+    SUPERVISOR = 'SUPERVISOR',
+    // INSTRUCTOR = 'INSTRUCTOR',
+    // EMPLOYEE = 'EMPLOYEE',
+    // GUEST = 'GUEST'
 }
 
 export enum PermissionName {
@@ -60,11 +62,17 @@ export enum PermissionName {
     EMPLOYEE_UPDATE = 'EMPLOYEE_UPDATE',
     EMPLOYEE_DELETE = 'EMPLOYEE_DELETE',
 
-    // Competency Management
+    // Competency Management (Legacy - 保留向後兼容)
     COMPETENCY_CREATE = 'COMPETENCY_CREATE',
     COMPETENCY_READ = 'COMPETENCY_READ',
     COMPETENCY_UPDATE = 'COMPETENCY_UPDATE',
     COMPETENCY_DELETE = 'COMPETENCY_DELETE',
+
+    // Job Role Management (New)
+    JOBROLE_CREATE = 'JOBROLE_CREATE',
+    JOBROLE_READ = 'JOBROLE_READ',
+    JOBROLE_UPDATE = 'JOBROLE_UPDATE',
+    JOBROLE_DELETE = 'JOBROLE_DELETE',
 
     // System Administration
     SYSTEM_ADMIN = 'SYSTEM_ADMIN',

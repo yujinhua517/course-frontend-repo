@@ -4,6 +4,13 @@ tools: ['codebase', 'editFiles']
 description: 'Scaffold an Angular CRUD Feature (Strictly Copy UI/SCSS/HTML from Template, Replace Only Table/Form Fields)'
 ---
 
+## Step 0: (Optional) Backend API/Model Reference
+
+- Before scaffolding, **ask the user whether they have a backend controller, OpenAPI/Swagger spec, or Java model file to reference**.
+- If provided, **extract field definitions/types from the backend source as the primary source of truth for model/interface generation**.
+- If not, proceed to manual field entry in Step 2.
+
+---
 ## Step 1: Specify Entity Name
 1. Entity/Feature Name
     - Please enter the entity/feature name you want to create (e.g., "course", "employee", "department")

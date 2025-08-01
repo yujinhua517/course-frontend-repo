@@ -8,7 +8,8 @@ import {
     Department,
     CreateDepartmentRequest,
     UpdateDepartmentRequest,
-    DEPARTMENT_LEVEL_OPTIONS
+    DEPARTMENT_LEVEL_OPTIONS,
+    DEPARTMENT_HIERARCHY_RULES
 } from '../../models/department.model';
 
 @Component({
@@ -22,7 +23,14 @@ export class DepartmentFormComponent implements OnInit {
     private readonly formBuilder = inject(FormBuilder);
     private readonly departmentService: DepartmentService = inject(DepartmentService);
     private readonly employeeService = inject(EmployeeService);
-    private readonly LEVEL_ORDER: Record<string, number> = { 'LOB': 0, 'BU': 1, 'BI': 2 };
+    private readonly LEVEL_ORDER: Record<string, number> = { 
+        'BI': 0,    // 最高層
+        'BU': 1,    // 事業群
+        'TU': 2,    // 技術單位
+        'SU': 2,    // 服務單位（與TU同級）
+        'LOB-T': 3, // 技術導向事業線
+        'LOB-S': 3  // 服務導向事業線
+    };
     // Inputs
     mode = input.required<'create' | 'edit'>();
     department = input<Department | null>(null);
@@ -80,20 +88,44 @@ export class DepartmentFormComponent implements OnInit {
         });
     }
 
-    // filteredParentDepartments 改為依賴 selectedDeptLevel
+    // filteredParentDepartments 改為依賴 selectedDeptLevel 和新的階層規則
     readonly filteredParentDepartments = computed(() => {
         const selectedLevel = this.selectedDeptLevel();
         const allDepartments = this.parentDepartments();
         if (!selectedLevel) return [];
 
-        let allowedLevels: string[] = [];
-        if (selectedLevel === 'LOB') allowedLevels = ['BU', 'BI'];
-        else if (selectedLevel === 'BU') allowedLevels = ['BI'];
-        else if (selectedLevel === 'BI') return [];
+        // 根據階層關係定義允許的上層部門層級
+        let allowedParentLevels: string[] = [];
+        
+        switch (selectedLevel) {
+            case 'BU':
+                allowedParentLevels = ['BI'];
+                break;
+            case 'TU':
+            case 'SU':
+                allowedParentLevels = ['BU'];
+                break;
+            case 'LOB-T':
+                allowedParentLevels = ['TU'];
+                break;
+            case 'LOB-S':
+                allowedParentLevels = ['SU'];
+                break;
+            case 'BI':
+            default:
+                // BI 是最高層級，沒有上層部門
+                return [];
+        }
 
+        // 篩選符合階層規則的部門
         return allDepartments
-            .filter(d => allowedLevels.includes(d.dept_level))
-            .sort((a, b) => (this.LEVEL_ORDER[a.dept_level] ?? 99) - (this.LEVEL_ORDER[b.dept_level] ?? 99));
+            .filter(d => allowedParentLevels.includes(d.dept_level))
+            .filter(d => d.is_active) // 只顯示啟用的部門
+            .sort((a, b) => {
+                // 先按層級排序，再按名稱排序
+                const levelOrder = (this.LEVEL_ORDER[a.dept_level] || 99) - (this.LEVEL_ORDER[b.dept_level] || 99);
+                return levelOrder !== 0 ? levelOrder : a.dept_name.localeCompare(b.dept_name);
+            });
     });
 
     private createForm(): FormGroup {

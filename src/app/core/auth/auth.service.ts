@@ -25,8 +25,9 @@ export class AuthService {
     }
 
     private restoreUserFromStorage(): void {
-        const token = localStorage.getItem('auth-token');
-        const userStr = localStorage.getItem('current-user');
+        // 使用 sessionStorage 替代 localStorage，頁面關閉後自動清除
+        const token = sessionStorage.getItem('auth-token');
+        const userStr = sessionStorage.getItem('current-user');
 
         if (token && userStr) {
             try {
@@ -38,15 +39,15 @@ export class AuthService {
                 // 只有在 UserStore 還沒設定用戶時才恢復
                 if (!this.userStore.isAuthenticated()) {
                     this.userStore.setUser(user);
-                    console.log('已從 localStorage 恢復用戶狀態:', user.username);
+                    console.log('已從 sessionStorage 恢復用戶狀態:', user.username);
                 }
             } catch (error) {
                 // 若解析失敗則清除所有相關資料
                 console.error('恢復用戶狀態失敗:', error);
-                localStorage.removeItem('current-user');
-                localStorage.removeItem('auth-token');
-                localStorage.removeItem('refresh-token');
-                localStorage.removeItem('current-username');
+                sessionStorage.removeItem('current-user');
+                sessionStorage.removeItem('auth-token');
+                sessionStorage.removeItem('refresh-token');
+                sessionStorage.removeItem('current-username');
             }
         }
     }
@@ -60,14 +61,14 @@ export class AuthService {
                 next: (response) => {
                     // 儲存 token
                     if (response.token) {
-                        localStorage.setItem('auth-token', response.token);
+                        sessionStorage.setItem('auth-token', response.token);
                     }
                     if (response.refreshToken) {
-                        localStorage.setItem('refresh-token', response.refreshToken);
+                        sessionStorage.setItem('refresh-token', response.refreshToken);
                     }
                     // 記錄當前登入的用戶名
                     if (response.user?.username) {
-                        localStorage.setItem('current-username', response.user.username);
+                        sessionStorage.setItem('current-username', response.user.username);
                     }
                     // 儲存完整 user 物件，roles/permissions 欄位強制為陣列
                     if (response.user) {
@@ -76,7 +77,7 @@ export class AuthService {
                             roles: Array.isArray(response.user.roles) ? response.user.roles : [],
                             permissions: Array.isArray(response.user.permissions) ? response.user.permissions : []
                         };
-                        localStorage.setItem('current-user', JSON.stringify(user));
+                        sessionStorage.setItem('current-user', JSON.stringify(user));
                         this.userStore.setUser(user);
                     }
                     // 顯示歡迎消息
@@ -96,11 +97,11 @@ export class AuthService {
 
     logout(showMessage: boolean = true): void {
         try {
-            // 清除本地儲存的 tokens
-            localStorage.removeItem('auth-token');
-            localStorage.removeItem('refresh-token');
-            localStorage.removeItem('current-username');
-            localStorage.removeItem('current-user');
+            // 清除會話儲存的 tokens
+            sessionStorage.removeItem('auth-token');
+            sessionStorage.removeItem('refresh-token');
+            sessionStorage.removeItem('current-username');
+            sessionStorage.removeItem('current-user');
 
             // 清除用戶狀態
             this.userStore.clearUser();
@@ -120,8 +121,8 @@ export class AuthService {
 
     // 檢查 token 是否存在（用於應用啟動時檢查）
     checkStoredAuth(): void {
-        const token = localStorage.getItem('auth-token');
-        const username = localStorage.getItem('current-username');
+        const token = sessionStorage.getItem('auth-token');
+        const username = sessionStorage.getItem('current-username');
 
         if (token && username) {
             // 由於我們沒有 /api/auth/me endpoint，暫時跳過自動登入
@@ -132,7 +133,7 @@ export class AuthService {
 
     // 獲取當前 token
     getToken(): string | null {
-        return localStorage.getItem('auth-token');
+        return sessionStorage.getItem('auth-token');
     }
 
     // 檢查是否已認證
@@ -142,10 +143,10 @@ export class AuthService {
             return true;
         }
 
-        // 如果 UserStore 狀態不正確，但 localStorage 中有有效的 token 和用戶資料
+        // 如果 UserStore 狀態不正確，但 sessionStorage 中有有效的 token 和用戶資料
         // 嘗試恢復狀態
         const token = this.getToken();
-        const userStr = localStorage.getItem('current-user');
+        const userStr = sessionStorage.getItem('current-user');
 
         if (token && userStr) {
             try {

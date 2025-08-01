@@ -1,26 +1,26 @@
 import { Component, OnInit, input, output, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { CompetencyService } from '../../services/competency.service';
+import { JobRoleService } from '../../services/job-role.service';
 import { BaseModalComponent, ModalConfig } from '../../../../shared/components/modal/base-modal.component';
-import { Competency, CompetencyCreateDto, CompetencyUpdateDto } from '../../models/competency.model';
+import { JobRole, JobRoleCreateDto, JobRoleUpdateDto } from '../../models/job-role.model';
 
 @Component({
-    selector: 'app-competency-form',
-    templateUrl: './competency-form.component.html',
-    styleUrls: ['./competency-form.component.scss'],
+    selector: 'app-job-role-form',
+    templateUrl: './job-role-form.component.html',
+    styleUrls: ['./job-role-form.component.scss'],
     imports: [CommonModule, ReactiveFormsModule, BaseModalComponent]
 })
-export class CompetencyFormComponent implements OnInit {
+export class JobRoleFormComponent implements OnInit {
     private fb = inject(FormBuilder);
-    private competencyService = inject(CompetencyService);
+    private jobRoleService = inject(JobRoleService);
 
     // Inputs
     mode = input.required<'create' | 'edit'>();
-    competency = input<Competency | null>(null);
+    jobRole = input<JobRole | null>(null);
 
     // Outputs
-    saved = output<Competency>();
+    saved = output<JobRole>();
     cancelled = output<void>();
 
     // State
@@ -34,7 +34,7 @@ export class CompetencyFormComponent implements OnInit {
 
     // Modal configuration
     modalConfig = computed<ModalConfig>(() => ({
-        title: this.isEditMode() ? '編輯職能' : '新增職能',
+        title: this.isEditMode() ? '編輯職務' : '新增職務',
         icon: 'bi bi-person-workspace',
         size: 'lg'
     }));
@@ -44,28 +44,28 @@ export class CompetencyFormComponent implements OnInit {
     }
 
     private initializeForm(): void {
-        const competencyData = this.competency();
+        const jobRoleData = this.jobRole();
 
         this.form = this.fb.group({
             job_role_code: [
-                competencyData?.job_role_code || '',
+                jobRoleData?.job_role_code || '',
                 [Validators.required, Validators.maxLength(20)]
             ],
             job_role_name: [
-                competencyData?.job_role_name || '',
+                jobRoleData?.job_role_name || '',
                 [Validators.required, Validators.maxLength(100)]
             ],
             description: [
-                competencyData?.description || '',
+                jobRoleData?.description || '',
                 [Validators.maxLength(500)]
             ],
             is_active: [
-                competencyData?.is_active ?? true,
+                jobRoleData?.is_active ?? true,
                 [Validators.required]
             ]
         });
 
-        // 編輯模式時職能代碼不可修改
+        // 編輯模式時職務代碼不可修改
         if (this.isEditMode()) {
             this.form.get('job_role_code')?.disable();
         }
@@ -87,9 +87,9 @@ export class CompetencyFormComponent implements OnInit {
 
     private getFieldLabel(fieldName: string): string {
         const labels: Record<string, string> = {
-            job_role_code: '職能代碼',
-            job_role_name: '職能名稱',
-            description: '職能描述',
+            job_role_code: '職務代碼',
+            job_role_name: '職務名稱',
+            description: '職務描述',
             is_active: '狀態'
         };
         return labels[fieldName] || fieldName;
@@ -112,46 +112,53 @@ export class CompetencyFormComponent implements OnInit {
         const formValue = this.form.getRawValue(); // 使用 getRawValue 來包含 disabled 欄位
 
         if (this.isEditMode()) {
-            this.updateCompetency(formValue);
+            this.updateJobRole(formValue);
         } else {
-            this.createCompetency(formValue);
+            this.createJobRole(formValue);
         }
     }
 
-    private createCompetency(formValue: CompetencyCreateDto): void {
-        this.competencyService.createCompetency(formValue).subscribe({
+    private createJobRole(formValue: JobRoleCreateDto): void {
+        this.jobRoleService.createJobRole(formValue).subscribe({
             next: (response) => {
                 this.loading.set(false);
                 if (response.code === 200) {
                     this.saved.emit(response.data);
                 } else {
-                    this.error.set(response.message || '建立職能失敗');
+                    this.error.set(response.message || '建立職務失敗');
                 }
             },
             error: (error) => {
                 this.loading.set(false);
-                this.error.set('建立職能失敗，請稍後再試');
-                console.error('Create competency error:', error);
+                this.error.set('建立職務失敗，請稍後再試');
+                console.error('Create job role error:', error);
             }
         });
     }
 
-    private updateCompetency(formValue: CompetencyUpdateDto): void {
-        const code = this.competency()!.job_role_code;
+    private updateJobRole(formValue: any): void {
+        const jobRoleData = this.jobRole()!;
+        const updateDto: JobRoleUpdateDto = {
+            job_role_id: jobRoleData.job_role_id!,
+            job_role_code: formValue.job_role_code,
+            job_role_name: formValue.job_role_name,
+            description: formValue.description,
+            is_active: formValue.is_active
+        };
 
-        this.competencyService.updateCompetency(code, formValue).subscribe({
+        this.jobRoleService.updateJobRole(updateDto).subscribe({
             next: (response) => {
                 this.loading.set(false);
                 if (response.code === 200) {
                     this.saved.emit(response.data);
                 } else {
-                    this.error.set(response.message || '更新職能失敗');
+                    this.error.set(response.message || '更新職務失敗');
                 }
             },
             error: (error) => {
                 this.loading.set(false);
-                this.error.set('更新職能失敗，請稍後再試');
-                console.error('Update competency error:', error);
+                this.error.set('更新職務失敗，請稍後再試');
+                console.error('Update job role error:', error);
             }
         });
     }

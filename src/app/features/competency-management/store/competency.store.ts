@@ -38,7 +38,7 @@ export class CompetencyStore {
         const searchParams = {
             ...this._searchParams(),
             ...params,
-            page: params?.page || this._currentPage(),
+            page: (params?.page !== undefined) ? params.page : this._currentPage() - 1, // 轉換為 0-based
             pageSize: params?.pageSize || this._pageSize()
         };
 
@@ -48,8 +48,8 @@ export class CompetencyStore {
             next: (response) => {
                 this._competencies.set(response.data.data_list);
                 this._total.set(response.data.total_records);
-                this._currentPage.set(searchParams.page || 1);
-                this._pageSize.set(searchParams.pageSize || 10);
+                this._currentPage.set((response.data.page || 0) + 1); // 轉換回 1-based 顯示
+                this._pageSize.set(response.data.size || 10);
                 this._loading.set(false);
             },
             error: (error) => {
@@ -64,7 +64,7 @@ export class CompetencyStore {
         this.loadCompetencies({
             ...this._searchParams(),
             keyword,
-            page: 1
+            page: 0 // 重設為第一頁 (0-based)
         });
     }
 
@@ -72,7 +72,7 @@ export class CompetencyStore {
         this.loadCompetencies({
             ...this._searchParams(),
             is_active,
-            page: 1
+            page: 0 // 重設為第一頁 (0-based)
         });
     }
 
@@ -88,7 +88,7 @@ export class CompetencyStore {
         if (page >= 1 && page <= this.totalPages()) {
             this.loadCompetencies({
                 ...this._searchParams(),
-                page
+                page: page - 1 // 轉換為 0-based
             });
         }
     }
@@ -97,7 +97,7 @@ export class CompetencyStore {
         this.loadCompetencies({
             ...this._searchParams(),
             pageSize,
-            page: 1
+            page: 0 // 重設為第一頁 (0-based)
         });
     }
 

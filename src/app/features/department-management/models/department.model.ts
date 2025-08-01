@@ -15,7 +15,7 @@ export interface Department {
     manager_name?: string; // 後端 UI 額外欄位
 }
 
-export type DepartmentLevel = 'BI' | 'BU' | 'LOB' | string;
+export type DepartmentLevel = 'BI' | 'BU' | 'TU' | 'SU' | 'LOB-S' | 'LOB-T' | string;
 
 export interface CreateDepartmentRequest {
     dept_code: string;
@@ -59,8 +59,24 @@ export interface DepartmentSearchParams {
     sort_direction?: 'asc' | 'desc';
 }
 
+/**
+ * 部門階層關係定義
+ * BI (最高層) -> BU -> TU/SU -> LOB-T/LOB-S
+ */
+export const DEPARTMENT_HIERARCHY_RULES = {
+    'BI': { allowedParents: [], description: '商業單位（最高層）' },
+    'BU': { allowedParents: ['BI'], description: '事業群' },
+    'TU': { allowedParents: ['BU'], description: '技術單位' },
+    'SU': { allowedParents: ['BU'], description: '服務單位' },
+    'LOB-T': { allowedParents: ['TU'], description: '技術導向事業線' },
+    'LOB-S': { allowedParents: ['SU'], description: '服務導向事業線' }
+} as const;
+
 export const DEPARTMENT_LEVEL_OPTIONS = [
-    { value: 'BI', label: 'BI', color: 'primary', icon: 'bi-building' },
-    { value: 'BU', label: 'BU', color: 'info', icon: 'bi-diagram-3' },
-    { value: 'LOB', label: 'LOB', color: 'success', icon: 'bi-boxes' }
+    { value: 'BI', label: 'BI', color: 'primary', icon: 'bi-building', description: '商業單位（最高層）' },
+    { value: 'BU', label: 'BU', color: 'info', icon: 'bi-diagram-3', description: '事業群' },
+    { value: 'TU', label: 'TU', color: 'warning', icon: 'bi-gear', description: '技術單位' },
+    { value: 'SU', label: 'SU', color: 'secondary', icon: 'bi-people', description: '服務單位' },
+    { value: 'LOB-T', label: 'LOB-T', color: 'success', icon: 'bi-code-slash', description: '技術導向事業線' },
+    { value: 'LOB-S', label: 'LOB-S', color: 'dark', icon: 'bi-headset', description: '服務導向事業線' }
 ] as const;

@@ -308,12 +308,40 @@ export class LoginService {
         resource: 'user',
         action: 'read',
         description: 'user read'
-      }
+      },
+      {
+        id: '6',
+        name: PermissionName.JOBROLE_READ,
+        resource: 'jobrole',
+        action: 'read',
+        description: 'job role read'
+      },
+      // {
+      //   id: '7',
+      //   name: PermissionName.JOBROLE_CREATE,
+      //   resource: 'jobrole',
+      //   action: 'create',
+      //   description: 'job role create'
+      // },
+      // {
+      //   id: '8',
+      //   name: PermissionName.JOBROLE_UPDATE,
+      //   resource: 'jobrole',
+      //   action: 'update',
+      //   description: 'job role update'
+      // },
+      // {
+      //   id: '9',
+      //   name: PermissionName.JOBROLE_DELETE,
+      //   resource: 'jobrole',
+      //   action: 'delete',
+      //   description: 'job role delete'
+      // }
     ];
     const roles = [{
       id: '2',
-      name: RoleName.EMPLOYEE,
-      description: 'Employee',
+      name: RoleName.USER,
+      description: 'User',
       permissions
     }];
     const user: User = {
@@ -339,15 +367,22 @@ export class LoginService {
   private mapRoleToPermissions(role: string): Array<{ id: string, name: PermissionName, resource: string, action: string, description: string }> {
     // 根據角色對應權限的邏輯
     if (role === 'ADMIN') {
-      // 管理員擁有所有權限
-      return Object.values(PermissionName).map((name, idx) => ({
-        id: (idx + 1).toString(),
-        name,
-        resource: name.split('_')[0].toLowerCase(),
-        action: name.split('_')[1]?.toLowerCase() || 'all',
-        description: name.replace(/_/g, ' ').toLowerCase()
-      }));
-    } else if (role === 'EMPLOYEE') {
+      // 管理員擁有所有權限 - 簡化權限映射邏輯
+      return Object.values(PermissionName).map((name, idx) => {
+        // 標準處理：將權限名稱分割為 resource 和 action
+        const parts = name.split('_');
+        const resource = parts[0].toLowerCase();
+        const action = parts[1]?.toLowerCase() || 'all';
+        
+        return {
+          id: (idx + 1).toString(),
+          name,
+          resource,
+          action,
+          description: name.replace(/_/g, ' ').toLowerCase()
+        };
+      });
+    } else if (role === 'USER') {
       // 一般員工只有讀取權限
       return [
         {
@@ -384,7 +419,81 @@ export class LoginService {
           resource: 'user',
           action: 'read',
           description: 'user read'
-        }
+        },
+        {
+          id: '6',
+          name: PermissionName.JOBROLE_READ,
+          resource: 'jobrole',
+          action: 'read',
+          description: 'job role read'
+        },
+      ];
+    }else if (role === 'MANAGER') {
+      // 一般員工只有讀取權限
+      return [
+        {
+          id: '1',
+          name: PermissionName.JOBROLE_CREATE,
+          resource: 'jobrole',
+          action: 'create',
+          description: 'job role create'
+        },
+        {
+          id: '2',
+          name: PermissionName.JOBROLE_READ,
+          resource: 'jobrole',
+          action: 'read',
+          description: 'job role read'
+        },
+        {
+          id: '3',
+          name: PermissionName.JOBROLE_DELETE,
+          resource: 'jobrole',
+          action: 'delete',
+          description: 'job role delete'
+        },
+        {
+          id: '4',
+          name: PermissionName.JOBROLE_UPDATE,
+          resource: 'jobrole',
+          action: 'update',
+          description: 'job role update'
+        },
+        // {
+        //   id: '2',
+        //   name: PermissionName.COMPETENCY_READ,
+        //   resource: 'competency',
+        //   action: 'read',
+        //   description: 'competency read'
+        // },
+        // {
+        //   id: '3',
+        //   name: PermissionName.EMPLOYEE_READ,
+        //   resource: 'employee',
+        //   action: 'read',
+        //   description: 'employee read'
+        // },
+        // {
+        //   id: '4',
+        //   name: PermissionName.DEPARTMENT_READ,
+        //   resource: 'department',
+        //   action: 'read',
+        //   description: 'department read'
+        // },
+        // {
+        //   id: '5',
+        //   name: PermissionName.USER_READ,
+        //   resource: 'user',
+        //   action: 'read',
+        //   description: 'user read'
+        // },
+        // {
+        //   id: '6',
+        //   name: PermissionName.JOBROLE_READ,
+        //   resource: 'jobrole',
+        //   action: 'read',
+        //   description: 'job role read'
+        // },
       ];
     }
 

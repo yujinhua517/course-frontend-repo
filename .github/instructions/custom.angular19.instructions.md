@@ -5,7 +5,7 @@ description: Complete Angular 19+ Coding, Structure, and Naming Guidelines (LLM/
 
 # 🟢 Angular 19+ Coding, Structure & Naming Unified Guide
 
-**Adapted from angular.dev/llms-full.txt, engineering best practices, and detailed team structure/naming guidelines for scalable, modern Angular projects.**
+**Adapted from [angular.dev/llms-full.txt](https://angular.dev/llms), engineering best practices, and detailed team structure/naming guidelines for scalable, modern Angular projects.**
 
 ---
 
@@ -180,7 +180,46 @@ environments/
 
 ---
 
-## 11. Testing & Test Files
+## 10.1. Mock Data and API Switching
+
+- **All feature services must support a one-click switch between mock data and real API.**
+- Each service should define:
+    ```typescript
+    private useMockData = true; // Set to false to use real API
+    ```
+- **All public CRUD methods** (list, get, add, update, delete, etc.) **must use `if (this.useMockData)` to select mock or API branch**.
+    - Example:
+      ```typescript
+      getList(params: QueryParams): Observable<Entity[]> {
+        if (this.useMockData) {
+          // Return mock Observable data here
+          return of(this.mockList).pipe(delay(300));
+        }
+        // Call real API here
+        return this.http.get<Entity[]>('/api/entity', { params });
+      }
+      ```
+- Switching the flag in one place (`useMockData = false`) immediately switches all CRUD operations for that service to the real API, and vice versa.
+- The flag can be refactored to use an `environment` variable or global config for large projects.
+
+---
+
+## 11. SCSS @use Instead of @import
+
+- **All SCSS must use the modern `@use` syntax instead of `@import`.**
+    - Example:
+      ```scss
+      // Instead of:
+      // @import 'variables';
+      // Use:
+      @use 'variables' as *;
+      ```
+- **Never use `@import` in new code**; update all legacy files to `@use` progressively.
+- Shared SCSS resources (e.g., `_variables.scss`, `_mixins.scss`) should be placed under `src/styles/` and imported using `@use`.
+
+---
+
+## 12. Testing & Test Files
 
 - Test files should be placed in the same directory as the source file, with the suffix `.spec.ts`
 - Tests should cover components, services, pipes, etc.
@@ -193,7 +232,7 @@ environments/
 
 ---
 
-## 12. Coding Style & Control Flow
+## 13. Coding Style & Control Flow
 
 - Use modern Angular control flow: `@if`, `@for`, `@defer`
 - **Do not use** `*ngIf`, `*ngFor`
@@ -204,14 +243,25 @@ environments/
 
 ---
 
-## 13. Images & Optimization
+## 14. Images & Optimization
 
 - Always use `NgOptimizedImage` for static images; **do not use plain `<img>`**
 - Manage all static resources via `assets/`
 
 ---
 
-## 14. Practices to Avoid
+
+## 15. Shared Components Usage
+
+- **If a shared component, pipe, or utility already exists in `src/app/shared/` or a global library, you must use it directly instead of creating a new duplicate.**
+    - **Always check `shared/components/`, `shared/pipes/`, and `shared/utils/` before building any new UI component or helper.**
+    - **Do not re-invent or duplicate components like Table, Modal, Badge, Button, etc.**
+    - **If the existing shared component does not meet your requirements, propose an extension or improvement, rather than making a separate copy.**
+    - The team should always prefer using and improving shared resources to keep code DRY and maintainable.
+
+---
+
+## 16. Practices to Avoid
 
 - **Do not** create technology-layer folders (e.g., `components/`, `services/`) at the root—always organize by feature/domain
 - **Do not** place any business logic in `shared/`; only UI, pipes, or utilities are allowed
@@ -222,7 +272,7 @@ environments/
 
 ---
 
-## 15. Additional Recommendations
+## 17. Additional Recommendations
 
 - **Always** use Angular CLI/Vite generators (schematics) to create components, services, etc.
 - Regularly refactor and clean up unused files or components
@@ -230,7 +280,7 @@ environments/
 
 ---
 
-## 16. Do's and Don'ts Summary Table
+## 18. Do's and Don'ts Summary Table
 
 | ✅ Do                                   | ❌ Don't                               |
 | --------------------------------------- | --------------------------------------- |
@@ -247,10 +297,12 @@ environments/
 | Use assets/ for all static resources    | Spread static files in app/             |
 | Feature-first folder organization       | Technology-first root folders           |
 | Use CLI/Vite generators                 | Manual file creation with inconsistent style |
+| `@use` SCSS syntax                      | `@import` SCSS syntax                   |
+| One-click mock/API switch in services   | Hardcoded/mock scattered                |
 
 ---
 
-## 17. Official References
+## 19. Official References
 
 - [Angular LLM Guidelines](https://angular.dev/llms)
 - [Angular Signals](https://angular.dev/guide/signals)
@@ -259,11 +311,11 @@ environments/
 
 ---
 
-## 18. Notes
+## 20. Notes
 
 - Applies to all Angular 19+ projects, team onboarding, and LLM generation scenarios
 - Can be extended with feature-specific instructions
 - For special project rules, add supplemental instructions in the respective feature folder
 
 ---
-
+```

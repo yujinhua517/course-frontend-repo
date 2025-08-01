@@ -1,0 +1,122 @@
+<div class="job-role-list-container">
+    <!-- 頁面標題與操作區 -->
+    <div class="page-header d-flex justify-content-between align-items-center mb-4">
+        <h2 class="page-title fw-bold mb-0">
+            <i class="bi bi-person-workspace me-2 text-primary"></i>
+            職務主檔管理
+        </h2>
+        <div class="header-actions d-flex gap-2">
+            @if (selectedJobRoles().length > 0 && hasDeletePermission()) {
+            <button type="button" class="btn btn-outline-danger" (click)="onBulkDelete()" aria-label="批量刪除">
+                <i class="bi bi-trash me-1"></i>
+                刪除選中項目 ({{ selectedJobRoles().length }})
+            </button>
+            }
+            @if (hasCreatePermission()) {
+            <button type="button" class="btn btn-outline-secondary" (click)="exportData()" aria-label="匯出資料">
+                <i class="bi bi-download me-1"></i>
+                匯出
+            </button>
+            <button type="button" class="btn btn-primary" (click)="onCreateNew()" aria-label="新增職務">
+                <i class="bi bi-plus-circle me-1"></i>
+                新增職務
+            </button>
+            }
+        </div>
+    </div>
+
+    <!-- 搜尋與篩選區 -->
+    <app-search-filter [config]="searchFilterConfig()" [searchKeyword]="searchKeyword()" [pageSize]="pageSize()"
+        [totalCount]="total()" [loading]="loading()" [filterValues]="currentFilterValues()"
+        (searchChanged)="onSearchChange($event)" (filterChanged)="onFilterChange($event)"
+        (pageSizeChanged)="onPageSizeChange($event)" (searchCleared)="clearSearch()">
+    </app-search-filter>
+
+    <!-- 載入狀態 -->
+    @if (loading()) {
+    <app-loading-state [config]="loadingConfig()"></app-loading-state>
+    }
+
+    <!-- 錯誤訊息 -->
+    @if (!loading() && error()) {
+    <app-error-message [config]="errorConfig()" (actionClicked)="onRetry()"></app-error-message>
+    }
+
+    <!-- 資料表格 -->
+    @if (!loading() && !error() && jobRoles().length > 0) {
+    <div class="table-container card">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <app-table-header [config]="tableHeaderConfig()" (sortChanged)="onTableSort($event)"
+                        (selectAllChanged)="onTableSelectAll($event)">
+                    </app-table-header>
+                </thead>
+                <tbody>
+                    <app-table-body [config]="tableBodyConfig()" [selectedItems]="selectedJobRoles()"
+                        (itemSelected)="onTableItemSelected($event)">
+                    </app-table-body>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    }
+
+    <!-- 模板定義 -->
+    <ng-template #codeTemplate let-jobRole>
+        <span [innerHTML]="jobRole.job_role_code | highlight:searchKeyword()"></span>
+    </ng-template>
+
+    <ng-template #nameTemplate let-jobRole>
+        <span [innerHTML]="jobRole.job_role_name | highlight:searchKeyword()"></span>
+    </ng-template>
+
+    <ng-template #descriptionTemplate let-jobRole>
+        <span [innerHTML]="(jobRole.description || '無描述') | highlight:searchKeyword()"></span>
+    </ng-template>
+
+    <ng-template #statusTemplate let-jobRole>
+        <app-status-badge [config]="getStatusConfig(jobRole)" (statusToggled)="onStatusToggled(jobRole, $event)"
+            [ariaLabel]="'切換 ' + jobRole.job_role_name + ' 的狀態'">
+        </app-status-badge>
+    </ng-template>
+
+    <ng-template #timeTemplate let-jobRole>
+        {{ jobRole.create_time | date:'yyyy/MM/dd HH:mm' }}
+    </ng-template>
+
+    <ng-template #actionsTemplate let-jobRole>
+        <app-action-button-group [config]="getActionConfig(jobRole)" (viewClicked)="onActionView(jobRole)"
+            (editClicked)="onActionEdit(jobRole)" (deleteClicked)="onActionDelete(jobRole)">
+        </app-action-button-group>
+    </ng-template>
+
+    <!-- 空狀態 -->
+    @if (!loading() && !error() && jobRoles().length === 0) {
+    <app-empty-state [config]="emptyStateConfig()" (actionClicked)="onCreateNew()"></app-empty-state>
+    }
+
+    <!-- 分頁控制 -->
+    @if (!loading() && !error() && jobRoles().length > 0 && totalPages() > 1) {
+    <app-pagination [config]="paginationConfig()" (pageChanged)="onPageChange($event)">
+    </app-pagination>
+    }
+</div>
+
+<!-- 表單模態視窗 -->
+@if (showForm()) {
+<app-job-role-form [mode]="formMode()" [jobRole]="selectedJobRole()" (saved)="onFormSaved($event)"
+    (cancelled)="onFormCancelled()">
+</app-job-role-form>
+}
+
+<!-- 檢視模態視窗 -->
+@if (showView()) {
+<app-job-role-view [jobRole]="selectedJobRole()!" (closed)="onViewClosed()">
+</app-job-role-view>
+}
+
+<!-- 批量刪除確認模態框 -->
+<app-confirmation-modal [config]="bulkDeleteConfirmConfig()" [show]="showBulkDeleteConfirm()"
+    [loading]="bulkDeleteLoading()" (confirmed)="confirmBulkDelete()" (cancelled)="showBulkDeleteConfirm.set(false)">
+</app-confirmation-modal>

@@ -10,16 +10,26 @@ import {
     DepartmentLevel
 } from '../models/department.model';
 import { environment } from '../../../../environments/environment';
+import { UserStore } from '../../../core/auth/user.store';
 
 @Injectable({
     providedIn: 'root'
 })
 export class DepartmentService {
     private http = inject(HttpClient);
+    private userStore = inject(UserStore);
 
     // Toggle between mock data and real API
     private readonly useMockData = false;
     private readonly apiUrl = `${environment.apiBaseUrl}/departments`;
+
+    /**
+     * Get current logged-in user's username
+     */
+    private getCurrentUser(): string {
+        const currentUser = this.userStore.user();
+        return currentUser?.username || 'system';
+    }
 
     private mockDepartments: Department[] = [
         // BI層（最高層，通常1-3個）
@@ -612,6 +622,7 @@ export class DepartmentService {
             return of(null).pipe(
                 delay(500),
                 map(() => {
+                    const currentUser = this.getCurrentUser();
                     const newDepartment: Department = {
                         dept_id: Math.max(...this.mockDepartments.map(d => d.dept_id)) + 1,
                         dept_code: request.dept_code,
@@ -621,9 +632,9 @@ export class DepartmentService {
                         manager_emp_id: request.manager_emp_id ?? null,
                         is_active: true,
                         create_time: new Date(),
-                        create_user: 'current_user',
+                        create_user: currentUser,
                         update_time: new Date(),
-                        update_user: 'current_user'
+                        update_user: currentUser
                     };
 
                     this.mockDepartments.push(newDepartment);
@@ -635,6 +646,7 @@ export class DepartmentService {
         }
 
         // 後端 API 調用
+        const currentUser = this.getCurrentUser();
         const departmentData = {
             dept_code: request.dept_code,
             dept_name: request.dept_name,
@@ -643,7 +655,7 @@ export class DepartmentService {
             manager_emp_id: request.manager_emp_id || null,
             is_active: request.is_active ?? true,
             dept_desc: request.dept_desc,
-            create_user: 'current_user'
+            create_user: currentUser
         };
 
         return this.http.post<any>(`${this.apiUrl}/create`, departmentData).pipe(
@@ -689,12 +701,13 @@ export class DepartmentService {
                         throw new Error(`Department with id ${id} not found`);
                     }
 
+                    const currentUser = this.getCurrentUser();
                     const existingDepartment = this.mockDepartments[departmentIndex];
                     const updatedDepartment: Department = {
                         ...existingDepartment,
                         ...request,
                         update_time: new Date(),
-                        update_user: 'current_user'
+                        update_user: currentUser
                     };
 
                     this.mockDepartments[departmentIndex] = updatedDepartment;
@@ -706,6 +719,7 @@ export class DepartmentService {
         }
 
         // 後端 API 調用
+        const currentUser = this.getCurrentUser();
         const updateData = {
             dept_id: id,
             dept_code: request.dept_code,
@@ -715,7 +729,7 @@ export class DepartmentService {
             manager_emp_id: request.manager_emp_id,
             is_active: request.is_active,
             dept_desc: request.dept_desc,
-            update_user: 'current_user',
+            update_user: currentUser,
             update_time: new Date().toISOString()
         };
 
@@ -740,6 +754,7 @@ export class DepartmentService {
                     } as Department;
                 } else if (response.code === 1000) {
                     // 成功但沒有回傳資料的情況，使用請求資料建構回傳
+                    const currentUser = this.getCurrentUser();
                     return {
                         dept_id: id,
                         dept_code: request.dept_code,
@@ -752,7 +767,7 @@ export class DepartmentService {
                         create_time: new Date(),
                         create_user: 'system',
                         update_time: new Date(),
-                        update_user: 'current_user'
+                        update_user: currentUser
                     } as Department;
                 } else {
                     throw new Error(response.message || '更新部門失敗');
@@ -778,12 +793,13 @@ export class DepartmentService {
                         throw new Error(`Department with id ${id} not found`);
                     }
 
+                    const currentUser = this.getCurrentUser();
                     // Soft delete by setting is_active to false
                     this.mockDepartments[departmentIndex] = {
                         ...this.mockDepartments[departmentIndex],
                         is_active: false,
                         update_time: new Date(),
-                        update_user: 'current_user'
+                        update_user: currentUser
                     };
 
                     this.departmentsSubject.next([...this.mockDepartments]);

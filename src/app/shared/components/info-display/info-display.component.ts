@@ -55,7 +55,7 @@ export interface InfoDisplayConfig {
                 }
                 @case ('date') {
                   <span class="text-muted">
-                    {{ formatDate(item.value) }}
+                    {{ formatDate(item.value, '無') }}
                   </span>
                 }
                 @case ('email') {
@@ -64,7 +64,7 @@ export interface InfoDisplayConfig {
                       {{ item.value }}
                     </a>
                   } @else {
-                    <span class="text-muted">-</span>
+                    <span class="text-muted">無</span>
                   }
                 }
                 @case ('phone') {
@@ -73,7 +73,7 @@ export interface InfoDisplayConfig {
                       {{ item.value }}
                     </a>
                   } @else {
-                    <span class="text-muted">-</span>
+                    <span class="text-muted">無</span>
                   }
                 }
                 @case ('link') {
@@ -196,7 +196,7 @@ export class InfoDisplayComponent {
 
     visibleItems = computed(() => {
         const items = this.config().items;
-        const showEmpty = this.config().showEmptyItems ?? false;
+        const showEmpty = this.config().showEmptyItems ?? true; // 預設顯示空值項目
 
         return items.filter(item => {
             if (item.visible === false) return false;
@@ -244,7 +244,7 @@ export class InfoDisplayComponent {
 
     formatValue(value: any): string {
         if (this.isEmpty(value)) {
-            return '-';
+            return '無';
         }
         if (typeof value === 'boolean') {
             return value ? '是' : '否';
@@ -252,22 +252,43 @@ export class InfoDisplayComponent {
         return String(value);
     }
 
-    formatDate(value: any): string {
-        if (this.isEmpty(value)) {
-            return '-';
-        }
-        try {
-            const date = new Date(value);
-            return date.toLocaleString('zh-TW', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        } catch {
-            return String(value);
-        }
+    // formatDate(value: any): string {
+    //     if (this.isEmpty(value)) {
+    //         return '-';
+    //     }
+    //     try {
+    //         const date = new Date(value);
+    //         return date.toLocaleString('zh-TW', {
+    //             year: 'numeric',
+    //             month: '2-digit',
+    //             day: '2-digit',
+    //             hour: '2-digit',
+    //             minute: '2-digit'
+    //         });
+    //     } catch {
+    //         return String(value);
+    //     }
+    // }
+
+    formatDate(value: any, fallback = '無'): string {
+      if (this.isEmpty(value)) {
+          return fallback;
+      }
+      try {
+          const date = new Date(value);
+          if (isNaN(date.getTime())) {
+              return fallback;
+          }
+          return date.toLocaleString('zh-TW', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit'
+          });
+      } catch {
+          return fallback;
+      }
     }
 
     getBadgeClass(item: InfoItem): string {

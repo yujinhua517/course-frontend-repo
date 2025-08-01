@@ -7,89 +7,65 @@ description: 'Scaffold Global Permission Guard and Global Notification/Message S
 
 # Scaffold Global Permission Control & Global Message Notification (Angular 19+ Standard)
 
-## Step 1: Create Permission Guard (Role/Access Control)
+## Step 1: Scaffold Permission Guard（全域權限攔截）
 
-- Under `/src/app/core/auth/`, create:
+- 在 `/src/app/core/auth/` 下建立：
   - `permission.guard.ts`
-    - Implements Angular Route Guard, supports canActivate/canLoad
-    - Allows checking for user roles (roles), permissions, or API-returned claims to intercept navigation
-    - Reads user info from `/src/app/core/auth/user.store.ts` or JWT by default
-    - All permissions and route metadata must use strict types (enum/type)
-    - If insufficient permission, auto-redirect to login or a no-access page, and trigger a global message
+    - Angular Route Guard，支援 canActivate/canLoad。
+    - 允許依據 route data（roles/permissions）及 `/src/app/core/auth/user.store.ts` 當前 user/claims 判斷權限。
+    - 權限、角色等型別請用 enum/type 定義，嚴格型別。
 
 - `user.store.ts`
-  - Define types/interfaces for User, Role, Permission (strictly typed)
-  - Use Angular signal/store to provide current user info, roles, permission list (can start as mock, later support API)
+  - 定義 User、Role、Permission interface/enum。
+  - 使用 signal/store 提供 current user/roles/permissions（可先 mock）。
 
-- All main feature routes must be able to declare required permissions (e.g., data: { roles: ['ADMIN', 'MANAGER'] })
-- Example: add canActivate: [PermissionGuard] to app.routes.ts
+- 每個 feature route 可於 route data 註明需哪些權限（如：`data: { roles: ['ADMIN', 'MANAGER'] }`），guard 自動驗證。
 
----
+## Step 2: Scaffold Global Message/Notification System（全域訊息通知）
 
-## Step 2: Global Message / Notification System
-
-- Under `/src/app/shared/` or `/src/app/core/message/`, create:
+- 在 `/src/app/core/message/` 或 `/src/app/shared/components/` 下建立：
   - `global-message.service.ts`
-    - Provides global message push API (`success`, `info`, `error`, `warning`)
-    - Uses RxJS Subject/BehaviorSubject or signal for message stream
-    - Supports message timeout, auto-dismiss, and queue/stack
+    - 提供 `success/info/error/warning` 快捷訊息 API（RxJS Subject 或 signal stream）。
+    - 支援 queue、timeout、auto-dismiss。
 
   - `global-message.component.ts/.html/.scss`
-    - Standalone component, three-file separation
-    - Acts as a Snackbar/Toast or global bar, styled with Bootstrap, uses icons
-    - Supports close button, ARIA labels, tab focus
-    - All message types (info, success, error, warning) should use matching Bootstrap icons and colors (from variables)
-    - Supports multiple queued messages
+    - Snackbar/Toast 類型，Bootstrap 樣式、ARIA 標籤、多訊息隊列。
+    - `<app-global-message />` 插入 `app.component.html`，全域可見。
 
-- Insert `<app-global-message />` directly into `app.component.html` to ensure global visibility
+## Step 3: 範例與測試
 
----
+- 為 guard、store、service、component 製作簡要 `.spec.ts` 單元測試。
+- 於 `/src/app/models/` 定義必要嚴格型別（如 User、Role、Permission、MessageType）。
 
-## Step 3: Type Definitions & Testing
+## Step 4: README/說明文件
 
-- All types (User, Role, Permission, Message) must be defined as interface/enum in `/src/app/models/` and use strict mode
-- All guards, services, and components should have basic `.spec.ts` tests for core logic (e.g., permission checks, message pushes, UI display/interactivity)
+- 說明如何於 route data 設定權限，如何於任一元件呼叫訊息服務，以及如何存取當前 user/permission。
 
----
+## Step 5: 可維護性與共用原則
 
-## Step 4: README & Usage Documentation
-
-- Generate a `README.md` describing:
-  - How to add permission checks to routes
-  - How to use the message service to push notifications
-  - How to access user info and permissions in features/pages
+- guard/service/component 採 singleton/global 設計，全專案可直接 import 使用。
+- message component 支援 i18n，HTML/SCSS 遵循 BEM 或專案規範。
 
 ---
 
-## Step 5: Reusability & Maintenance Tips
+### 補充
 
-- Permission guard and message service should be singleton services, shared globally
-- All message UI supports i18n (pipe/resource)
-- Designed to be easily shared across all feature prompts (place under `core/` or `shared/` for import everywhere)
-- Message component can be dynamic/portal for easy embedding anywhere
+- 本 prompt 僅補足 instructions 未細述之 scaffold 操作細節與範例，所有型別結構、三檔案分離、命名、共用原則等，皆依主 instructions 規範。
+- **如需自動產生，可依此 prompt 執行 scaffold；如需專案維護，請參考 instructions 對應細節。**
 
 ---
 
-## Checklist
+**Example Usage:**
 
-[] Permission guard can intercept routes by role/permission
-[] Global notification can be triggered from any component/page
-[] Strict types, no any, easy to extend
-[] SCSS/HTML uses BEM or project convention
-[] Unit tests and usage examples included
-[] README documents integration and best practices
-
----
-
-## Example Usage
-
-- In route definition:
-
-  ```typescript
-  {
-    path: 'admin',
-    canActivate: [PermissionGuard],
-    data: { roles: ['ADMIN'] },
-    loadComponent: () => import('...')
-  }
+```typescript
+// Route 配置
+{
+  path: 'admin',
+  canActivate: [PermissionGuard],
+  data: { roles: ['ADMIN'] },
+  loadComponent: () => import('...')
+}
+// 訊息服務
+this.globalMessageService.success('操作成功')
 ```
+---

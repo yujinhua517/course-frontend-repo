@@ -26,8 +26,6 @@
                 <div id="dept_code_help" class="form-text">
                     @if (isEditMode()) {
                     編輯模式下部門代碼不可修改
-                    } @else {
-                    建議使用簡短且具意義的代碼，如 IT, HR, FIN
                     }
                 </div>
                 @if (getFieldError('dept_code'); as error) {
@@ -44,7 +42,6 @@
                 <input type="text" id="dept_name" class="form-control" [class.is-invalid]="isFieldInvalid('dept_name')"
                     formControlName="dept_name" placeholder="請輸入部門名稱" maxlength="100"
                     aria-describedby="dept_name_help dept_name_error">
-                <div id="dept_name_help" class="form-text">完整的部門名稱，如資訊技術部</div>
                 @if (getFieldError('dept_name'); as error) {
                 <div id="dept_name_error" class="invalid-feedback">{{ error }}</div>
                 }
@@ -60,10 +57,16 @@
                     formControlName="dept_level" aria-describedby="dept_level_help dept_level_error">
                     <option value="">請選擇部門層級</option>
                     @for (option of levelOptions; track option.value) {
-                    <option [value]="option.value">{{ option.label }}</option>
+                    <option [value]="option.value" [title]="option.description">
+                        {{ option.label }} - {{ option.description }}
+                    </option>
                     }
                 </select>
-                <div id="dept_level_help" class="form-text">選擇適當的部門層級分類</div>
+                <div id="dept_level_help" class="form-text">
+                    <small class="text-muted">
+                        階層關係：BI(最高層) → BU → TU/SU → LOB-T/LOB-S
+                    </small>
+                </div>
                 @if (getFieldError('dept_level'); as error) {
                 <div id="dept_level_error" class="invalid-feedback">{{ error }}</div>
                 }
@@ -89,7 +92,20 @@
                     <option [value]="dept.dept_id">{{ dept.dept_name }} ({{ dept.dept_code }})</option>
                     }
                 </select>
-                <div id="parent_dept_help" class="form-text">選擇此部門的直屬上級部門</div>
+                <div id="parent_dept_help" class="form-text">
+                    @if (selectedDeptLevel()) {
+                    <small class="text-info">
+                        @switch (selectedDeptLevel()) {
+                            @case ('BU') { <i class="bi bi-info-circle me-1"></i>BU 的上層部門只能是 BI }
+                            @case ('TU') { <i class="bi bi-info-circle me-1"></i>TU 的上層部門只能是 BU }
+                            @case ('SU') { <i class="bi bi-info-circle me-1"></i>SU 的上層部門只能是 BU }
+                            @case ('LOB-T') { <i class="bi bi-info-circle me-1"></i>LOB-T 的上層部門只能是 TU }
+                            @case ('LOB-S') { <i class="bi bi-info-circle me-1"></i>LOB-S 的上層部門只能是 SU }
+                            @case ('BI') { <i class="bi bi-info-circle me-1"></i>BI 是最高層級，無上級部門 }
+                        }
+                    </small>
+                    }
+                </div>
                 @if (getFieldError('parent_dept_id'); as error) {
                 <div id="parent_dept_error" class="invalid-feedback">{{ error }}</div>
                 }
@@ -108,7 +124,6 @@
                     <option [value]="emp.emp_id">{{ emp.emp_name }} ({{ emp.emp_code }})</option>
                     }
                 </select>
-                <div id="manager_emp_help" class="form-text">選擇擔任此部門主管的員工</div>
                 @if (getFieldError('manager_emp_id'); as error) {
                 <div id="manager_emp_error" class="invalid-feedback">{{ error }}</div>
                 }
@@ -125,9 +140,6 @@
                     <option [value]="true">啟用 - 正常運作的部門</option>
                     <option [value]="false">停用 - 暫時停止運作的部門</option>
                 </select>
-                <div id="is_active_help" class="form-text">
-                    停用的部門將不會出現在部門選單中
-                </div>
                 @if (getFieldError('is_active'); as error) {
                 <div id="is_active_error" class="invalid-feedback">{{ error }}</div>
                 }

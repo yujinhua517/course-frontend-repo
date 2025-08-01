@@ -5,6 +5,10 @@ import { RoleName, PermissionName } from './models/user.model';
 
 export const routes: Routes = [
   {
+    path: 'login',
+    children: LOGIN_ROUTES
+  },
+  {
     path: '',
     canActivate: [PermissionGuard],
     data: { requireAuth: true }, // 需要認證但不需要特定權限
@@ -29,6 +33,14 @@ export const routes: Routes = [
         loadComponent: () => import('./features/competency-management/pages/competency-list/competency-list.component').then(m => m.CompetencyListComponent)
       },
       {
+        path: 'job-role',
+        canActivate: [PermissionGuard],
+        data: { 
+          //roles: [RoleName.ADMIN, RoleName.MANAGER, RoleName.SUPERVISOR, RoleName.USER],
+          permissions: [PermissionName.JOBROLE_READ] },
+        loadComponent: () => import('./features/job-role-management/pages/job-role-list/job-role-list.component').then(m => m.JobRoleListComponent)
+      },
+      {
         path: 'employee',
         canActivate: [PermissionGuard],
         data: { permissions: [PermissionName.EMPLOYEE_READ] },
@@ -38,7 +50,7 @@ export const routes: Routes = [
         path: 'department',
         canActivate: [PermissionGuard],
         data: {
-          roles: [RoleName.ADMIN, RoleName.MANAGER],
+          // roles: [RoleName.ADMIN, RoleName.MANAGER, RoleName.SUPERVISOR, RoleName.USER],
           permissions: [PermissionName.DEPARTMENT_READ]
         },
         loadComponent: () => import('./features/department-management/pages/department-list/department-list.component').then(m => m.DepartmentListComponent)
@@ -47,15 +59,11 @@ export const routes: Routes = [
     ]
   },
   {
-    path: 'login',
-    children: LOGIN_ROUTES
-  },
-  {
     path: 'unauthorized',
     loadComponent: () => import('./shared/components/unauthorized/unauthorized.component').then(m => m.UnauthorizedComponent)
   },
   {
     path: '**',
-    redirectTo: '/login' // 未匹配路由重定向到登入頁
+    redirectTo: '/' // 未匹配路由重定向到首頁，讓 PermissionGuard 處理認證邏輯
   }
 ];

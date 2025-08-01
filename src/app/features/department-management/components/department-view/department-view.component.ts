@@ -96,12 +96,12 @@ export class DepartmentViewComponent {
             },
             {
                 label: '建立者',
-                value: this.department().create_user || '系統',
+                value: this.department().create_user || '無',
                 icon: 'person-plus'
             },
             {
                 label: '更新者',
-                value: this.department().update_user || '系統',
+                value: this.department().update_user || '無',
                 icon: 'person-gear'
             }
         ]
