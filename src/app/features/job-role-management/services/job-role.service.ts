@@ -1,6 +1,6 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, of, delay, map } from 'rxjs';
+import { Observable, of, delay, map, catchError } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import {
     JobRole,
@@ -146,86 +146,82 @@ export class JobRoleService {
             return this.getMockJobRoles(params);
         }
 
-        // 真實 API 呼叫 - 使用 GET 方式獲取所有職務，前端處理分頁和篩選
-        return this.http.get<ApiResponse<JobRole[]>>(this.apiUrl).pipe(
-            map(response => {
-                if (response.code === 1000) {
-                    let filteredData = [...response.data];
+        // 前端適配後端的 PageBean 分頁格式
+        // 將前端的 page_index(0-based) 和 page_size 轉換為後端的 first_index_in_page 和 last_index_in_page
+        const page = (params?.page_index || 0) + 1; // 後端頁碼從 1 開始
+        const pageSize = params?.page_size || 10;
+        
+        // 計算後端 PageBean 需要的索引 (1-based)
+        const firstIndex = (page - 1) * pageSize + 1; // 第一筆資料的索引
+        const lastIndex = page * pageSize; // 最後一筆資料的索引
 
-                    // 搜尋篩選
-                    if (params?.keyword) {
-                        const keyword = params.keyword.toLowerCase();
-                        filteredData = filteredData.filter(item =>
-                            item.job_role_code.toLowerCase().includes(keyword) ||
-                            item.job_role_name.toLowerCase().includes(keyword) ||
-                            (item.description && item.description.toLowerCase().includes(keyword))
-                        );
-                    }
+        const requestParams = {
+            // 後端 PageBean 的分頁參數
+            first_index_in_page: firstIndex,
+            last_index_in_page: lastIndex,
+            pageable: true,
+            
+            // 排序參數
+            sort_column: params?.sort_column || 'job_role_code',
+            sort_direction: params?.sort_direction || 'ASC',
+            
+            // 搜尋條件
+            ...(params?.keyword && { keyword: params.keyword }),
+            ...(params?.is_active !== undefined && { is_active: params.is_active }),
+            ...(params?.job_role_id && { job_role_id: params.job_role_id }),
+            ...(params?.job_role_code && { job_role_code: params.job_role_code }),
+            ...(params?.job_role_name && { job_role_name: params.job_role_name }),
+            ...(params?.description && { description: params.description })
+        };
 
-                    // 狀態篩選
-                    if (params?.is_active !== undefined) {
-                        let targetStatus: boolean;
-                        if (typeof params.is_active === 'string') {
-                            targetStatus = params.is_active === 'true';
-                        } else {
-                            targetStatus = params.is_active;
-                        }
-                        filteredData = filteredData.filter(item => item.is_active === targetStatus);
-                    }
+        console.log(`前端分頁參數轉換: page_index=${params?.page_index}, page_size=${pageSize} -> first_index=${firstIndex}, last_index=${lastIndex}`);
+        console.log('發送到後端的參數:', requestParams);
 
-                    // 排序
-                    if (params?.sort_column && params?.sort_direction) {
-                        filteredData.sort((a, b) => {
-                            const aValue = (a as any)[params.sort_column!];
-                            const bValue = (b as any)[params.sort_column!];
-
-                            if (aValue === undefined || bValue === undefined) return 0;
-
-                            let comparison = 0;
-                            if (aValue < bValue) comparison = -1;
-                            else if (aValue > bValue) comparison = 1;
-
-                            return params.sort_direction === 'desc' ? -comparison : comparison;
-                        });
-                    }
-
-                    // 分頁
-                    const page = params?.page_index || 0;
-                    const pageSize = params?.page_size || 10;
-                    const startIndex = page * pageSize;
-                    const endIndex = startIndex + pageSize;
-                    const paginatedData = filteredData.slice(startIndex, endIndex);
-
-                    const totalRecords = filteredData.length;
-                    const totalPages = Math.ceil(totalRecords / pageSize);
-                    
-                    const result: JobRoleListResponse = {
-                        code: 200,
-                        message: '查詢成功',
-                        data: {
-                            data_list: paginatedData,
-                            total_records: totalRecords,
-                            first_index_in_page: startIndex + 1,
-                            last_index_in_page: Math.min(endIndex, totalRecords),
-                            pageable: true,
-                            sort_column: params?.sort_column,
-                            sort_direction: params?.sort_direction,
-                            // 額外資訊
-                            totalPages,
-                            page,
+        return this.http.post<ApiResponse<PagerDto<JobRole>>>(`${this.apiUrl}/query`, requestParams)
+            .pipe(
+                map(response => {
+                    console.log('後端回應:', response);
+                    if (response.code === 1000) {
+                        // 後端回傳的資料可能分頁資訊不正確，前端重新計算
+                        const backendData = response.data;
+                        const actualDataCount = backendData.data_list?.length || 0;
+                        
+                        // 重新計算正確的分頁資訊
+                        const adaptedData: PagerDto<JobRole> = {
+                            data_list: backendData.data_list,
+                            total_records: backendData.total_records,
+                            // 使用前端計算的正確分頁資訊
+                            first_index_in_page: firstIndex,
+                            last_index_in_page: Math.min(lastIndex, backendData.total_records),
+                            pageable: backendData.pageable,
+                            sort_column: backendData.sort_column,
+                            sort_direction: backendData.sort_direction,
+                            // 額外的分頁資訊
+                            totalPages: Math.ceil(backendData.total_records / pageSize),
+                            page: params?.page_index || 0,
                             size: pageSize,
-                            hasNext: page < totalPages - 1,
-                            hasPrevious: page > 0
-                        }
-                    };
-
-                    return result;
-                } else {
-                    // 處理錯誤回應
-                    throw new Error(response.message || '查詢失敗');
-                }
-            })
-        );
+                            hasNext: (params?.page_index || 0) < Math.ceil(backendData.total_records / pageSize) - 1,
+                            hasPrevious: (params?.page_index || 0) > 0
+                        };
+                        
+                        console.log(`前端修正分頁資訊: 請求範圍=${firstIndex}-${lastIndex}, 實際回傳=${actualDataCount}筆, 總計=${backendData.total_records}筆`);
+                        
+                        const result: JobRoleListResponse = {
+                            code: 200,
+                            message: '查詢成功',
+                            data: adaptedData
+                        };
+                        
+                        return result;
+                    } else {
+                        throw new Error(response.message || '查詢失敗');
+                    }
+                }),
+                catchError(error => {
+                    console.error('API 查詢失敗，使用 Mock 資料:', error);
+                    return this.getMockJobRoles(params);
+                })
+            );
     }
 
     /**

@@ -38,10 +38,14 @@ export interface JobRoleSearchParams {
     // 排序參數
     sort_column?: string;
     sort_direction?: string;
-    // 分頁參數 (統一使用後端格式)
-    page_index?: number;
-    page_size?: number;
+    // 分頁參數 (前端使用，會轉換為後端 PageBean 格式)
+    page_index?: number;  // 0-based 頁碼
+    page_size?: number;   // 每頁筆數
+    // 後端 PageBean 分頁參數 (轉換後傳送給後端)
+    first_index_in_page?: number;  // 1-based 第一筆索引
+    last_index_in_page?: number;   // 1-based 最後一筆索引
     pageable?: boolean;
+    total_records?: number;
 }
 
 // API 回應包裝器
