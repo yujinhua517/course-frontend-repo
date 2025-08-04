@@ -39,11 +39,17 @@ export class EmployeeStore {
         const searchParams = {
             ...this._searchParams(),
             ...params,
-            keyword: params?.keyword || '',
-            is_active: params?.is_active ?? true,
             first_index_in_page: ((params?.first_index_in_page || this._currentPage()) - 1) * this._pageSize() + 1,
             pageable: true
         };
+
+        // 只有當明確傳入時才覆蓋，避免清除現有的搜尋條件
+        if (params?.keyword !== undefined) {
+            searchParams.keyword = params.keyword;
+        }
+        if (params?.is_active !== undefined) {
+            searchParams.is_active = params.is_active;
+        }
 
         console.log('Employee Store loadEmployees called with params:', searchParams);
 

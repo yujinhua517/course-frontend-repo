@@ -66,7 +66,7 @@ describe('JobRoleService', () => {
     });
 
     it('should delete job role', (done) => {
-        service.deleteJobRole('DEV001').subscribe(result => {
+        service.deleteJobRole(1).subscribe(result => {
             expect(result.code).toBe(200);
             done();
         });

@@ -17,7 +17,7 @@ import {
 })
 export class JobRoleService {
     private http = inject(HttpClient);
-    private useMockData = true; // 臨時使用 Mock 資料來檢查前端邏輯
+    private useMockData = false; // 臨時使用 Mock 資料來檢查前端邏輯
     private apiUrl = `${environment.apiBaseUrl}/job-roles`;
 
     // Signals
@@ -146,36 +146,86 @@ export class JobRoleService {
             return this.getMockJobRoles(params);
         }
 
-        // 真實 API 呼叫
-        const requestBody: any = {
-            page_index: params?.page_index || 0,
-            page_size: params?.page_size || 10,
-            pageable: true
-        };
-        
-        // 搜尋條件
-        if (params?.keyword) {
-            requestBody.keyword = params.keyword;
-        }
-        if (params?.job_role_code) {
-            requestBody.job_role_code = params.job_role_code;
-        }
-        if (params?.job_role_name) {
-            requestBody.job_role_name = params.job_role_name;
-        }
-        if (params?.is_active !== undefined) {
-            requestBody.is_active = params.is_active;
-        }
-        
-        // 排序參數
-        if (params?.sort_column) {
-            requestBody.sort_column = params.sort_column;
-        }
-        if (params?.sort_direction) {
-            requestBody.sort_direction = params.sort_direction;
-        }
+        // 真實 API 呼叫 - 使用 GET 方式獲取所有職務，前端處理分頁和篩選
+        return this.http.get<ApiResponse<JobRole[]>>(this.apiUrl).pipe(
+            map(response => {
+                if (response.code === 1000) {
+                    let filteredData = [...response.data];
 
-        return this.http.post<ApiResponse<PagerDto<JobRole>>>(`${this.apiUrl}/query`, requestBody);
+                    // 搜尋篩選
+                    if (params?.keyword) {
+                        const keyword = params.keyword.toLowerCase();
+                        filteredData = filteredData.filter(item =>
+                            item.job_role_code.toLowerCase().includes(keyword) ||
+                            item.job_role_name.toLowerCase().includes(keyword) ||
+                            (item.description && item.description.toLowerCase().includes(keyword))
+                        );
+                    }
+
+                    // 狀態篩選
+                    if (params?.is_active !== undefined) {
+                        let targetStatus: boolean;
+                        if (typeof params.is_active === 'string') {
+                            targetStatus = params.is_active === 'true';
+                        } else {
+                            targetStatus = params.is_active;
+                        }
+                        filteredData = filteredData.filter(item => item.is_active === targetStatus);
+                    }
+
+                    // 排序
+                    if (params?.sort_column && params?.sort_direction) {
+                        filteredData.sort((a, b) => {
+                            const aValue = (a as any)[params.sort_column!];
+                            const bValue = (b as any)[params.sort_column!];
+
+                            if (aValue === undefined || bValue === undefined) return 0;
+
+                            let comparison = 0;
+                            if (aValue < bValue) comparison = -1;
+                            else if (aValue > bValue) comparison = 1;
+
+                            return params.sort_direction === 'desc' ? -comparison : comparison;
+                        });
+                    }
+
+                    // 分頁
+                    const page = params?.page_index || 0;
+                    const pageSize = params?.page_size || 10;
+                    const startIndex = page * pageSize;
+                    const endIndex = startIndex + pageSize;
+                    const paginatedData = filteredData.slice(startIndex, endIndex);
+
+                    const totalRecords = filteredData.length;
+                    const totalPages = Math.ceil(totalRecords / pageSize);
+                    
+                    const result: JobRoleListResponse = {
+                        code: 200,
+                        message: '查詢成功',
+                        data: {
+                            data_list: paginatedData,
+                            total_records: totalRecords,
+                            first_index_in_page: startIndex + 1,
+                            last_index_in_page: Math.min(endIndex, totalRecords),
+                            pageable: true,
+                            sort_column: params?.sort_column,
+                            sort_direction: params?.sort_direction,
+                            // 額外資訊
+                            totalPages,
+                            page,
+                            size: pageSize,
+                            hasNext: page < totalPages - 1,
+                            hasPrevious: page > 0
+                        }
+                    };
+
+                    return result;
+                } else {
+                    // 處理錯誤回應
+                    throw new Error(response.message || '查詢失敗');
+                }
+            })
+        );
     }
 
     /**

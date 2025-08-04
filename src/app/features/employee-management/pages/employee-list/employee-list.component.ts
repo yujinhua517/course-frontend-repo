@@ -373,8 +373,8 @@ export class EmployeeListComponent implements OnInit {
         this.employeeStore.loadEmployees({
             keyword: this.searchKeyword() || undefined,
             is_active: this.statusFilter() ?? undefined,
-            sortBy: this.sortBy(),
-            sort_direction: this.sortDirection()
+            sort_column: this.sortBy(),
+            sort_direction: this.sortDirection().toUpperCase()
         });
     }
 

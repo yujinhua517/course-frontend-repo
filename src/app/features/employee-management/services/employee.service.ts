@@ -32,33 +32,61 @@ export class EmployeeService {
         if (this.useMockData) {
             let all = this.getMockEmployeeList().data_list;
 
-            console.log('原始員工數據數量:', all.length);
-            console.log('搜尋參數:', params);
+            // console.log('原始員工數據數量:', all.length);
+            // console.log('搜尋參數:', params);
 
             // 根據搜尋參數過濾
             if (params?.dept_id !== undefined) {
                 all = all.filter(e => e.dept_id === params.dept_id);
-                console.log('按部門過濾後數量:', all.length);
+                //console.log('按部門過濾後數量:', all.length);
             }
 
             if (params?.is_active !== undefined) {
-                console.log('按狀態過濾，目標狀態:', params.is_active, '類型:', typeof params.is_active);
+                //console.log('按狀態過濾，目標狀態:', params.is_active, '類型:', typeof params.is_active);
 
                 // 確保比較時類型一致
                 const targetStatus = Boolean(params.is_active);
                 all = all.filter(e => {
                     const employeeStatus = Boolean(e.is_active);
-                    console.log(`員工 ${e.emp_name} 狀態: ${employeeStatus}, 目標: ${targetStatus}, 匹配: ${employeeStatus === targetStatus}`);
+                    //console.log(`員工 ${e.emp_name} 狀態: ${employeeStatus}, 目標: ${targetStatus}, 匹配: ${employeeStatus === targetStatus}`);
                     return employeeStatus === targetStatus;
                 });
-                console.log('按狀態過濾後數量:', all.length);
+                //console.log('按狀態過濾後數量:', all.length);
             }
 
             if (params?.emp_name) {
                 all = all.filter(e => e.emp_name.includes(params.emp_name as string));
-                console.log('按姓名過濾後數量:', all.length);
+                //console.log('按姓名過濾後數量:', all.length);
+            }
+
+            // 通用關鍵字搜尋 (搜尋員工姓名、工號、電子郵件)
+            if (params?.keyword) {
+                const keyword = params.keyword.toLowerCase();
+                all = all.filter(e => 
+                    e.emp_name.toLowerCase().includes(keyword) ||
+                    e.emp_code.toLowerCase().includes(keyword) ||
+                    (e.emp_email && e.emp_email.toLowerCase().includes(keyword))
+                );
+                //console.log('按關鍵字過濾後數量:', all.length);
             }
             // 其他欄位可依需求補充
+
+            // 排序
+            if (params?.sort_column && params?.sort_direction) {
+                all.sort((a, b) => {
+                    const aValue = (a as any)[params.sort_column!];
+                    const bValue = (b as any)[params.sort_column!];
+
+                    if (aValue === undefined || bValue === undefined) return 0;
+
+                    let comparison = 0;
+                    if (aValue < bValue) comparison = -1;
+                    else if (aValue > bValue) comparison = 1;
+
+                    return params.sort_direction === 'DESC' ? -comparison : comparison;
+                });
+                //console.log('按排序條件排序:', params.sort_column, params.sort_direction);
+            }
 
             // 分頁
             const page = params?.page ?? 1;
@@ -67,7 +95,7 @@ export class EmployeeService {
             const end = start + pageSize;
             const paged = all.slice(start, end);
 
-            console.log('最終返回數據數量:', paged.length);
+            //console.log('最終返回數據數量:', paged.length);
 
             return of({
                 data_list: paged,
@@ -79,10 +107,69 @@ export class EmployeeService {
                 sort_direction: params?.sort_direction ?? 'ASC'
             }).pipe(delay(300)); // 添加 300ms 延遲以模擬網路請求
         }
-        return this.http.post<ApiResponse<PagerDto<Employee>>>(`${this.apiUrl}/query`, params || {})
+
+        // 前端適配後端的 PageBean 分頁格式
+        // 將前端的 page(1-based) 和 pageSize 轉換為後端的 first_index_in_page 和 last_index_in_page
+        const page = params?.page || 1; // 前端頁碼從 1 開始
+        const pageSize = params?.pageSize || 10;
+        
+        // 計算後端 PageBean 需要的索引 (1-based)
+        const firstIndex = (page - 1) * pageSize + 1; // 第一筆資料的索引
+        const lastIndex = page * pageSize; // 最後一筆資料的索引
+
+        const requestParams = {
+            // 後端 PageBean 的分頁參數
+            first_index_in_page: firstIndex,
+            last_index_in_page: lastIndex,
+            pageable: true,
+            
+            // 排序參數
+            sort_column: params?.sort_column || 'emp_code',
+            sort_direction: params?.sort_direction || 'ASC',
+            
+            // 搜尋條件
+            ...(params?.keyword && { keyword: params.keyword }),
+            ...(params?.is_active !== undefined && { is_active: params.is_active }),
+            ...(params?.dept_id && { dept_id: params.dept_id }),
+            ...(params?.emp_name && { emp_name: params.emp_name }),
+            ...(params?.emp_code && { emp_code: params.emp_code }),
+            ...(params?.emp_email && { emp_email: params.emp_email })
+        };
+
+        //console.log(`前端分頁參數轉換: page=${page}, pageSize=${pageSize} -> first_index=${firstIndex}, last_index=${lastIndex}`);
+        //console.log('發送到後端的參數:', requestParams);
+
+        return this.http.post<ApiResponse<PagerDto<Employee>>>(`${this.apiUrl}/query`, requestParams)
             .pipe(
-                map(response => response.data),
-                catchError(() => of(this.getMockEmployeeList()))
+                map(response => {
+                    //console.log('後端回應:', response);
+                    if (response.code === 1000) {
+                        // 後端回傳的資料可能分頁資訊不正確，前端重新計算
+                        const backendData = response.data;
+                        const actualDataCount = backendData.data_list?.length || 0;
+                        
+                        // 重新計算正確的分頁資訊
+                        const adaptedData: PagerDto<Employee> = {
+                            data_list: backendData.data_list,
+                            total_records: backendData.total_records,
+                            // 使用前端計算的正確分頁資訊
+                            first_index_in_page: firstIndex,
+                            last_index_in_page: Math.min(lastIndex, backendData.total_records),
+                            pageable: backendData.pageable,
+                            sort_column: backendData.sort_column,
+                            sort_direction: backendData.sort_direction
+                        };
+                        
+                        //console.log(`前端修正分頁資訊: 請求範圍=${firstIndex}-${lastIndex}, 實際回傳=${actualDataCount}筆, 總計=${backendData.total_records}筆`);
+                        return adaptedData;
+                    } else {
+                        throw new Error(response.message || '查詢失敗');
+                    }
+                }),
+                catchError(error => {
+                    console.error('API 查詢失敗，使用 Mock 資料:', error);
+                    return of(this.getMockEmployeeList());
+                })
             );
     }
 
