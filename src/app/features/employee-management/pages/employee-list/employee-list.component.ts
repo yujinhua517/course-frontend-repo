@@ -1,7 +1,7 @@
 import { Component, OnInit, signal, computed, inject, ViewChild, TemplateRef, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+// import { FormsModule } from '@angular/forms';
+// import { RouterModule } from '@angular/router';
 import { EmployeeStore } from '../../store/employee.store';
 import { EmployeeService } from '../../services/employee.service';
 import { EmployeeFormComponent } from '../../components/employee-form/employee-form.component';
@@ -29,8 +29,8 @@ import { HighlightPipe } from '../../../../shared/pipes/highlight.pipe';
     styleUrls: ['./employee-list.component.scss'],
     imports: [
         CommonModule,
-        FormsModule,
-        RouterModule,
+        // FormsModule,
+        // RouterModule,
         EmployeeFormComponent,
         EmployeeViewComponent,
         TableHeaderComponent,
@@ -73,7 +73,7 @@ export class EmployeeListComponent implements OnInit {
     showView = signal(false);
     selectedEmployee = signal<Employee | null>(null);
     formMode = signal<'create' | 'edit'>('create');
-    sortBy = signal<keyof Employee>('emp_code');
+    sortBy = signal<keyof Employee>('empCode');
     sortDirection = signal<'asc' | 'desc'>('asc');
 
     // Bulk selection signals
@@ -87,7 +87,7 @@ export class EmployeeListComponent implements OnInit {
         searchLabel: '關鍵字搜尋',
         filters: [
             {
-                key: 'is_active',
+                key: 'isActive',
                 label: '在職狀態',
                 options: [
                     { value: true, text: '在職' },
@@ -104,8 +104,8 @@ export class EmployeeListComponent implements OnInit {
 
     // 計算當前篩選器值
     readonly currentFilterValues = computed(() => ({
-        is_active: this.statusFilter(),
-        dept_id: this.departmentFilter()
+        isActive: this.statusFilter(),
+        deptId: this.departmentFilter()
     }));
 
     // 分頁配置
@@ -207,7 +207,7 @@ export class EmployeeListComponent implements OnInit {
         return {
             data: this.employees(),
             showSelectColumn: this.hasDeletePermission(),
-            trackByFn: (index: number, item: Employee) => item.emp_id,
+            trackByFn: (index: number, item: Employee) => item.empId,
             rowCssClass: (item: Employee) => this.isSelected(item) ? 'table-active' : '',
             columns: [
                 {
@@ -324,12 +324,12 @@ export class EmployeeListComponent implements OnInit {
         cancelText: '取消',
         size: 'md',
         items: this.selectedEmployees().map(emp => ({
-            id: emp.emp_id.toString(),
-            text: emp.emp_code,
-            subText: emp.emp_name,
+            id: emp.empId.toString(),
+            text: emp.empCode,
+            subText: emp.empName,
             icon: 'person'
         })),
-        maxItemsToShow: 5,
+        maxItemsToShow: 100,
         showItemIcon: true
     }));
 
@@ -372,9 +372,9 @@ export class EmployeeListComponent implements OnInit {
         console.log('Employee List Component: loadEmployees called');
         this.employeeStore.loadEmployees({
             keyword: this.searchKeyword() || undefined,
-            is_active: this.statusFilter() ?? undefined,
-            sort_column: this.sortBy(),
-            sort_direction: this.sortDirection().toUpperCase()
+            isActive: this.statusFilter() ?? undefined,
+            sortColumn: this.sortBy(),
+            sortDirection: this.sortDirection().toUpperCase()
         });
     }
 
@@ -446,12 +446,12 @@ export class EmployeeListComponent implements OnInit {
         if (selected) {
             this.selectedEmployees.set([...currentSelected, item]);
         } else {
-            this.selectedEmployees.set(currentSelected.filter(e => e.emp_id !== item.emp_id));
+            this.selectedEmployees.set(currentSelected.filter(e => e.empId !== item.empId));
         }
     }
 
     isSelected(item: Employee): boolean {
-        return this.selectedEmployees().some(e => e.emp_id === item.emp_id);
+        return this.selectedEmployees().some(e => e.empId === item.empId);
     }
 
     // CRUD 操作
@@ -473,11 +473,11 @@ export class EmployeeListComponent implements OnInit {
     }
 
     onDelete(employee: Employee): void {
-        if (confirm(`確定要刪除員工「${employee.emp_name}」嗎？`)) {
-            this.employeeService.deleteEmployee(employee.emp_id).subscribe({
+        if (confirm(`確定要刪除員工「${employee.empName}」嗎？`)) {
+            this.employeeService.deleteEmployee(employee.empId).subscribe({
                 next: (success) => {
                     if (success) {
-                        this.employeeStore.removeEmployee(employee.emp_id);
+                        this.employeeStore.removeEmployee(employee.empId);
                     }
                 },
                 error: (error) => {
@@ -502,14 +502,14 @@ export class EmployeeListComponent implements OnInit {
 
     private performBulkDelete(): void {
         const selected = this.selectedEmployees();
-        const ids = selected.map(emp => emp.emp_id);
+        const ids = selected.map(emp => emp.empId);
 
         this.employeeService.bulkDeleteEmployees?.(ids).subscribe({
             next: (success) => {
                 if (success) {
                     // 從本地狀態移除已刪除的員工
                     selected.forEach(emp => {
-                        this.employeeStore.removeEmployee(emp.emp_id);
+                        this.employeeStore.removeEmployee(emp.empId);
                     });
                     this.selectedEmployees.set([]);
                 }
@@ -535,9 +535,9 @@ export class EmployeeListComponent implements OnInit {
     //     });
     // }
     onToggleStatus(employee: Employee): void {
-        const targetStatus = employee.is_active ? '離職' : '在職';
-        if (!confirm(`確定要將「${employee.emp_name}」的狀態切換至「${targetStatus}」嗎？`)) return;
-        this.employeeService.toggleActiveStatus(employee.emp_id).subscribe({
+        const targetStatus = employee.isActive ? '離職' : '在職';
+        if (!confirm(`確定要將「${employee.empName}」的狀態切換至「${targetStatus}」嗎？`)) return;
+        this.employeeService.toggleActiveStatus(employee.empId).subscribe({
             next: (updatedEmployee) => {
                 if (updatedEmployee) {
                     this.employeeStore.updateEmployee(updatedEmployee);
@@ -641,7 +641,7 @@ export class EmployeeListComponent implements OnInit {
             ],
             size: 'sm',
             orientation: 'horizontal',
-            itemName: employee.emp_name
+            itemName: employee.empName
         };
     }
 
@@ -660,7 +660,7 @@ export class EmployeeListComponent implements OnInit {
 
     getStatusConfig(employee: Employee): StatusConfig {
         return {
-            value: employee.is_active,
+            value: employee.isActive,
             activeValue: true,
             inactiveValue: false,
             activeText: '在職',

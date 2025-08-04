@@ -38,8 +38,8 @@ export class JobRoleStore {
         const searchParams: JobRoleSearchParams = {
             ...this._searchParams(),
             ...params,
-            page_index: params?.page_index ?? (this._currentPage() - 1), // 轉換為 0-based
-            page_size: params?.page_size ?? this._pageSize(),
+            pageIndex: params?.pageIndex ?? (this._currentPage() - 1), // 轉換為 0-based
+            pageSize: params?.pageSize ?? this._pageSize(),
             pageable: true
         };
 
@@ -48,8 +48,8 @@ export class JobRoleStore {
         this.jobRoleService.getJobRoles(searchParams).subscribe({
             next: (response) => {
                 if (response.code === 200) {
-                    this._jobRoles.set(response.data.data_list);
-                    this._total.set(response.data.total_records);
+                    this._jobRoles.set(response.data.dataList);
+                    this._total.set(response.data.totalRecords);
                     // 將 0-based 轉換為 1-based 顯示
                     this._currentPage.set((response.data.page || 0) + 1);
                     this._pageSize.set(response.data.size || 10);
@@ -69,24 +69,24 @@ export class JobRoleStore {
         this.loadJobRoles({
             ...this._searchParams(),
             keyword,
-            page_index: 0
+            pageIndex: 0
         });
     }
 
-    filterByStatus(is_active?: boolean): void {
+    filterByStatus(isActive?: boolean): void {
         this._currentPage.set(1); // 重設為第一頁
         this.loadJobRoles({
             ...this._searchParams(),
-            is_active,
-            page_index: 0
+            isActive,
+            pageIndex: 0
         });
     }
 
     sortJobRoles(sortBy: keyof JobRole, sortDirection: 'asc' | 'desc'): void {
         this.loadJobRoles({
             ...this._searchParams(),
-            sort_column: sortBy as string,
-            sort_direction: sortDirection
+            sortColumn: sortBy as string,
+            sortDirection: sortDirection
         });
     }
 
@@ -95,7 +95,7 @@ export class JobRoleStore {
             this._currentPage.set(page);
             this.loadJobRoles({
                 ...this._searchParams(),
-                page_index: page - 1 // 轉換為 0-based
+                pageIndex: page - 1 // 轉換為 0-based
             });
         }
     }
@@ -105,8 +105,8 @@ export class JobRoleStore {
         this._pageSize.set(pageSize);
         this.loadJobRoles({
             ...this._searchParams(),
-            page_size: pageSize,
-            page_index: 0
+            pageSize: pageSize,
+            pageIndex: 0
         });
     }
 
@@ -118,7 +118,7 @@ export class JobRoleStore {
 
     updateJobRole(updatedJobRole: JobRole): void {
         const jobRoles = this._jobRoles();
-        const index = jobRoles.findIndex(c => c.job_role_code === updatedJobRole.job_role_code);
+        const index = jobRoles.findIndex(c => c.jobRoleCode === updatedJobRole.jobRoleCode);
 
         if (index !== -1) {
             const updated = [...jobRoles];
@@ -128,22 +128,22 @@ export class JobRoleStore {
     }
 
     removeJobRole(code: string): void {
-        const filtered = this._jobRoles().filter(c => c.job_role_code !== code);
+        const filtered = this._jobRoles().filter(c => c.jobRoleCode !== code);
         this._jobRoles.set(filtered);
         this._total.set(this._total() - 1);
     }
 
     toggleJobRoleStatus(code: string): void {
         const jobRoles = this._jobRoles();
-        const index = jobRoles.findIndex(c => c.job_role_code === code);
+        const index = jobRoles.findIndex(c => c.jobRoleCode === code);
 
         if (index !== -1) {
             const updated = [...jobRoles];
             updated[index] = {
                 ...updated[index],
-                is_active: !updated[index].is_active,
-                update_time: new Date().toISOString(),
-                update_user: 'current_user'
+                isActive: !updated[index].isActive,
+                updateTime: new Date().toISOString(),
+                updateUser: 'current_user'
             };
             this._jobRoles.set(updated);
         }

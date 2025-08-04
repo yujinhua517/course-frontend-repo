@@ -16,45 +16,44 @@
         <div class="row g-3">
             <!-- 部門代碼 -->
             <div class="col-md-6">
-                <label for="dept_code" class="form-label required">
-                    <i class="bi bi-hash me-1"></i>
+                                <label for="deptCode" class="form-label required">
                     部門代碼
+                    <span class="text-danger">*</span>
                 </label>
-                <input type="text" id="dept_code" class="form-control" [class.is-invalid]="isFieldInvalid('dept_code')"
-                    formControlName="dept_code" placeholder="請輸入部門代碼（如：IT, HR）" [readonly]="isEditMode()" maxlength="20"
-                    aria-describedby="dept_code_help dept_code_error">
-                <div id="dept_code_help" class="form-text">
-                    @if (isEditMode()) {
-                    編輯模式下部門代碼不可修改
-                    }
+                <input type="text" id="deptCode" class="form-control" [class.is-invalid]="isFieldInvalid('deptCode')"
+                    formControlName="deptCode" placeholder="請輸入部門代碼（如：IT, HR）" [readonly]="isEditMode()" maxlength="20"
+                    aria-describedby="deptCode_help deptCode_error">
+                <div id="deptCode_help" class="form-text">
+                    部門代碼用於系統內部識別，建立後不可修改。
                 </div>
-                @if (getFieldError('dept_code'); as error) {
-                <div id="dept_code_error" class="invalid-feedback">{{ error }}</div>
+
+                @if (getFieldError('deptCode'); as error) {
+                <div id="deptCode_error" class="invalid-feedback">{{ error }}</div>
                 }
             </div>
 
             <!-- 部門名稱 -->
             <div class="col-md-6">
-                <label for="dept_name" class="form-label required">
-                    <i class="bi bi-building me-1"></i>
+                                <label for="deptName" class="form-label required">
                     部門名稱
+                    <span class="text-danger">*</span>
                 </label>
-                <input type="text" id="dept_name" class="form-control" [class.is-invalid]="isFieldInvalid('dept_name')"
-                    formControlName="dept_name" placeholder="請輸入部門名稱" maxlength="100"
-                    aria-describedby="dept_name_help dept_name_error">
-                @if (getFieldError('dept_name'); as error) {
-                <div id="dept_name_error" class="invalid-feedback">{{ error }}</div>
+                <input type="text" id="deptName" class="form-control" [class.is-invalid]="isFieldInvalid('deptName')"
+                    formControlName="deptName" placeholder="請輸入部門名稱" maxlength="100"
+                    aria-describedby="deptName_help deptName_error">
+                @if (getFieldError('deptName'); as error) {
+                <div id="deptName_error" class="invalid-feedback">{{ error }}</div>
                 }
             </div>
 
             <!-- 部門層級 -->
             <div class="col-md-6">
-                <label for="dept_level" class="form-label required">
-                    <i class="bi bi-diagram-3 me-1"></i>
+                                <label for="deptLevel" class="form-label required">
                     部門層級
+                    <span class="text-danger">*</span>
                 </label>
-                <select id="dept_level" class="form-select" [class.is-invalid]="isFieldInvalid('dept_level')"
-                    formControlName="dept_level" aria-describedby="dept_level_help dept_level_error">
+                <select id="deptLevel" class="form-select" [class.is-invalid]="isFieldInvalid('deptLevel')"
+                    formControlName="deptLevel" aria-describedby="deptLevel_help deptLevel_error">
                     <option value="">請選擇部門層級</option>
                     @for (option of levelOptions; track option.value) {
                     <option [value]="option.value" [title]="option.description">
@@ -67,14 +66,14 @@
                         階層關係：BI(最高層) → BU → TU/SU → LOB-T/LOB-S
                     </small>
                 </div>
-                @if (getFieldError('dept_level'); as error) {
+                @if (getFieldError('deptLevel'); as error) {
                 <div id="dept_level_error" class="invalid-feedback">{{ error }}</div>
                 }
             </div>
 
             <!-- 上級部門 -->
             <div class="col-md-6">
-                <label for="parent_dept_id" class="form-label">
+                <label for="parentDeptId" class="form-label">
                     <i class="bi bi-arrow-up-circle me-1"></i>
                     上級部門
                 </label>
@@ -85,11 +84,11 @@
                     <option [value]="dept.dept_id">{{ dept.dept_name }} ({{ dept.dept_code }})</option>
                     }
                 </select> -->
-                <select id="parent_dept_id" class="form-select" [class.is-invalid]="isFieldInvalid('parent_dept_id')"
-                    formControlName="parent_dept_id" aria-describedby="parent_dept_help parent_dept_error">
+                <select id="parentDeptId" class="form-select" [class.is-invalid]="isFieldInvalid('parentDeptId')"
+                    formControlName="parentDeptId" aria-describedby="parentDept_help parentDept_error">
                     <option [value]="null">無上級部門（頂層部門）</option>
-                    @for (dept of filteredParentDepartments(); track dept.dept_id) {
-                    <option [value]="dept.dept_id">{{ dept.dept_name }} ({{ dept.dept_code }})</option>
+                    @for (dept of filteredParentDepartments(); track dept.deptId) {
+                    <option [value]="dept.deptId">{{ dept.deptName }} ({{ dept.deptCode }})</option>
                     }
                 </select>
                 <div id="parent_dept_help" class="form-text">
@@ -106,42 +105,42 @@
                     </small>
                     }
                 </div>
-                @if (getFieldError('parent_dept_id'); as error) {
-                <div id="parent_dept_error" class="invalid-feedback">{{ error }}</div>
+                @if (getFieldError('parentDeptId'); as error) {
+                <div id="parentDept_error" class="invalid-feedback">{{ error }}</div>
                 }
             </div>
 
             <!-- 主管員工 -->
             <div class="col-md-6">
-                <label for="manager_emp_id" class="form-label">
+                <label for="managerEmpId" class="form-label">
                     <i class="bi bi-person-badge me-1"></i>
                     部門主管
                 </label>
-                <select id="manager_emp_id" class="form-select" [class.is-invalid]="isFieldInvalid('manager_emp_id')"
-                    formControlName="manager_emp_id" aria-describedby="manager_emp_help manager_emp_error">
+                <select id="managerEmpId" class="form-select" [class.is-invalid]="isFieldInvalid('managerEmpId')"
+                    formControlName="managerEmpId" aria-describedby="managerEmp_help managerEmp_error">
                     <option [value]="null">無主管</option>
-                    @for (emp of employees(); track emp.emp_id) {
-                    <option [value]="emp.emp_id">{{ emp.emp_name }} ({{ emp.emp_code }})</option>
+                    @for (emp of employees(); track emp.empId) {
+                    <option [value]="emp.empId">{{ emp.empName }} ({{ emp.empCode }})</option>
                     }
                 </select>
-                @if (getFieldError('manager_emp_id'); as error) {
+                @if (getFieldError('managerEmpId'); as error) {
                 <div id="manager_emp_error" class="invalid-feedback">{{ error }}</div>
                 }
             </div>
 
             <!-- 啟用狀態 -->
             <div class="col-md-6">
-                <label for="is_active" class="form-label required">
+                <label for="isActive" class="form-label required">
                     <i class="bi bi-power me-1"></i>
                     部門狀態
                 </label>
-                <select id="is_active" class="form-select" [class.is-invalid]="isFieldInvalid('is_active')"
-                    formControlName="is_active" aria-describedby="is_active_help is_active_error">
+                <select id="isActive" class="form-select" [class.is-invalid]="isFieldInvalid('isActive')"
+                    formControlName="isActive" aria-describedby="isActive_help isActive_error">
                     <option [value]="true">啟用 - 正常運作的部門</option>
                     <option [value]="false">停用 - 暫時停止運作的部門</option>
                 </select>
-                @if (getFieldError('is_active'); as error) {
-                <div id="is_active_error" class="invalid-feedback">{{ error }}</div>
+                @if (getFieldError('isActive'); as error) {
+                <div id="isActive_error" class="invalid-feedback">{{ error }}</div>
                 }
             </div>
         </div>

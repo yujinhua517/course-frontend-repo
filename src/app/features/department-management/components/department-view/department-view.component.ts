@@ -20,6 +20,11 @@ export class DepartmentViewComponent {
         this.closed.emit();
     }
 
+    // 日期轉換輔助函數
+    private formatDateString(dateString?: string): string | undefined {
+        return dateString ? new Date(dateString).toISOString() : undefined;
+    }
+
     // InfoDisplay 配置
     basicInfoConfig = computed<InfoDisplayConfig>(() => ({
         title: '基本資訊',
@@ -27,32 +32,32 @@ export class DepartmentViewComponent {
         items: [
             {
                 label: '部門代碼',
-                value: this.department().dept_code,
+                value: this.department().deptCode,
                 icon: 'hash',
                 className: 'fw-medium text-primary'
             },
             {
                 label: '部門名稱',
-                value: this.department().dept_name,
+                value: this.department().deptName,
                 icon: 'building',
                 className: 'fw-medium'
             },
             {
                 label: '部門層級',
-                value: this.getLevelOption(this.department().dept_level)?.label,
+                value: this.getLevelOption(this.department().deptLevel)?.label,
                 icon: 'diagram-3',
                 type: 'badge',
                 variant: 'info'
             },
             {
                 label: '啟用狀態',
-                value: this.department().is_active,
+                value: this.department().isActive,
                 icon: 'toggle-on',
                 type: 'status'
             },
             {
                 label: '部門描述',
-                value: this.department().dept_desc || '無描述',
+                value: this.department().deptDesc || '無描述',
                 icon: 'card-text',
                 visible: true
             }
@@ -65,15 +70,15 @@ export class DepartmentViewComponent {
         items: [
             {
                 label: '上級部門',
-                value: this.department().parent_dept_name || '無上級部門',
+                value: this.department().parentDeptName || '無上級部門',
                 icon: 'arrow-up-circle',
-                className: this.department().parent_dept_name ? '' : 'text-muted'
+                className: this.department().parentDeptName ? '' : 'text-muted'
             },
             {
                 label: '部門主管',
-                value: this.department().manager_name || '未指定',
+                value: this.department().managerName || '未指定',
                 icon: 'person-badge',
-                className: this.department().manager_name ? '' : 'text-muted'
+                className: this.department().managerName ? '' : 'text-muted'
             }
         ]
     }));
@@ -84,31 +89,31 @@ export class DepartmentViewComponent {
         items: [
             {
                 label: '建立時間',
-                value: this.department().create_time?.toISOString(),
+                value: this.formatDateString(this.department().createTime),
                 icon: 'calendar-plus',
                 type: 'date'
             },
             {
                 label: '最後更新',
-                value: this.department().update_time?.toISOString(),
+                value: this.formatDateString(this.department().updateTime),
                 icon: 'calendar-check',
                 type: 'date'
             },
             {
                 label: '建立者',
-                value: this.department().create_user || '無',
+                value: this.department().createUser || '無',
                 icon: 'person-plus'
             },
             {
                 label: '更新者',
-                value: this.department().update_user || '無',
+                value: this.department().updateUser || '無',
                 icon: 'person-gear'
             }
         ]
     }));
 
     getLevelOption(level: string) {
-        console.log('Department Data:', this.department());
+        //console.log('Department Data:', this.department());
         return DEPARTMENT_LEVEL_OPTIONS.find(option => option.value === level);
     }
 }

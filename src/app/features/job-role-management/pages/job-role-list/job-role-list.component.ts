@@ -1,7 +1,7 @@
 import { Component, OnInit, signal, computed, inject, ViewChild, TemplateRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+// import { FormsModule } from '@angular/forms';
+// import { RouterModule } from '@angular/router';
 import { JobRoleStore } from '../../store/job-role.store';
 import { JobRoleService } from '../../services/job-role.service';
 import { JobRoleFormComponent } from '../../components/job-role-form/job-role-form.component';
@@ -29,8 +29,8 @@ import { HighlightPipe } from '../../../../shared/pipes/highlight.pipe';
     styleUrls: ['./job-role-list.component.scss'],
     imports: [
         CommonModule,
-        FormsModule,
-        RouterModule,
+        // FormsModule,
+        // RouterModule,
         JobRoleFormComponent,
         JobRoleViewComponent,
         TableHeaderComponent,
@@ -114,7 +114,7 @@ export class JobRoleListComponent implements OnInit {
     showView = signal(false);
     selectedJobRole = signal<JobRole | null>(null);
     formMode = signal<'create' | 'edit'>('create');
-    sortBy = signal<keyof JobRole>('job_role_code');
+    sortBy = signal<keyof JobRole>('jobRoleCode');
     sortDirection = signal<'asc' | 'desc'>('asc');
 
     // Bulk selection signals
@@ -170,11 +170,12 @@ export class JobRoleListComponent implements OnInit {
         confirmText: '確認刪除',
         cancelText: '取消',
         items: this.selectedJobRoles().map(item => ({
-            id: item.job_role_code,
-            text: item.job_role_name,
-            subText: item.job_role_code
+            id: item.jobRoleCode,
+            text: item.jobRoleName,
+            subText: item.jobRoleCode
         })),
-        maxItemsToShow: 5
+        maxItemsToShow: 100,
+        showItemIcon: true
     }));
 
     // 搜尋篩選配置
@@ -290,7 +291,7 @@ export class JobRoleListComponent implements OnInit {
         return {
             data: this.jobRoles(),
             showSelectColumn: this.hasDeletePermission(),
-            trackByFn: (index: number, item: JobRole) => item.job_role_code,
+            trackByFn: (index: number, item: JobRole) => item.jobRoleCode,
             rowCssClass: (item: JobRole) => this.isSelected(item) ? 'table-active' : '',
             columns: [
                 {
@@ -346,9 +347,9 @@ export class JobRoleListComponent implements OnInit {
     loadJobRoles(): void {
         this.jobRoleStore.loadJobRoles({
             keyword: this.searchKeyword() || undefined,
-            is_active: this.statusFilter(),
-            sort_column: this.sortBy(),
-            sort_direction: this.sortDirection()
+            isActive: this.statusFilter(),
+            sortColumn: this.sortBy(),
+            sortDirection: this.sortDirection()
         });
     }
 
@@ -423,7 +424,7 @@ export class JobRoleListComponent implements OnInit {
         if (selected) {
             this.selectedJobRoles.set([...current, jobRole]);
         } else {
-            this.selectedJobRoles.set(current.filter(item => item.job_role_code !== jobRole.job_role_code));
+            this.selectedJobRoles.set(current.filter(item => item.jobRoleCode !== jobRole.jobRoleCode));
         }
     }
 
@@ -439,7 +440,7 @@ export class JobRoleListComponent implements OnInit {
 
     // 檢查項目是否被選中
     isSelected(jobRole: JobRole): boolean {
-        return this.selectedJobRoles().some(item => item.job_role_code === jobRole.job_role_code);
+        return this.selectedJobRoles().some(item => item.jobRoleCode === jobRole.jobRoleCode);
     }
 
     isAllSelected(): boolean {
@@ -480,11 +481,11 @@ export class JobRoleListComponent implements OnInit {
 
     // 刪除職務
     onDelete(jobRole: JobRole): void {
-        if (confirm(`確定要刪除職務「${jobRole.job_role_name}」嗎？`)) {
-            this.jobRoleService.deleteJobRole(jobRole.job_role_id!).subscribe({
+        if (confirm(`確定要刪除職務「${jobRole.jobRoleCode}」嗎？`)) {
+            this.jobRoleService.deleteJobRole(jobRole.jobRoleId!).subscribe({
                 next: (response) => {
                     if (response.code === 200) {
-                        this.jobRoleStore.removeJobRole(jobRole.job_role_code);
+                        this.jobRoleStore.removeJobRole(jobRole.jobRoleCode);
                         alert('職務已成功刪除');
                     } else {
                         alert(response.message || '刪除失敗');
@@ -500,11 +501,11 @@ export class JobRoleListComponent implements OnInit {
 
     // 切換職務狀態
     onToggleStatus(jobRole: JobRole): void {
-        const newStatus = !jobRole.is_active;
+        const newStatus = !jobRole.isActive;
         const updateDto = {
-            job_role_id: jobRole.job_role_id!,
-            job_role_code: jobRole.job_role_code,
-            job_role_name: jobRole.job_role_name,
+            jobRoleId: jobRole.jobRoleId!,
+            jobRoleCode: jobRole.jobRoleCode,
+            jobRoleName: jobRole.jobRoleName,
             description: jobRole.description,
             is_active: newStatus
         };
@@ -545,8 +546,8 @@ export class JobRoleListComponent implements OnInit {
     }
 
     private performBulkDelete(): void {
-        const selectedCodes = this.selectedJobRoles().map(item => item.job_role_code);
-        
+        const selectedCodes = this.selectedJobRoles().map(item => item.jobRoleCode);
+
         this.jobRoleService.bulkDeleteJobRoles(selectedCodes).subscribe({
             next: (response) => {
                 if (response.code === 200) {
@@ -585,10 +586,10 @@ export class JobRoleListComponent implements OnInit {
     // 切換單項選擇 (與 competency-list 統一命名)
     onToggleSelection(jobRole: JobRole): void {
         const current = this.selectedJobRoles();
-        const isSelected = current.some(s => s.job_role_code === jobRole.job_role_code);
-        
+        const isSelected = current.some(s => s.jobRoleCode === jobRole.jobRoleCode);
+
         if (isSelected) {
-            this.selectedJobRoles.set(current.filter(s => s.job_role_code !== jobRole.job_role_code));
+            this.selectedJobRoles.set(current.filter(s => s.jobRoleCode !== jobRole.jobRoleCode));
         } else {
             this.selectedJobRoles.set([...current, jobRole]);
         }
@@ -653,10 +654,10 @@ export class JobRoleListComponent implements OnInit {
 
     // 狀態切換處理 (簡化版本)
     onStatusToggled(jobRole: JobRole, newStatus: boolean): void {
-        this.jobRoleService.batchUpdateJobRoleStatus([jobRole.job_role_code], newStatus).subscribe({
+        this.jobRoleService.batchUpdateJobRoleStatus([jobRole.jobRoleCode], newStatus).subscribe({
             next: (response) => {
                 if (response.code === 200) {
-                    this.jobRoleStore.toggleJobRoleStatus(jobRole.job_role_code);
+                    this.jobRoleStore.toggleJobRoleStatus(jobRole.jobRoleCode);
                 }
             },
             error: (error) => {
@@ -684,14 +685,14 @@ export class JobRoleListComponent implements OnInit {
             ],
             size: 'sm' as const,
             orientation: 'horizontal' as const,
-            itemName: jobRole.job_role_name
+            itemName: jobRole.jobRoleName
         };
     }
 
     // 獲取狀態配置
     getStatusConfig(jobRole: JobRole): StatusConfig {
         return {
-            value: jobRole.is_active,
+            value: jobRole.isActive,
             activeValue: true,
             inactiveValue: false,
             activeText: '啟用',

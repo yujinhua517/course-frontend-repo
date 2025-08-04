@@ -27,19 +27,19 @@ export class JobRoleViewComponent {
         items: [
             {
                 label: '職務代碼',
-                value: this.jobRole().job_role_code,
+                value: this.jobRole().jobRoleCode,
                 icon: 'hash',
                 className: 'fw-medium text-primary'
             },
             {
                 label: '職務名稱',
-                value: this.jobRole().job_role_name,
+                value: this.jobRole().jobRoleName,
                 icon: 'briefcase',
                 className: 'fw-medium'
             },
             {
                 label: '啟用狀態',
-                value: this.jobRole().is_active,
+                value: this.jobRole().isActive,
                 icon: 'toggle-on',
                 type: 'status'
             },
@@ -58,24 +58,24 @@ export class JobRoleViewComponent {
         items: [
             {
                 label: '建立時間',
-                value: this.jobRole().create_time,
+                value: this.jobRole().createTime,
                 icon: 'calendar-plus',
                 type: 'date'
             },
             {
                 label: '最後更新',
-                value: this.jobRole().update_time,
+                value: this.jobRole().updateTime,
                 icon: 'calendar-check',
                 type: 'date'
             },
             {
                 label: '建立者',
-                value: this.jobRole().create_user || '系統',
+                value: this.jobRole().createUser || '系統',
                 icon: 'person-plus'
             },
             {
                 label: '更新者',
-                value: this.jobRole().update_user || '系統',
+                value: this.jobRole().updateUser || '系統',
                 icon: 'person-gear'
             }
         ]

@@ -1,40 +1,39 @@
 export interface Department {
-    dept_id: number;
-    parent_dept_id: number | null;
-    dept_code: string;
-    dept_name: string;
-    dept_level: string; // 後端為 string，前端可用 enum 或 union type
-    manager_emp_id: number | null;
-    is_active: boolean;
-    dept_desc?: string; // 後端有此欄位
-    create_time: Date;
-    create_user: string;
-    update_time?: Date;
-    update_user?: string;
-    parent_dept_name?: string; // 後端 UI 額外欄位
-    manager_name?: string; // 後端 UI 額外欄位
+    deptId: number;
+    parentDeptId: number | null;
+    deptCode: string;
+    deptName: string;
+    deptLevel: string; // 後端為 string，前端可用 enum 或 union type
+    managerEmpId: number | null;
+    isActive: boolean;
+    deptDesc?: string; // 後端有此欄位
+    createTime: string; // API 回傳字串格式
+    createUser: string;
+    updateTime?: string; // API 回傳字串格式
+    updateUser?: string;
+    parentDeptName?: string; // 後端 UI 額外欄位
+    managerName?: string; // 後端 UI 額外欄位
 }
 
 export type DepartmentLevel = 'BI' | 'BU' | 'TU' | 'SU' | 'LOB-S' | 'LOB-T' | string;
 
 export interface CreateDepartmentRequest {
-    dept_code: string;
-    dept_name: string;
-    dept_level: string;
-    parent_dept_id?: number | null;
-    manager_emp_id?: number | null;
-    is_active: boolean;
-    dept_desc?: string;
+    deptCode: string;
+    deptName: string;
+    deptLevel: string;
+    parentDeptId?: number | null;
+    managerEmpId?: number | null;
+    isActive: boolean;
+    deptDesc?: string;
 }
 
 
 export interface UpdateDepartmentRequest extends Partial<CreateDepartmentRequest> {
-    dept_id: number;
+    deptId: number;
 }
 
 export interface DepartmentListResponse {
-    data?: Department[];
-    departments?: Department[];
+    data: Department[];
     total: number;
     page: number;
     pageSize: number;
@@ -42,21 +41,44 @@ export interface DepartmentListResponse {
 
 export interface DepartmentSearchFilters {
     keyword?: string;
-    dept_level?: string;
-    is_active?: boolean;
-    parent_dept_id?: number;
+    deptLevel?: string;
+    isActive?: boolean;
+    parentDeptId?: number;
 }
 
 export interface DepartmentSearchParams {
     keyword?: string;
-    dept_level?: string;
-    is_active?: boolean;
-    parent_dept_id?: number;
+    deptLevel?: string;
+    isActive?: boolean;
+    parentDeptId?: number;
     page?: number;
     pageSize?: number;
     sortBy?: keyof Department;
     sortDirection?: 'asc' | 'desc';
-    sort_direction?: 'asc' | 'desc';
+}
+
+// API 回應包裝器
+export interface ApiResponse<T> {
+    code: number;
+    message: string;
+    data: T;
+}
+
+// 分頁回應 DTO (前端使用 camelCase)
+export interface PagerDto<T> {
+    dataList: T[];
+    totalRecords: number;
+    firstIndexInPage: number;
+    lastIndexInPage: number;
+    pageable: boolean;
+    sortColumn?: string;
+    sortDirection?: string;
+    // 額外的分頁資訊（匹配後端 Spring Data Page）
+    totalPages?: number;
+    page?: number;
+    size?: number;
+    hasNext?: boolean;
+    hasPrevious?: boolean;
 }
 
 /**

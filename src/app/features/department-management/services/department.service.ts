@@ -7,10 +7,13 @@ import {
     UpdateDepartmentRequest,
     DepartmentListResponse,
     DepartmentSearchFilters,
-    DepartmentLevel
+    DepartmentLevel,
+    ApiResponse,
+    PagerDto
 } from '../models/department.model';
 import { environment } from '../../../../environments/environment';
 import { UserStore } from '../../../core/auth/user.store';
+import { HttpErrorHandlerService } from '../../../core/services/http-error-handler.service';
 
 @Injectable({
     providedIn: 'root'
@@ -18,6 +21,7 @@ import { UserStore } from '../../../core/auth/user.store';
 export class DepartmentService {
     private http = inject(HttpClient);
     private userStore = inject(UserStore);
+    private httpErrorHandler = inject(HttpErrorHandlerService);
 
     // Toggle between mock data and real API
     private readonly useMockData = false;
@@ -34,328 +38,328 @@ export class DepartmentService {
     private mockDepartments: Department[] = [
         // BI層（最高層，通常1-3個）
         {
-            dept_id: 1,
-            parent_dept_id: null,
-            dept_code: 'CORP',
-            dept_name: '企業發展事業群',
-            dept_level: 'BI',
-            manager_emp_id: 1,
-            is_active: true,
-            dept_desc: '負責公司整體發展與決策，涵蓋策略與規劃等。',
-            create_time: new Date('2024-01-10T08:00:00'),
-            create_user: 'sysadmin',
-            update_time: new Date('2024-06-01T08:30:00'),
-            update_user: 'sysadmin',
-            parent_dept_name: undefined,
-            manager_name: '林泰安'
+            deptId: 1,
+            parentDeptId: null,
+            deptCode: 'CORP',
+            deptName: '企業發展事業群',
+            deptLevel: 'BI',
+            managerEmpId: 1,
+            isActive: true,
+            deptDesc: '負責公司整體發展與決策，涵蓋策略與規劃等。',
+            createTime: '2024-01-10T08:00:00',
+            createUser: 'sysadmin',
+            updateTime: '2024-06-01T08:30:00',
+            updateUser: 'sysadmin',
+            parentDeptName: undefined,
+            managerName: '林泰安'
         },
         {
-            dept_id: 2,
-            parent_dept_id: null,
-            dept_code: 'TECH',
-            dept_name: '技術策略事業群',
-            dept_level: 'BI',
-            manager_emp_id: 2,
-            is_active: true,
-            dept_desc: '主導技術方向與產品創新策略。',
-            create_time: new Date('2024-01-12T09:00:00'),
-            create_user: 'sysadmin',
-            update_time: new Date('2024-06-03T09:45:00'),
-            update_user: 'sysadmin',
-            parent_dept_name: undefined,
-            manager_name: '張偉翔'
+            deptId: 2,
+            parentDeptId: null,
+            deptCode: 'TECH',
+            deptName: '技術策略事業群',
+            deptLevel: 'BI',
+            managerEmpId: 2,
+            isActive: true,
+            deptDesc: '主導技術方向與產品創新策略。',
+            createTime: '2024-01-12T09:00:00',
+            createUser: 'sysadmin',
+            updateTime: '2024-06-03T09:45:00',
+            updateUser: 'sysadmin',
+            parentDeptName: undefined,
+            managerName: '張偉翔'
         },
 
         // BU 層
         {
-            dept_id: 3,
-            parent_dept_id: 1,
-            dept_code: 'OPS',
-            dept_name: '營運管理中心',
-            dept_level: 'BU',
-            manager_emp_id: 3,
-            is_active: true,
-            dept_desc: '統籌營運資源，確保業務穩定發展。',
-            create_time: new Date('2024-02-01T10:00:00'),
-            create_user: 'admin1',
-            update_time: new Date('2024-06-08T10:00:00'),
-            update_user: 'admin1',
-            parent_dept_name: '企業發展事業群',
-            manager_name: '蘇怡君'
+            deptId: 3,
+            parentDeptId: 1,
+            deptCode: 'OPS',
+            deptName: '營運管理中心',
+            deptLevel: 'BU',
+            managerEmpId: 3,
+            isActive: true,
+            deptDesc: '統籌營運資源，確保業務穩定發展。',
+            createTime: '2024-02-01T10:00:00',
+            createUser: 'admin1',
+            updateTime: '2024-06-08T10:00:00',
+            updateUser: 'admin1',
+            parentDeptName: '企業發展事業群',
+            managerName: '蘇怡君'
         },
         {
-            dept_id: 4,
-            parent_dept_id: 1,
-            dept_code: 'SALE',
-            dept_name: '銷售服務中心',
-            dept_level: 'BU',
-            manager_emp_id: 4,
-            is_active: true,
-            dept_desc: '負責全公司銷售目標與客戶關係管理。',
-            create_time: new Date('2024-02-02T13:00:00'),
-            create_user: 'admin2',
-            update_time: new Date('2024-06-10T13:00:00'),
-            update_user: 'admin2',
-            parent_dept_name: '企業發展事業群',
-            manager_name: '高家豪'
+            deptId: 4,
+            parentDeptId: 1,
+            deptCode: 'SALE',
+            deptName: '銷售服務中心',
+            deptLevel: 'BU',
+            managerEmpId: 4,
+            isActive: true,
+            deptDesc: '負責全公司銷售目標與客戶關係管理。',
+            createTime: '2024-02-02T13:00:00',
+            createUser: 'admin2',
+            updateTime: '2024-06-10T13:00:00',
+            updateUser: 'admin2',
+            parentDeptName: '企業發展事業群',
+            managerName: '高家豪'
         },
         {
-            dept_id: 5,
-            parent_dept_id: 2,
-            dept_code: 'ENG',
-            dept_name: '工程研發中心',
-            dept_level: 'BU',
-            manager_emp_id: 5,
-            is_active: true,
-            dept_desc: '技術開發與產品維護的核心部門。',
-            create_time: new Date('2024-02-03T11:00:00'),
-            create_user: 'admin3',
-            update_time: new Date('2024-06-11T11:00:00'),
-            update_user: 'admin3',
-            parent_dept_name: '技術策略事業群',
-            manager_name: '許惠玲'
+            deptId: 5,
+            parentDeptId: 2,
+            deptCode: 'ENG',
+            deptName: '工程研發中心',
+            deptLevel: 'BU',
+            managerEmpId: 5,
+            isActive: true,
+            deptDesc: '技術開發與產品維護的核心部門。',
+            createTime: '2024-02-03T11:00:00',
+            createUser: 'admin3',
+            updateTime: '2024-06-11T11:00:00',
+            updateUser: 'admin3',
+            parentDeptName: '技術策略事業群',
+            managerName: '許惠玲'
         },
         {
-            dept_id: 6,
-            parent_dept_id: 2,
-            dept_code: 'QA',
-            dept_name: '品質管理中心',
-            dept_level: 'BU',
-            manager_emp_id: 6,
-            is_active: true,
-            dept_desc: '確保產品服務品質、制定品質標準。',
-            create_time: new Date('2024-02-04T15:00:00'),
-            create_user: 'admin4',
-            update_time: new Date('2024-06-12T15:00:00'),
-            update_user: 'admin4',
-            parent_dept_name: '技術策略事業群',
-            manager_name: '吳志軒'
+            deptId: 6,
+            parentDeptId: 2,
+            deptCode: 'QA',
+            deptName: '品質管理中心',
+            deptLevel: 'BU',
+            managerEmpId: 6,
+            isActive: true,
+            deptDesc: '確保產品服務品質、制定品質標準。',
+            createTime: '2024-02-04T15:00:00',
+            createUser: 'admin4',
+            updateTime: '2024-06-12T15:00:00',
+            updateUser: 'admin4',
+            parentDeptName: '技術策略事業群',
+            managerName: '吳志軒'
         },
 
         // LOB 層
         {
-            dept_id: 7,
-            parent_dept_id: 3,
-            dept_code: 'CUST',
-            dept_name: '客服組',
-            dept_level: 'LOB',
-            manager_emp_id: 7,
-            is_active: true,
-            dept_desc: '第一線客戶回應與問題處理。',
-            create_time: new Date('2024-03-01T09:00:00'),
-            create_user: 'ops_mgr',
-            update_time: new Date('2024-07-01T09:30:00'),
-            update_user: 'ops_mgr',
-            parent_dept_name: '營運管理中心',
-            manager_name: '鄭佳珊'
+            deptId: 7,
+            parentDeptId: 3,
+            deptCode: 'CUST',
+            deptName: '客服組',
+            deptLevel: 'LOB',
+            managerEmpId: 7,
+            isActive: true,
+            deptDesc: '第一線客戶回應與問題處理。',
+            createTime: '2024-03-01T09:00:00',
+            createUser: 'ops_mgr',
+            updateTime: '2024-07-01T09:30:00',
+            updateUser: 'ops_mgr',
+            parentDeptName: '營運管理中心',
+            managerName: '鄭佳珊'
         },
         {
-            dept_id: 8,
-            parent_dept_id: 3,
-            dept_code: 'PROC',
-            dept_name: '採購組',
-            dept_level: 'LOB',
-            manager_emp_id: 8,
-            is_active: true,
-            dept_desc: '原物料與外包服務採購。',
-            create_time: new Date('2024-03-02T10:00:00'),
-            create_user: 'ops_mgr',
-            update_time: new Date('2024-07-01T10:15:00'),
-            update_user: 'ops_mgr',
-            parent_dept_name: '營運管理中心',
-            manager_name: '王柏廷'
+            deptId: 8,
+            parentDeptId: 3,
+            deptCode: 'PROC',
+            deptName: '採購組',
+            deptLevel: 'LOB',
+            managerEmpId: 8,
+            isActive: true,
+            deptDesc: '原物料與外包服務採購。',
+            createTime: '2024-03-02T10:00:00',
+            createUser: 'ops_mgr',
+            updateTime: '2024-07-01T10:15:00',
+            updateUser: 'ops_mgr',
+            parentDeptName: '營運管理中心',
+            managerName: '王柏廷'
         },
         {
-            dept_id: 9,
-            parent_dept_id: 4,
-            dept_code: 'DOMS',
-            dept_name: '國內銷售組',
-            dept_level: 'LOB',
-            manager_emp_id: 9,
-            is_active: true,
-            dept_desc: '負責國內客戶與經銷商業務。',
-            create_time: new Date('2024-03-03T11:00:00'),
-            create_user: 'sale_mgr',
-            update_time: new Date('2024-07-01T11:25:00'),
-            update_user: 'sale_mgr',
-            parent_dept_name: '銷售服務中心',
-            manager_name: '林家宏'
+            deptId: 9,
+            parentDeptId: 4,
+            deptCode: 'DOMS',
+            deptName: '國內銷售組',
+            deptLevel: 'LOB',
+            managerEmpId: 9,
+            isActive: true,
+            deptDesc: '負責國內客戶與經銷商業務。',
+            createTime: '2024-03-03T11:00:00',
+            createUser: 'sale_mgr',
+            updateTime: '2024-07-01T11:25:00',
+            updateUser: 'sale_mgr',
+            parentDeptName: '銷售服務中心',
+            managerName: '林家宏'
         },
         {
-            dept_id: 10,
-            parent_dept_id: 4,
-            dept_code: 'INTR',
-            dept_name: '國際銷售組',
-            dept_level: 'LOB',
-            manager_emp_id: 10,
-            is_active: true,
-            dept_desc: '拓展海外市場，協助出口業務。',
-            create_time: new Date('2024-03-04T12:00:00'),
-            create_user: 'sale_mgr',
-            update_time: new Date('2024-07-01T12:35:00'),
-            update_user: 'sale_mgr',
-            parent_dept_name: '銷售服務中心',
-            manager_name: '葉欣怡'
+            deptId: 10,
+            parentDeptId: 4,
+            deptCode: 'INTR',
+            deptName: '國際銷售組',
+            deptLevel: 'LOB',
+            managerEmpId: 10,
+            isActive: true,
+            deptDesc: '拓展海外市場，協助出口業務。',
+            createTime: '2024-03-04T12:00:00',
+            createUser: 'sale_mgr',
+            updateTime: '2024-07-01T12:35:00',
+            updateUser: 'sale_mgr',
+            parentDeptName: '銷售服務中心',
+            managerName: '葉欣怡'
         },
         {
-            dept_id: 11,
-            parent_dept_id: 5,
-            dept_code: 'DEV',
-            dept_name: '後端開發組',
-            dept_level: 'LOB',
-            manager_emp_id: 11,
-            is_active: true,
-            dept_desc: '專注於後端系統設計與維護。',
-            create_time: new Date('2024-03-05T13:00:00'),
-            create_user: 'eng_mgr',
-            update_time: new Date('2024-07-01T13:45:00'),
-            update_user: 'eng_mgr',
-            parent_dept_name: '工程研發中心',
-            manager_name: '曾國凱'
+            deptId: 11,
+            parentDeptId: 5,
+            deptCode: 'DEV',
+            deptName: '後端開發組',
+            deptLevel: 'LOB',
+            managerEmpId: 11,
+            isActive: true,
+            deptDesc: '專注於後端系統設計與維護。',
+            createTime: '2024-03-05T13:00:00',
+            createUser: 'eng_mgr',
+            updateTime: '2024-07-01T13:45:00',
+            updateUser: 'eng_mgr',
+            parentDeptName: '工程研發中心',
+            managerName: '曾國凱'
         },
         {
-            dept_id: 12,
-            parent_dept_id: 5,
-            dept_code: 'FRONT',
-            dept_name: '前端開發組',
-            dept_level: 'LOB',
-            manager_emp_id: 12,
-            is_active: true,
-            dept_desc: '前端UI與互動介面設計。',
-            create_time: new Date('2024-03-06T14:00:00'),
-            create_user: 'eng_mgr',
-            update_time: new Date('2024-07-01T14:55:00'),
-            update_user: 'eng_mgr',
-            parent_dept_name: '工程研發中心',
-            manager_name: '陳韋廷'
+            deptId: 12,
+            parentDeptId: 5,
+            deptCode: 'FRONT',
+            deptName: '前端開發組',
+            deptLevel: 'LOB',
+            managerEmpId: 12,
+            isActive: true,
+            deptDesc: '前端UI與互動介面設計。',
+            createTime: '2024-03-06T14:00:00',
+            createUser: 'eng_mgr',
+            updateTime: '2024-07-01T14:55:00',
+            updateUser: 'eng_mgr',
+            parentDeptName: '工程研發中心',
+            managerName: '陳韋廷'
         },
         {
-            dept_id: 13,
-            parent_dept_id: 6,
-            dept_code: 'TEST',
-            dept_name: '軟體測試組',
-            dept_level: 'LOB',
-            manager_emp_id: 13,
-            is_active: true,
-            dept_desc: '產品測試與自動化回歸測試。',
-            create_time: new Date('2024-03-07T15:00:00'),
-            create_user: 'qa_mgr',
-            update_time: new Date('2024-07-01T15:20:00'),
-            update_user: 'qa_mgr',
-            parent_dept_name: '品質管理中心',
-            manager_name: '賴信瑋'
+            deptId: 13,
+            parentDeptId: 6,
+            deptCode: 'TEST',
+            deptName: '軟體測試組',
+            deptLevel: 'LOB',
+            managerEmpId: 13,
+            isActive: true,
+            deptDesc: '產品測試與自動化回歸測試。',
+            createTime: '2024-03-07T15:00:00',
+            createUser: 'qa_mgr',
+            updateTime: '2024-07-01T15:20:00',
+            updateUser: 'qa_mgr',
+            parentDeptName: '品質管理中心',
+            managerName: '賴信瑋'
         },
         {
-            dept_id: 14,
-            parent_dept_id: 6,
-            dept_code: 'CTRL',
-            dept_name: '品管稽核組',
-            dept_level: 'LOB',
-            manager_emp_id: 14,
-            is_active: true,
-            dept_desc: '協助品質稽核與標準作業稽查。',
-            create_time: new Date('2024-03-08T16:00:00'),
-            create_user: 'qa_mgr',
-            update_time: new Date('2024-07-01T16:40:00'),
-            update_user: 'qa_mgr',
-            parent_dept_name: '品質管理中心',
-            manager_name: '簡雅婷'
+            deptId: 14,
+            parentDeptId: 6,
+            deptCode: 'CTRL',
+            deptName: '品管稽核組',
+            deptLevel: 'LOB',
+            managerEmpId: 14,
+            isActive: true,
+            deptDesc: '協助品質稽核與標準作業稽查。',
+            createTime: '2024-03-08T16:00:00',
+            createUser: 'qa_mgr',
+            updateTime: '2024-07-01T16:40:00',
+            updateUser: 'qa_mgr',
+            parentDeptName: '品質管理中心',
+            managerName: '簡雅婷'
         },
         {
-            dept_id: 15,
-            parent_dept_id: 3,
-            dept_code: 'RISK',
-            dept_name: '風險控管組',
-            dept_level: 'LOB',
-            manager_emp_id: 15,
-            is_active: false,
-            dept_desc: '內部稽核、企業風險評估與控管。',
-            create_time: new Date('2024-03-09T17:00:00'),
-            create_user: 'ops_mgr',
-            update_time: new Date('2024-07-02T17:10:00'),
-            update_user: 'ops_mgr',
-            parent_dept_name: '營運管理中心',
-            manager_name: '許榮華'
+            deptId: 15,
+            parentDeptId: 3,
+            deptCode: 'RISK',
+            deptName: '風險控管組',
+            deptLevel: 'LOB',
+            managerEmpId: 15,
+            isActive: false,
+            deptDesc: '內部稽核、企業風險評估與控管。',
+            createTime: '2024-03-09T17:00:00',
+            createUser: 'ops_mgr',
+            updateTime: '2024-07-02T17:10:00',
+            updateUser: 'ops_mgr',
+            parentDeptName: '營運管理中心',
+            managerName: '許榮華'
         },
         {
-            dept_id: 16,
-            parent_dept_id: 4,
-            dept_code: 'MARK',
-            dept_name: '行銷推廣組',
-            dept_level: 'LOB',
-            manager_emp_id: 16,
-            is_active: true,
-            dept_desc: '產品推廣、品牌行銷與活動執行。',
-            create_time: new Date('2024-03-10T18:00:00'),
-            create_user: 'sale_mgr',
-            update_time: new Date('2024-07-02T18:30:00'),
-            update_user: 'sale_mgr',
-            parent_dept_name: '銷售服務中心',
-            manager_name: '葉姿君'
+            deptId: 16,
+            parentDeptId: 4,
+            deptCode: 'MARK',
+            deptName: '行銷推廣組',
+            deptLevel: 'LOB',
+            managerEmpId: 16,
+            isActive: true,
+            deptDesc: '產品推廣、品牌行銷與活動執行。',
+            createTime: '2024-03-10T18:00:00',
+            createUser: 'sale_mgr',
+            updateTime: '2024-07-02T18:30:00',
+            updateUser: 'sale_mgr',
+            parentDeptName: '銷售服務中心',
+            managerName: '葉姿君'
         },
         {
-            dept_id: 17,
-            parent_dept_id: 5,
-            dept_code: 'UXUI',
-            dept_name: 'UX設計組',
-            dept_level: 'LOB',
-            manager_emp_id: 17,
-            is_active: true,
-            dept_desc: '使用者體驗與介面設計團隊。',
-            create_time: new Date('2024-03-11T19:00:00'),
-            create_user: 'eng_mgr',
-            update_time: new Date('2024-07-02T19:10:00'),
-            update_user: 'eng_mgr',
-            parent_dept_name: '工程研發中心',
-            manager_name: '鄧宜樺'
+            deptId: 17,
+            parentDeptId: 5,
+            deptCode: 'UXUI',
+            deptName: 'UX設計組',
+            deptLevel: 'LOB',
+            managerEmpId: 17,
+            isActive: true,
+            deptDesc: '使用者體驗與介面設計團隊。',
+            createTime: '2024-03-11T19:00:00',
+            createUser: 'eng_mgr',
+            updateTime: '2024-07-02T19:10:00',
+            updateUser: 'eng_mgr',
+            parentDeptName: '工程研發中心',
+            managerName: '鄧宜樺'
         },
         {
-            dept_id: 18,
-            parent_dept_id: 6,
-            dept_code: 'SQA',
-            dept_name: '自動化測試組',
-            dept_level: 'LOB',
-            manager_emp_id: 18,
-            is_active: true,
-            dept_desc: '軟體測試自動化開發、測試效率提升。',
-            create_time: new Date('2024-03-12T20:00:00'),
-            create_user: 'qa_mgr',
-            update_time: new Date('2024-07-02T20:10:00'),
-            update_user: 'qa_mgr',
-            parent_dept_name: '品質管理中心',
-            manager_name: '方承睿'
+            deptId: 18,
+            parentDeptId: 6,
+            deptCode: 'SQA',
+            deptName: '自動化測試組',
+            deptLevel: 'LOB',
+            managerEmpId: 18,
+            isActive: true,
+            deptDesc: '軟體測試自動化開發、測試效率提升。',
+            createTime: '2024-03-12T20:00:00',
+            createUser: 'qa_mgr',
+            updateTime: '2024-07-02T20:10:00',
+            updateUser: 'qa_mgr',
+            parentDeptName: '品質管理中心',
+            managerName: '方承睿'
         },
         {
-            dept_id: 19,
-            parent_dept_id: 5,
-            dept_code: 'DOCS',
-            dept_name: '技術文件組',
-            dept_level: 'LOB',
-            manager_emp_id: 19,
-            is_active: true,
-            dept_desc: '撰寫、管理技術與開發文件。',
-            create_time: new Date('2024-03-13T21:00:00'),
-            create_user: 'eng_mgr',
-            update_time: new Date('2024-07-02T21:10:00'),
-            update_user: 'eng_mgr',
-            parent_dept_name: '工程研發中心',
-            manager_name: '廖立文'
+            deptId: 19,
+            parentDeptId: 5,
+            deptCode: 'DOCS',
+            deptName: '技術文件組',
+            deptLevel: 'LOB',
+            managerEmpId: 19,
+            isActive: true,
+            deptDesc: '撰寫、管理技術與開發文件。',
+            createTime: '2024-03-13T21:00:00',
+            createUser: 'eng_mgr',
+            updateTime: '2024-07-02T21:10:00',
+            updateUser: 'eng_mgr',
+            parentDeptName: '工程研發中心',
+            managerName: '廖立文'
         },
         {
-            dept_id: 20,
-            parent_dept_id: 3,
-            dept_code: 'SUP',
-            dept_name: '支援服務組',
-            dept_level: 'LOB',
-            manager_emp_id: 20,
-            is_active: true,
-            dept_desc: '內部技術與行政支援服務窗口。',
-            create_time: new Date('2024-03-14T22:00:00'),
-            create_user: 'ops_mgr',
-            update_time: new Date('2024-07-02T22:10:00'),
-            update_user: 'ops_mgr',
-            parent_dept_name: '營運管理中心',
-            manager_name: '林品妤'
+            deptId: 20,
+            parentDeptId: 3,
+            deptCode: 'SUP',
+            deptName: '支援服務組',
+            deptLevel: 'LOB',
+            managerEmpId: 20,
+            isActive: true,
+            deptDesc: '內部技術與行政支援服務窗口。',
+            createTime: '2024-03-14T22:00:00',
+            createUser: 'ops_mgr',
+            updateTime: '2024-07-02T22:10:00',
+            updateUser: 'ops_mgr',
+            parentDeptName: '營運管理中心',
+            managerName: '林品妤'
         }
     ];
 
@@ -377,7 +381,7 @@ export class DepartmentService {
             return this.getMockDepartments(page, pageSize, searchTerm, filters);
         }
 
-        // 後端使用 GET /api/departments/query，並傳遞查詢參數
+        // 使用 camelCase 參數，HTTP 攔截器會自動轉換為 snake_case
         const params: any = {
             page,
             pageSize
@@ -386,46 +390,28 @@ export class DepartmentService {
         if (searchTerm) {
             params.keyword = searchTerm;
         }
-        if (filters.dept_level) {
-            params.dept_level = filters.dept_level;
+        if (filters.deptLevel) {
+            params.deptLevel = filters.deptLevel;  // 轉為 camelCase
         }
-        if (filters.is_active !== undefined) {
-            params.is_active = filters.is_active;
+        if (filters.isActive !== undefined) {
+            params.isActive = filters.isActive;  // 轉為 camelCase
         }
-        if (filters.parent_dept_id !== undefined) {
-            params.parent_dept_id = filters.parent_dept_id;
+        if (filters.parentDeptId !== undefined) {
+            params.parentDeptId = filters.parentDeptId;  // 轉為 camelCase
         }
 
-        console.log('Sending HTTP GET request with params:', params);
-        console.log('Constructed request URL:', `${this.apiUrl}/query`);
-        console.log('Constructed request params:', params);
+        console.log('Sending HTTP GET request with params (camelCase, 攔截器會自動轉換):', params);
 
-        return this.http.get<any>(`${this.apiUrl}/query`, { params }).pipe(
+        return this.http.get<ApiResponse<PagerDto<Department>>>(`${this.apiUrl}/query`, { params }).pipe(
             map(response => {
-                // 檢查後端回應格式
+                // HTTP 攔截器已經自動轉換為 camelCase，直接使用
                 if (response.code === 1000 && response.data) {
                     const pagerDto = response.data;
-                    // 後端使用 data_list 而不是 dataList，total_records 而不是 totalRecords
-                    const departments = pagerDto.data_list ? pagerDto.data_list.map((dept: any) => ({
-                        dept_id: dept.dept_id,
-                        dept_code: dept.dept_code,
-                        dept_name: dept.dept_name,
-                        dept_level: dept.dept_level,
-                        parent_dept_id: dept.parent_dept_id,
-                        manager_emp_id: dept.manager_emp_id,
-                        is_active: dept.is_active,
-                        dept_desc: dept.dept_desc,
-                        create_time: dept.create_time ? new Date(dept.create_time) : undefined,
-                        create_user: dept.create_user,
-                        update_time: dept.update_time ? new Date(dept.update_time) : undefined,
-                        update_user: dept.update_user,
-                        parent_dept_name: dept.parent_dept_name,
-                        manager_name: dept.manager_name
-                    })) : [];
+                    const departments = pagerDto.dataList || [];
 
                     return {
                         data: departments,
-                        total: pagerDto.total_records || departments.length,
+                        total: pagerDto.totalRecords || departments.length,
                         page: page,
                         pageSize: pageSize
                     };
@@ -443,7 +429,7 @@ export class DepartmentService {
         //console.log('getActiveDepartments called, useMockData:', this.useMockData);
 
         if (this.useMockData) {
-            const activeDepts = this.mockDepartments.filter(dept => dept.is_active === true);
+            const activeDepts = this.mockDepartments.filter(dept => dept.isActive === true);
             //console.log('返回 mock 活躍部門:', activeDepts);
             return of(activeDepts).pipe(delay(300));
         }
@@ -475,9 +461,9 @@ export class DepartmentService {
                         parent_dept_id: dept.parent_dept_id || dept.parentDeptId || null,
                         manager_emp_id: dept.manager_emp_id || dept.managerEmpId || null,
                         is_active: dept.is_active === true || dept.isActive === true,
-                        create_time: new Date(dept.create_time || dept.createTime || Date.now()),
+                        create_time: dept.create_time || dept.createTime || new Date().toISOString(),
                         create_user: dept.create_user || dept.createUser || 'system',
-                        update_time: dept.update_time ? new Date(dept.update_time) : (dept.updateTime ? new Date(dept.updateTime) : undefined),
+                        update_time: dept.update_time || dept.updateTime || undefined,
                         update_user: dept.update_user || dept.updateUser
                     }));
 
@@ -489,16 +475,7 @@ export class DepartmentService {
                     throw new Error(response?.message || '載入部門資料失敗');
                 }
             }),
-            catchError((error: any) => {
-                console.error('API 請求失敗:', error);
-                console.error('錯誤詳情:', {
-                    status: error.status,
-                    statusText: error.statusText,
-                    message: error.message,
-                    url: error.url
-                });
-                throw error;
-            })
+            catchError(this.httpErrorHandler.handleError('getDepartments', []))
         );
     }
 
@@ -521,39 +498,39 @@ export class DepartmentService {
                 if (searchTerm.trim()) {
                     const term = searchTerm.toLowerCase();
                     filteredDepartments = filteredDepartments.filter(dept =>
-                        dept.dept_name.toLowerCase().includes(term) ||
-                        dept.dept_code.toLowerCase().includes(term)
+                        dept.deptName.toLowerCase().includes(term) ||
+                        dept.deptCode.toLowerCase().includes(term)
                     );
                     console.log('按關鍵字過濾後數量:', filteredDepartments.length);
                 }
 
                 // Apply filters
-                if (filters.dept_level && filters.dept_level.trim() !== '') {
-                    console.log('按層級過濾，目標層級:', filters.dept_level);
+                if (filters.deptLevel && filters.deptLevel.trim() !== '') {
+                    console.log('按層級過濾，目標層級:', filters.deptLevel);
                     filteredDepartments = filteredDepartments.filter(dept => {
-                        const match = dept.dept_level === filters.dept_level;
-                        console.log(`部門 ${dept.dept_name} 層級: ${dept.dept_level}, 目標: ${filters.dept_level}, 匹配: ${match}`);
+                        const match = dept.deptLevel === filters.deptLevel;
+                        console.log(`部門 ${dept.deptName} 層級: ${dept.deptLevel}, 目標: ${filters.deptLevel}, 匹配: ${match}`);
                         return match;
                     });
                     console.log('按層級過濾後數量:', filteredDepartments.length);
                 }
 
-                if (filters.is_active !== undefined) {
-                    console.log('按狀態過濾，目標狀態:', filters.is_active, '類型:', typeof filters.is_active);
+                if (filters.isActive !== undefined) {
+                    console.log('按狀態過濾，目標狀態:', filters.isActive, '類型:', typeof filters.isActive);
 
                     // 確保比較時類型一致
-                    const targetStatus = Boolean(filters.is_active);
+                    const targetStatus = Boolean(filters.isActive);
                     filteredDepartments = filteredDepartments.filter(dept => {
-                        const deptStatus = Boolean(dept.is_active);
-                        console.log(`部門 ${dept.dept_name} 狀態: ${deptStatus}, 目標: ${targetStatus}, 匹配: ${deptStatus === targetStatus}`);
+                        const deptStatus = Boolean(dept.isActive);
+                        console.log(`部門 ${dept.deptName} 狀態: ${deptStatus}, 目標: ${targetStatus}, 匹配: ${deptStatus === targetStatus}`);
                         return deptStatus === targetStatus;
                     });
                     console.log('按狀態過濾後數量:', filteredDepartments.length);
                 }
 
-                if (filters.parent_dept_id !== undefined) {
+                if (filters.parentDeptId !== undefined) {
                     filteredDepartments = filteredDepartments.filter(dept =>
-                        dept.parent_dept_id === filters.parent_dept_id
+                        dept.parentDeptId === filters.parentDeptId
                     );
                     console.log('按上級部門過濾後數量:', filteredDepartments.length);
                 }
@@ -584,7 +561,7 @@ export class DepartmentService {
         if (this.useMockData) {
             return of(this.mockDepartments).pipe(
                 delay(200),
-                map(departments => departments.find(dept => dept.dept_id === id) || null),
+                map(departments => departments.find(dept => dept.deptId === id) || null),
             );
         }
 
@@ -594,18 +571,18 @@ export class DepartmentService {
                 if (response.code === 1000 && response.data) {
                     const dept = response.data;
                     return {
-                        dept_id: dept.dept_id,
-                        dept_code: dept.dept_code,
-                        dept_name: dept.dept_name,
-                        dept_level: dept.dept_level,
-                        parent_dept_id: dept.parent_dept_id,
-                        manager_emp_id: dept.manager_emp_id,
-                        is_active: dept.is_active,
-                        dept_desc: dept.dept_desc,
-                        create_time: dept.create_time ? new Date(dept.create_time) : new Date(),
-                        create_user: dept.create_user || 'system',
-                        update_time: dept.update_time ? new Date(dept.update_time) : undefined,
-                        update_user: dept.update_user
+                        deptId: dept.dept_id,
+                        deptCode: dept.dept_code,
+                        deptName: dept.dept_name,
+                        deptLevel: dept.dept_level,
+                        parentDeptId: dept.parent_dept_id,
+                        managerEmpId: dept.manager_emp_id,
+                        isActive: dept.is_active,
+                        deptDesc: dept.dept_desc,
+                        createTime: dept.create_time || new Date().toISOString(),
+                        createUser: dept.create_user || 'system',
+                        updateTime: dept.update_time || undefined,
+                        updateUser: dept.update_user
                     } as Department;
                 } else {
                     return null;
@@ -624,17 +601,17 @@ export class DepartmentService {
                 map(() => {
                     const currentUser = this.getCurrentUser();
                     const newDepartment: Department = {
-                        dept_id: Math.max(...this.mockDepartments.map(d => d.dept_id)) + 1,
-                        dept_code: request.dept_code,
-                        dept_name: request.dept_name,
-                        dept_level: request.dept_level,
-                        parent_dept_id: request.parent_dept_id ?? null,
-                        manager_emp_id: request.manager_emp_id ?? null,
-                        is_active: true,
-                        create_time: new Date(),
-                        create_user: currentUser,
-                        update_time: new Date(),
-                        update_user: currentUser
+                        deptId: Math.max(...this.mockDepartments.map(d => d.deptId)) + 1,
+                        deptCode: request.deptCode,
+                        deptName: request.deptName,
+                        deptLevel: request.deptLevel,
+                        parentDeptId: request.parentDeptId ?? null,
+                        managerEmpId: request.managerEmpId ?? null,
+                        isActive: true,
+                        createTime: new Date().toISOString(),
+                        createUser: currentUser,
+                        updateTime: new Date().toISOString(),
+                        updateUser: currentUser
                     };
 
                     this.mockDepartments.push(newDepartment);
@@ -648,14 +625,14 @@ export class DepartmentService {
         // 後端 API 調用
         const currentUser = this.getCurrentUser();
         const departmentData = {
-            dept_code: request.dept_code,
-            dept_name: request.dept_name,
-            dept_level: request.dept_level,
-            parent_dept_id: request.parent_dept_id || null,
-            manager_emp_id: request.manager_emp_id || null,
-            is_active: request.is_active ?? true,
-            dept_desc: request.dept_desc,
-            create_user: currentUser
+            deptCode: request.deptCode,
+            deptName: request.deptName,
+            deptLevel: request.deptLevel,
+            parentDeptId: request.parentDeptId || null,
+            managerEmpId: request.managerEmpId || null,
+            isActive: request.isActive ?? true,
+            deptDesc: request.deptDesc,
+            createUser: currentUser
         };
 
         return this.http.post<any>(`${this.apiUrl}/create`, departmentData).pipe(
@@ -664,18 +641,18 @@ export class DepartmentService {
                 if (response.code === 1000 && response.data) {
                     const dept = response.data;
                     return {
-                        dept_id: dept.dept_id,
-                        dept_code: dept.dept_code,
-                        dept_name: dept.dept_name,
-                        dept_level: dept.dept_level,
-                        parent_dept_id: dept.parent_dept_id,
-                        manager_emp_id: dept.manager_emp_id,
-                        is_active: dept.is_active,
-                        dept_desc: dept.dept_desc,
-                        create_time: dept.create_time ? new Date(dept.create_time) : new Date(),
-                        create_user: dept.create_user,
-                        update_time: dept.update_time ? new Date(dept.update_time) : undefined,
-                        update_user: dept.update_user
+                        deptId: dept.dept_id,
+                        deptCode: dept.dept_code,
+                        deptName: dept.dept_name,
+                        deptLevel: dept.dept_level,
+                        parentDeptId: dept.parent_dept_id,
+                        managerEmpId: dept.manager_emp_id,
+                        isActive: dept.is_active,
+                        deptDesc: dept.dept_desc,
+                        createTime: dept.create_time || new Date().toISOString(),
+                        createUser: dept.create_user,
+                        updateTime: dept.update_time || undefined,
+                        updateUser: dept.update_user
                     };
                 } else {
                     throw new Error(response.message || '創建部門失敗');
@@ -696,7 +673,7 @@ export class DepartmentService {
             return of(null).pipe(
                 delay(500),
                 map(() => {
-                    const departmentIndex = this.mockDepartments.findIndex(dept => dept.dept_id === id);
+                    const departmentIndex = this.mockDepartments.findIndex(dept => dept.deptId === id);
                     if (departmentIndex === -1) {
                         throw new Error(`Department with id ${id} not found`);
                     }
@@ -706,8 +683,8 @@ export class DepartmentService {
                     const updatedDepartment: Department = {
                         ...existingDepartment,
                         ...request,
-                        update_time: new Date(),
-                        update_user: currentUser
+                        updateTime: new Date().toISOString(),
+                        updateUser: currentUser
                     };
 
                     this.mockDepartments[departmentIndex] = updatedDepartment;
@@ -721,16 +698,16 @@ export class DepartmentService {
         // 後端 API 調用
         const currentUser = this.getCurrentUser();
         const updateData = {
-            dept_id: id,
-            dept_code: request.dept_code,
-            dept_name: request.dept_name,
-            dept_level: request.dept_level,
-            parent_dept_id: request.parent_dept_id,
-            manager_emp_id: request.manager_emp_id,
-            is_active: request.is_active,
-            dept_desc: request.dept_desc,
-            update_user: currentUser,
-            update_time: new Date().toISOString()
+            deptId: id,
+            deptCode: request.deptCode,
+            deptName: request.deptName,
+            deptLevel: request.deptLevel,
+            parentDeptId: request.parentDeptId,
+            managerEmpId: request.managerEmpId,
+            isActive: request.isActive,
+            deptDesc: request.deptDesc,
+            updateUser: currentUser,
+            updateTime: new Date().toISOString()
         };
 
         return this.http.post<any>(`${this.apiUrl}/update`, updateData).pipe(
@@ -739,35 +716,35 @@ export class DepartmentService {
                 if (response.code === 1000 && response.data) {
                     const dept = response.data;
                     return {
-                        dept_id: dept.dept_id,
-                        dept_code: dept.dept_code,
-                        dept_name: dept.dept_name,
-                        dept_level: dept.dept_level,
-                        parent_dept_id: dept.parent_dept_id,
-                        manager_emp_id: dept.manager_emp_id,
-                        is_active: dept.is_active,
-                        dept_desc: dept.dept_desc,
-                        create_time: dept.create_time ? new Date(dept.create_time) : new Date(),
-                        create_user: dept.create_user || 'system',
-                        update_time: dept.update_time ? new Date(dept.update_time) : new Date(),
-                        update_user: dept.update_user || 'system'
+                        deptId: dept.dept_id,
+                        deptCode: dept.dept_code,
+                        deptName: dept.dept_name,
+                        deptLevel: dept.dept_level,
+                        parentDeptId: dept.parent_dept_id,
+                        managerEmpId: dept.manager_emp_id,
+                        isActive: dept.is_active,
+                        deptDesc: dept.dept_desc,
+                        createTime: dept.create_time || new Date().toISOString(),
+                        createUser: dept.create_user || 'system',
+                        updateTime: dept.update_time || new Date().toISOString(),
+                        updateUser: dept.update_user || 'system'
                     } as Department;
                 } else if (response.code === 1000) {
                     // 成功但沒有回傳資料的情況，使用請求資料建構回傳
                     const currentUser = this.getCurrentUser();
                     return {
-                        dept_id: id,
-                        dept_code: request.dept_code,
-                        dept_name: request.dept_name,
-                        dept_level: request.dept_level,
-                        parent_dept_id: request.parent_dept_id,
-                        manager_emp_id: request.manager_emp_id,
-                        is_active: request.is_active,
-                        dept_desc: request.dept_desc,
-                        create_time: new Date(),
-                        create_user: 'system',
-                        update_time: new Date(),
-                        update_user: currentUser
+                        deptId: id,
+                        deptCode: request.deptCode,
+                        deptName: request.deptName,
+                        deptLevel: request.deptLevel,
+                        parentDeptId: request.parentDeptId,
+                        managerEmpId: request.managerEmpId,
+                        isActive: request.isActive,
+                        deptDesc: request.deptDesc,
+                        createTime: new Date().toISOString(),
+                        createUser: 'system',
+                        updateTime: new Date().toISOString(),
+                        updateUser: currentUser
                     } as Department;
                 } else {
                     throw new Error(response.message || '更新部門失敗');
@@ -788,7 +765,7 @@ export class DepartmentService {
             return of(null).pipe(
                 delay(300),
                 map(() => {
-                    const departmentIndex = this.mockDepartments.findIndex(dept => dept.dept_id === id);
+                    const departmentIndex = this.mockDepartments.findIndex(dept => dept.deptId === id);
                     if (departmentIndex === -1) {
                         throw new Error(`Department with id ${id} not found`);
                     }
@@ -797,9 +774,9 @@ export class DepartmentService {
                     // Soft delete by setting is_active to false
                     this.mockDepartments[departmentIndex] = {
                         ...this.mockDepartments[departmentIndex],
-                        is_active: false,
-                        update_time: new Date(),
-                        update_user: currentUser
+                        isActive: false,
+                        updateTime: new Date().toISOString(),
+                        updateUser: currentUser
                     };
 
                     this.departmentsSubject.next([...this.mockDepartments]);
@@ -831,16 +808,16 @@ export class DepartmentService {
             map((dept: Department | null): Department => {
                 if (!dept) throw new Error(`Department with id ${departmentId} not found`);
                 // 切換狀態
-                return { ...dept, is_active: !dept.is_active };
+                return { ...dept, isActive: !dept.isActive };
             }),
-            switchMap((toggled: Department) => this.updateDepartment(toggled.dept_id, {
-                dept_id: toggled.dept_id,
-                dept_code: toggled.dept_code,
-                dept_name: toggled.dept_name,
-                dept_level: toggled.dept_level,
-                parent_dept_id: toggled.parent_dept_id,
-                manager_emp_id: toggled.manager_emp_id,
-                is_active: toggled.is_active
+            switchMap((toggled: Department) => this.updateDepartment(toggled.deptId, {
+                deptId: toggled.deptId,
+                deptCode: toggled.deptCode,
+                deptName: toggled.deptName,
+                deptLevel: toggled.deptLevel,
+                parentDeptId: toggled.parentDeptId,
+                managerEmpId: toggled.managerEmpId,
+                isActive: toggled.isActive
             }))
         );
     }
@@ -851,7 +828,7 @@ export class DepartmentService {
     getRootDepartments(): Observable<Department[]> {
         if (this.useMockData) {
             // 只回傳頂層且啟用的部門
-            return of(this.mockDepartments.filter(dept => dept.parent_dept_id === null && dept.is_active === true)).pipe(delay(200));
+            return of(this.mockDepartments.filter(dept => dept.parentDeptId === null && dept.isActive === true)).pipe(delay(200));
         }
 
         // 從 API 取得全部部門，過濾頂層且啟用的部門
@@ -892,7 +869,7 @@ export class DepartmentService {
             return of(this.mockDepartments).pipe(
                 delay(200),
                 map(departments => departments.filter(dept =>
-                    dept.parent_dept_id === parentId && dept.is_active === true
+                    dept.parentDeptId === parentId && dept.isActive === true
                 )),
             );
         }
@@ -930,14 +907,14 @@ export class DepartmentService {
             return of(this.mockDepartments).pipe(
                 delay(300),
                 map(departments => {
-                    return departments.filter(dept => dept.is_active === true)
+                    return departments.filter(dept => dept.isActive === true)
                         .sort((a, b) => {
-                            if (a.dept_level !== b.dept_level) {
+                            if (a.deptLevel !== b.deptLevel) {
                                 const levelOrder = { 'BI': 1, 'BU': 2, 'DEPT': 3 };
-                                return (levelOrder[a.dept_level as keyof typeof levelOrder] || 4) -
-                                    (levelOrder[b.dept_level as keyof typeof levelOrder] || 4);
+                                return (levelOrder[a.deptLevel as keyof typeof levelOrder] || 4) -
+                                    (levelOrder[b.deptLevel as keyof typeof levelOrder] || 4);
                             }
-                            return a.dept_name.localeCompare(b.dept_name);
+                            return a.deptName.localeCompare(b.deptName);
                         });
                 })
             );
@@ -1009,8 +986,8 @@ export class DepartmentService {
                 delay(200),
                 map(departments => {
                     const existingDept = departments.find(dept =>
-                        dept.dept_code.toLowerCase() === code.toLowerCase() &&
-                        dept.dept_id !== excludeId
+                        dept.deptCode.toLowerCase() === code.toLowerCase() &&
+                        dept.deptId !== excludeId
                     );
                     return !existingDept;
                 })

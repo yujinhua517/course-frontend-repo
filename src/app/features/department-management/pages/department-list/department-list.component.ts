@@ -1,7 +1,7 @@
 import { Component, OnInit, signal, computed, inject, ViewChild, TemplateRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+// import { FormsModule } from '@angular/forms';
+// import { RouterModule } from '@angular/router';
 import { DepartmentStore } from '../../store/department.store';
 import { DepartmentService } from '../../services/department.service';
 import { DepartmentFormComponent } from '../../components/department-form/department-form.component';
@@ -28,8 +28,8 @@ import { HighlightPipe } from '../../../../shared/pipes/highlight.pipe';
     styleUrls: ['./department-list.component.scss'],
     imports: [
         CommonModule,
-        FormsModule,
-        RouterModule,
+        // FormsModule,
+        // RouterModule,
         DepartmentFormComponent,
         DepartmentViewComponent,
         TableHeaderComponent,
@@ -73,7 +73,7 @@ export class DepartmentListComponent implements OnInit {
     showView = signal(false);
     selectedDepartment = signal<Department | null>(null);
     formMode = signal<'create' | 'edit'>('create');
-    sortBy = signal<keyof Department>('dept_code');
+    sortBy = signal<keyof Department>('deptCode');
     sortDirection = signal<'asc' | 'desc'>('asc');
 
     // Bulk selection signals
@@ -207,7 +207,7 @@ export class DepartmentListComponent implements OnInit {
         return {
             data: this.departments(),
             showSelectColumn: this.hasDeletePermission(),
-            trackByFn: (index: number, item: Department) => item.dept_id,
+            trackByFn: (index: number, item: Department) => item.deptId,
             rowCssClass: (item: Department) => this.isSelected(item) ? 'table-active' : '',
             columns: [
                 {
@@ -317,12 +317,12 @@ export class DepartmentListComponent implements OnInit {
         cancelText: '取消',
         size: 'md',
         items: this.selectedDepartments().map(dept => ({
-            id: dept.dept_id.toString(),
-            text: dept.dept_code,
-            subText: dept.dept_name,
+            id: dept.deptId.toString(),
+            text: dept.deptCode,
+            subText: dept.deptName,
             icon: 'building'
         })),
-        maxItemsToShow: 5,
+        maxItemsToShow: 100,
         showItemIcon: true
     }));
 
@@ -356,9 +356,9 @@ export class DepartmentListComponent implements OnInit {
     loadDepartments(): void {
         this.departmentStore.loadDepartments({
             keyword: this.searchKeyword() || undefined,
-            is_active: this.statusFilter() ?? undefined,
+            isActive: this.statusFilter() ?? undefined,
             sortBy: this.sortBy(),
-            sort_direction: this.sortDirection()
+            sortDirection: this.sortDirection()
         });
     }
 
@@ -463,7 +463,7 @@ export class DepartmentListComponent implements OnInit {
             ],
             size: 'sm',
             orientation: 'horizontal',
-            itemName: department.dept_name
+            itemName: department.deptName
         };
     }
 
@@ -495,7 +495,7 @@ export class DepartmentListComponent implements OnInit {
     }
 
     onFilterChange(event: { key: string; value: any }): void {
-        console.log('Department Filter Change:', event);
+        //console.log('Department Filter Change:', event);
 
         switch (event.key) {
             case 'is_active':
@@ -552,12 +552,12 @@ export class DepartmentListComponent implements OnInit {
         if (selected) {
             this.selectedDepartments.set([...currentSelected, item]);
         } else {
-            this.selectedDepartments.set(currentSelected.filter(d => d.dept_id !== item.dept_id));
+            this.selectedDepartments.set(currentSelected.filter(d => d.deptId !== item.deptId));
         }
     }
 
     isSelected(item: Department): boolean {
-        return this.selectedDepartments().some(d => d.dept_id === item.dept_id);
+        return this.selectedDepartments().some(d => d.deptId === item.deptId);
     }
 
     // CRUD 操作
@@ -583,11 +583,11 @@ export class DepartmentListComponent implements OnInit {
     }
 
     onDelete(department: Department): void {
-        if (confirm(`確定要刪除部門「${department.dept_name}」嗎？`)) {
-            this.departmentService.deleteDepartment(department.dept_id).subscribe({
+        if (confirm(`確定要刪除部門「${department.deptName}」嗎？`)) {
+            this.departmentService.deleteDepartment(department.deptId).subscribe({
                 next: (success) => {
                     if (success) {
-                        this.departmentStore.removeDepartment(department.dept_id);
+                        this.departmentStore.removeDepartment(department.deptId);
                     }
                 },
                 error: (error) => {
@@ -613,7 +613,7 @@ export class DepartmentListComponent implements OnInit {
     private performBulkDelete(): void {
         const selected = this.selectedDepartments();
         const deletePromises = selected.map(dept =>
-            this.departmentService.deleteDepartment(dept.dept_id).toPromise()
+            this.departmentService.deleteDepartment(dept.deptId).toPromise()
         );
 
         Promise.all(deletePromises).then(() => {
@@ -639,9 +639,9 @@ export class DepartmentListComponent implements OnInit {
     //     });
     // }
     onToggleStatus(department: Department): void {
-        const targetStatus = department.is_active ? '停用' : '啟用';
-        if (!confirm(`確定要將「${department.dept_name}」的狀態切換至「${targetStatus}」嗎？`)) return;
-        this.departmentService.toggleDepartmentStatus(department.dept_id).subscribe({
+        const targetStatus = department.isActive ? '停用' : '啟用';
+        if (!confirm(`確定要將「${department.deptName}」的狀態切換至「${targetStatus}」嗎？`)) return;
+        this.departmentService.toggleDepartmentStatus(department.deptId).subscribe({
             next: (updatedDepartment) => {
                 if (updatedDepartment) {
                     this.departmentStore.updateDepartment(updatedDepartment);
@@ -707,7 +707,7 @@ export class DepartmentListComponent implements OnInit {
 
     getStatusConfig(department: Department): StatusConfig {
         return {
-            value: department.is_active,
+            value: department.isActive,
             activeValue: true,
             inactiveValue: false,
             activeText: '啟用',

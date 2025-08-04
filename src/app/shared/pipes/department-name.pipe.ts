@@ -23,8 +23,8 @@ export class DepartmentNamePipe implements PipeTransform {
         // 從服務獲取部門資料
         return this.departmentService.getActiveDepartments().pipe(
             map(departments => {
-                const department = departments.find(d => d.dept_id === deptId);
-                const name = department ? department.dept_name : `部門 ${deptId}`;
+                const department = departments.find(d => d.deptId === deptId);
+                const name = department ? department.deptName : `部門 ${deptId}`;
                 this.cache.set(deptId, name);
                 return name;
             })

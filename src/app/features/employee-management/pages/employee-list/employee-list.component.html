@@ -64,28 +64,28 @@
 
     <!-- 模板定義 -->
     <ng-template #codeTemplate let-employee>
-        <span [innerHTML]="employee.emp_code | highlight:searchKeyword()"></span>
+        <span [innerHTML]="employee.empCode | highlight:searchKeyword()"></span>
     </ng-template>
 
     <ng-template #nameTemplate let-employee>
-        <span [innerHTML]="employee.emp_name | highlight:searchKeyword()"></span>
+        <span [innerHTML]="employee.empName | highlight:searchKeyword()"></span>
     </ng-template>
 
     <ng-template #emailTemplate let-employee>
-        <span [innerHTML]="employee.emp_email | highlight:searchKeyword()"></span>
+        <span [innerHTML]="employee.empEmail | highlight:searchKeyword()"></span>
     </ng-template>
 
     <ng-template #deptTemplate let-employee>
-        <span [innerHTML]="employee.dept_name | highlight:searchKeyword()"></span>
+        <span [innerHTML]="employee.deptName | highlight:searchKeyword()"></span>
     </ng-template>
 
     <ng-template #jobTemplate let-employee>
-        <span [innerHTML]="employee.job_title | highlight:searchKeyword()"></span>
+        <span [innerHTML]="employee.jobTitle | highlight:searchKeyword()"></span>
     </ng-template>
 
     <ng-template #statusTemplate let-employee>
         <app-status-badge [config]="getStatusConfig(employee)" (statusToggled)="onToggleStatus(employee)"
-            [ariaLabel]="'切換 ' + employee.emp_name + ' 的狀態'">
+            [ariaLabel]="'切換 ' + employee.empName + ' 的狀態'">
         </app-status-badge>
     </ng-template>
 
@@ -94,7 +94,7 @@
     </ng-template> -->
 
     <ng-template #dateTemplate let-employee>
-        {{ employee.hire_date | date:'yyyy/MM/dd' }}
+        {{ employee.hireDate | date:'yyyy/MM/dd' }}
     </ng-template>
 
     <ng-template #actionsTemplate let-employee>

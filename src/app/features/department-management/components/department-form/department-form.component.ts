@@ -82,7 +82,7 @@ export class DepartmentFormComponent implements OnInit {
         ]).then(() => {
             this.setupForm();
             // 監聽部門層級變化，更新 signal
-            this.departmentForm().get('dept_level')?.valueChanges.subscribe((level: string) => {
+            this.departmentForm().get('deptLevel')?.valueChanges.subscribe((level: string) => {
                 this.selectedDeptLevel.set(level);
             });
         });
@@ -119,23 +119,23 @@ export class DepartmentFormComponent implements OnInit {
 
         // 篩選符合階層規則的部門
         return allDepartments
-            .filter(d => allowedParentLevels.includes(d.dept_level))
-            .filter(d => d.is_active) // 只顯示啟用的部門
+            .filter(d => allowedParentLevels.includes(d.deptLevel))
+            .filter(d => d.isActive) // 只顯示啟用的部門
             .sort((a, b) => {
                 // 先按層級排序，再按名稱排序
-                const levelOrder = (this.LEVEL_ORDER[a.dept_level] || 99) - (this.LEVEL_ORDER[b.dept_level] || 99);
-                return levelOrder !== 0 ? levelOrder : a.dept_name.localeCompare(b.dept_name);
+                const levelOrder = (this.LEVEL_ORDER[a.deptLevel] || 99) - (this.LEVEL_ORDER[b.deptLevel] || 99);
+                return levelOrder !== 0 ? levelOrder : a.deptName.localeCompare(b.deptName);
             });
     });
 
     private createForm(): FormGroup {
         return this.formBuilder.group({
-            dept_code: ['', [Validators.required, Validators.maxLength(20)]],
-            dept_name: ['', [Validators.required, Validators.maxLength(100)]],
-            dept_level: ['', [Validators.required]],
-            parent_dept_id: [null],
-            manager_emp_id: [null],
-            is_active: [true, [Validators.required]]
+            deptCode: ['', [Validators.required, Validators.maxLength(20)]],
+            deptName: ['', [Validators.required, Validators.maxLength(100)]],
+            deptLevel: ['', [Validators.required]],
+            parentDeptId: [null],
+            managerEmpId: [null],
+            isActive: [true, [Validators.required]]
         });
     }
 
@@ -144,15 +144,15 @@ export class DepartmentFormComponent implements OnInit {
         if (dept) {
             const form = this.departmentForm();
             form.patchValue({
-                dept_code: dept.dept_code,
-                dept_name: dept.dept_name,
-                dept_level: dept.dept_level,
-                parent_dept_id: dept.parent_dept_id,
-                manager_emp_id: dept.manager_emp_id,
-                is_active: dept.is_active
+                deptCode: dept.deptCode,
+                deptName: dept.deptName,
+                deptLevel: dept.deptLevel,
+                parentDeptId: dept.parentDeptId,
+                managerEmpId: dept.managerEmpId,
+                isActive: dept.isActive
             });
             // 同步 signal，確保 filteredParentDepartments 正確
-            this.selectedDeptLevel.set(dept.dept_level);
+            this.selectedDeptLevel.set(dept.deptLevel);
         } else {
             this.departmentForm.set(this.createForm());
             this.selectedDeptLevel.set(null);
@@ -179,9 +179,9 @@ export class DepartmentFormComponent implements OnInit {
         return new Promise(resolve => {
             this.departmentService.getDepartmentsAsObservable().subscribe({
                 next: (departments: Department[]) => {
-                    const currentDeptId = this.department()?.dept_id;
+                    const currentDeptId = this.department()?.deptId;
                     const filteredDepts = currentDeptId
-                        ? departments.filter((d: Department) => d.dept_id !== currentDeptId)
+                        ? departments.filter((d: Department) => d.deptId !== currentDeptId)
                         : departments;
                     this.parentDepartments.set(filteredDepts);
                     resolve();
@@ -198,7 +198,7 @@ export class DepartmentFormComponent implements OnInit {
         return new Promise(resolve => {
             this.employeeService.getEmployees().subscribe({
                 next: (res) => {
-                    this.employees.set(res.data_list ?? res);
+                    this.employees.set(res.dataList ?? res);
                     resolve();
                 },
                 error: (err) => {
@@ -224,11 +224,11 @@ export class DepartmentFormComponent implements OnInit {
 
         if (this.isEditMode()) {
             const request: UpdateDepartmentRequest = {
-                dept_id: this.department()!.dept_id,
+                deptId: this.department()!.deptId,
                 ...formValue
             };
 
-            this.departmentService.updateDepartment(this.department()!.dept_id, request).subscribe({
+            this.departmentService.updateDepartment(this.department()!.deptId, request).subscribe({
                 next: (updatedDepartment: Department) => {
                     this.handleSuccess(updatedDepartment);
                 },

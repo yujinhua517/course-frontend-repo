@@ -16,51 +16,48 @@
         <div class="row g-3">
             <!-- 員工工號 -->
             <div class="col-md-6">
-                <label for="emp_code" class="form-label required">
-                    <i class="bi bi-hash me-1"></i>
+                                <label for="empCode" class="form-label required">
                     員工工號
+                    <span class="text-danger">*</span>
                 </label>
-                <input type="text" id="emp_code" class="form-control" [class.is-invalid]="isFieldInvalid('emp_code')"
-                    formControlName="emp_code" placeholder="請輸入員工工號" [readonly]="isEditMode()" maxlength="20"
-                    aria-describedby="emp_code_help emp_code_error">
-                <div id="emp_code_help" class="form-text">
-                    @if (isEditMode()) {
-                    編輯模式下員工工號不可修改
-                    } @else {
-                    建議使用簡短且具意義的工號，如 EMP001
-                    }
+                <input type="text" id="empCode" class="form-control" [class.is-invalid]="isFieldInvalid('empCode')"
+                    formControlName="empCode" placeholder="請輸入員工工號" [readonly]="isEditMode()" maxlength="20"
+                    aria-describedby="empCode_help empCode_error">
+                <div id="empCode_help" class="form-text">
+                    員工工號用於系統內部識別，建立後不可修改。
                 </div>
-                @if (getFieldError('emp_code'); as error) {
-                <div id="emp_code_error" class="invalid-feedback">{{ error }}</div>
+
+                @if (getFieldError('empCode'); as error) {
+                <div id="empCode_error" class="invalid-feedback">{{ error }}</div>
                 }
             </div>
 
             <!-- 員工姓名 -->
             <div class="col-md-6">
-                <label for="emp_name" class="form-label required">
+                <label for="empName" class="form-label required">
                     <i class="bi bi-person me-1"></i>
                     員工姓名
                 </label>
-                <input type="text" id="emp_name" class="form-control" [class.is-invalid]="isFieldInvalid('emp_name')"
-                    formControlName="emp_name" placeholder="請輸入員工姓名" maxlength="50"
-                    aria-describedby="emp_name_help emp_name_error">
-                <div id="emp_name_help" class="form-text">
+                <input type="text" id="empName" class="form-control" [class.is-invalid]="isFieldInvalid('empName')"
+                    formControlName="empName" placeholder="請輸入員工姓名" maxlength="50"
+                    aria-describedby="empName_help empName_error">
+                <div id="empName_help" class="form-text">
                     請輸入員工的真實姓名
                 </div>
-                @if (getFieldError('emp_name'); as error) {
-                <div id="emp_name_error" class="invalid-feedback">{{ error }}</div>
+                @if (getFieldError('empName'); as error) {
+                <div id="empName_error" class="invalid-feedback">{{ error }}</div>
                 }
             </div>
 
             <!-- 電子郵件 -->
             <div class="col-md-6">
-                <label for="emp_email" class="form-label">
+                <label for="empEmail" class="form-label">
                     <i class="bi bi-envelope me-1"></i>
                     電子郵件
                 </label>
-                <input type="email" id="emp_email" class="form-control" [class.is-invalid]="isFieldInvalid('emp_email')"
-                    formControlName="emp_email" placeholder="請輸入電子郵件" maxlength="100"
-                    aria-describedby="emp_email_help emp_email_error">
+                <input type="email" id="empEmail" class="form-control" [class.is-invalid]="isFieldInvalid('empEmail')"
+                    formControlName="empEmail" placeholder="請輸入電子郵件" maxlength="100"
+                    aria-describedby="empEmail_help empEmail_error">
                 <div id="emp_email_help" class="form-text">
                     可選填，請輸入有效的電子郵件地址
                 </div>
@@ -95,8 +92,8 @@
                 <select id="dept_id" class="form-select" [class.is-invalid]="isFieldInvalid('dept_id')"
                     formControlName="dept_id" aria-describedby="dept_id_help dept_id_error">
                     <option value="">請選擇部門</option>
-                    @for (dept of departments(); track dept.dept_id) {
-                    <option [value]="dept.dept_id">{{ dept.dept_name }}</option>
+                    @for (dept of departments(); track dept.deptId) {
+                    <option [value]="dept.deptId">{{ dept.deptName }}</option>
                     }
                 </select>
                 <div id="dept_id_help" class="form-text">
@@ -191,7 +188,7 @@
                             <i class="bi bi-person me-1"></i>
                             建立者
                         </div>
-                        <div class="system-field-value">{{ employee()!.create_user }}</div>
+                        <div class="system-field-value">{{ employee()!.createUser }}</div>
                     </div>
                 </div>
                 <div class="col-md-6">
@@ -201,22 +198,22 @@
                             建立時間
                         </div>
                         <div class="system-field-value">
-                            {{ employee()!.create_time | date:'yyyy/MM/dd HH:mm:ss' }}
+                            {{ employee()!.createTime | date:'yyyy/MM/dd HH:mm:ss' }}
                         </div>
                     </div>
                 </div>
-                @if (employee()!.update_user) {
+                @if (employee()!.updateUser) {
                 <div class="col-md-6">
                     <div class="system-field">
                         <div class="system-field-label">
                             <i class="bi bi-person-check me-1"></i>
                             最後更新者
                         </div>
-                        <div class="system-field-value">{{ employee()!.update_user }}</div>
+                        <div class="system-field-value">{{ employee()!.updateUser }}</div>
                     </div>
                 </div>
                 }
-                @if (employee()!.update_time) {
+                @if (employee()!.updateTime) {
                 <div class="col-md-6">
                     <div class="system-field">
                         <div class="system-field-label">
@@ -224,7 +221,7 @@
                             最後更新時間
                         </div>
                         <div class="system-field-value">
-                            {{ employee()!.update_time | date:'yyyy/MM/dd HH:mm:ss' }}
+                            {{ employee()!.updateTime | date:'yyyy/MM/dd HH:mm:ss' }}
                         </div>
                     </div>
                 </div>

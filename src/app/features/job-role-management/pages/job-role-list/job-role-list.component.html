@@ -64,11 +64,11 @@
 
     <!-- 模板定義 -->
     <ng-template #codeTemplate let-jobRole>
-        <span [innerHTML]="jobRole.job_role_code | highlight:searchKeyword()"></span>
+        <span [innerHTML]="jobRole.jobRoleCode | highlight:searchKeyword()"></span>
     </ng-template>
 
     <ng-template #nameTemplate let-jobRole>
-        <span [innerHTML]="jobRole.job_role_name | highlight:searchKeyword()"></span>
+        <span [innerHTML]="jobRole.jobRoleName | highlight:searchKeyword()"></span>
     </ng-template>
 
     <ng-template #descriptionTemplate let-jobRole>
@@ -77,12 +77,12 @@
 
     <ng-template #statusTemplate let-jobRole>
         <app-status-badge [config]="getStatusConfig(jobRole)" (statusToggled)="onStatusToggled(jobRole, $event)"
-            [ariaLabel]="'切換 ' + jobRole.job_role_name + ' 的狀態'">
+            [ariaLabel]="'切換 ' + jobRole.jobRoleName + ' 的狀態'">
         </app-status-badge>
     </ng-template>
 
     <ng-template #timeTemplate let-jobRole>
-        {{ jobRole.create_time | date:'yyyy/MM/dd HH:mm' }}
+        {{ jobRole.createTime | date:'yyyy/MM/dd HH:mm' }}
     </ng-template>
 
     <ng-template #actionsTemplate let-jobRole>

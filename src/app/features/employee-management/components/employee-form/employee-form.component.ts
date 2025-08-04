@@ -64,40 +64,40 @@ export class EmployeeFormComponent implements OnInit {
         const employeeData = this.employee();
 
         this.form = this.fb.group({
-            emp_code: [
-                employeeData?.emp_code || '',
+            empCode: [
+                employeeData?.empCode || '',
                 [Validators.required, Validators.maxLength(20)]
             ],
-            emp_name: [
-                employeeData?.emp_name || '',
+            empName: [
+                employeeData?.empName || '',
                 [Validators.required, Validators.maxLength(50)]
             ],
-            emp_email: [
-                employeeData?.emp_email || '',
+            empEmail: [
+                employeeData?.empEmail || '',
                 [Validators.email, Validators.maxLength(100)]
             ],
-            emp_phone: [
-                employeeData?.emp_phone || '',
+            empPhone: [
+                employeeData?.empPhone || '',
                 [Validators.pattern(/^[0-9\-\+\(\)\s]{8,20}$/), Validators.maxLength(20)]
             ],
-            dept_id: [
-                employeeData?.dept_id || '',
+            deptId: [
+                employeeData?.deptId || '',
                 [Validators.required]
             ],
-            job_title: [
-                employeeData?.job_title || '',
+            jobTitle: [
+                employeeData?.jobTitle || '',
                 [Validators.maxLength(50)]
             ],
-            hire_date: [
-                employeeData?.hire_date ? this.formatDateForInput(employeeData.hire_date) : '',
+            hireDate: [
+                employeeData?.hireDate ? this.formatDateForInput(employeeData.hireDate) : '',
                 []
             ],
-            resign_date: [
-                employeeData?.resign_date ? this.formatDateForInput(employeeData.resign_date) : '',
+            resignDate: [
+                employeeData?.resignDate ? this.formatDateForInput(employeeData.resignDate) : '',
                 []
             ],
-            is_active: [
-                employeeData?.is_active ?? true,
+            isActive: [
+                employeeData?.isActive ?? true,
                 [Validators.required]
             ]
         });
@@ -176,7 +176,7 @@ export class EmployeeFormComponent implements OnInit {
         }
 
         if (this.isEditMode()) {
-            this.updateEmployee({ ...formValue, emp_id: this.employee()!.emp_id });
+            this.updateEmployee({ ...formValue, empId: this.employee()!.empId });
         } else {
             this.createEmployee(formValue);
         }
@@ -197,7 +197,7 @@ export class EmployeeFormComponent implements OnInit {
     }
 
     private updateEmployee(formValue: EmployeeUpdateDto): void {
-        const id = this.employee()!.emp_id;
+        const id = this.employee()!.empId;
 
         this.employeeService.updateEmployee(id, formValue).subscribe({
             next: (updatedEmployee) => {

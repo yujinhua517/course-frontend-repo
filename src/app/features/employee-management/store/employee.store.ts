@@ -39,7 +39,7 @@ export class EmployeeStore {
         const searchParams = {
             ...this._searchParams(),
             ...params,
-            first_index_in_page: ((params?.first_index_in_page || this._currentPage()) - 1) * this._pageSize() + 1,
+            first_index_in_page: ((params?.firstIndexInPage || this._currentPage()) - 1) * this._pageSize() + 1,
             pageable: true
         };
 
@@ -47,8 +47,8 @@ export class EmployeeStore {
         if (params?.keyword !== undefined) {
             searchParams.keyword = params.keyword;
         }
-        if (params?.is_active !== undefined) {
-            searchParams.is_active = params.is_active;
+        if (params?.isActive !== undefined) {
+            searchParams.isActive = params.isActive;
         }
 
         console.log('Employee Store loadEmployees called with params:', searchParams);
@@ -59,11 +59,11 @@ export class EmployeeStore {
             next: (response) => {
                 //console.log('Employee Service response:', response);
 
-                const totalRecords = response.total_records || response.data_list.length;
+                const totalRecords = response.totalRecords || response.dataList.length;
 
-                this._employees.set(response.data_list);
+                this._employees.set(response.dataList);
                 this._total.set(totalRecords);
-                const currentPage = Math.floor((response.first_index_in_page - 1) / this._pageSize()) + 1;
+                const currentPage = Math.floor((response.firstIndexInPage - 1) / this._pageSize()) + 1;
                 //console.log('Calculated Current Page:', currentPage);
                 this._currentPage.set(currentPage);
                 this._loading.set(false);
@@ -83,34 +83,34 @@ export class EmployeeStore {
     searchEmployees(keyword: string): void {
         this.loadEmployees({
             ...this._searchParams(),
-            emp_name: keyword,
-            first_index_in_page: 1
+            empName: keyword,
+            firstIndexInPage: 1
         });
     }
 
-    filterByDepartment(dept_id?: number): void {
+    filterByDepartment(deptId?: number): void {
         this.loadEmployees({
             ...this._searchParams(),
-            dept_id,
-            first_index_in_page: 1
+            deptId: deptId,
+            firstIndexInPage: 1
         });
     }
 
-    filterByStatus(is_active?: boolean): void {
-        console.log('Employee Store filterByStatus called with:', is_active, 'Type:', typeof is_active);
+    filterByStatus(isActive?: boolean): void {
+        console.log('Employee Store filterByStatus called with:', isActive, 'Type:', typeof isActive);
 
         this.loadEmployees({
             ...this._searchParams(),
-            is_active,
-            first_index_in_page: 1
+            isActive,
+            firstIndexInPage: 1
         });
     }
 
     sortEmployees(sortBy: keyof Employee, sortDirection: 'asc' | 'desc'): void {
         this.loadEmployees({
             ...this._searchParams(),
-            sort_column: sortBy as string,
-            sort_direction: sortDirection.toUpperCase()
+            sortColumn: sortBy as string,
+            sortDirection: sortDirection.toUpperCase()
         });
     }
 
@@ -120,7 +120,7 @@ export class EmployeeStore {
                 ...this._searchParams(),
                 page,
                 pageSize: this._pageSize(),
-                first_index_in_page: (page - 1) * this._pageSize() + 1
+                firstIndexInPage: (page - 1) * this._pageSize() + 1
             });
         }
     }
@@ -131,7 +131,7 @@ export class EmployeeStore {
             ...this._searchParams(),
             page: 1,
             pageSize,
-            first_index_in_page: 1
+            firstIndexInPage: 1
         });
     }
 
@@ -143,7 +143,7 @@ export class EmployeeStore {
 
     updateEmployee(updatedEmployee: Employee): void {
         const employees = this._employees();
-        const index = employees.findIndex((e: Employee) => e.emp_id === updatedEmployee.emp_id);
+        const index = employees.findIndex((e: Employee) => e.empId === updatedEmployee.empId);
 
         if (index !== -1) {
             const updated = [...employees];
@@ -153,22 +153,22 @@ export class EmployeeStore {
     }
 
     removeEmployee(id: number): void {
-        const filtered = this._employees().filter((e: Employee) => e.emp_id !== id);
+        const filtered = this._employees().filter((e: Employee) => e.empId !== id);
         this._employees.set(filtered);
         this._total.set(this._total() - 1);
     }
 
     toggleEmployeeStatus(id: number): void {
         const employees = this._employees();
-        const index = employees.findIndex((e: Employee) => e.emp_id === id);
+        const index = employees.findIndex((e: Employee) => e.empId === id);
 
         if (index !== -1) {
             const updated = [...employees];
             updated[index] = {
                 ...updated[index],
-                is_active: !updated[index].is_active,
-                update_time: new Date().toISOString(),
-                update_user: 'current_user'
+                isActive: !updated[index].isActive,
+                updateTime: new Date().toISOString(),
+                updateUser: 'current_user'
             };
             this._employees.set(updated);
         }

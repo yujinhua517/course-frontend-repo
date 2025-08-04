@@ -125,7 +125,7 @@ export class SearchFilterComponent {
             value = false;
         }
 
-        console.log(`Filter change - Key: ${filterKey}, Value: ${value}, Type: ${typeof value}`);
+        //console.log(`Filter change - Key: ${filterKey}, Value: ${value}, Type: ${typeof value}`);
 
         this.filterChanged.emit({ key: filterKey, value });
     }

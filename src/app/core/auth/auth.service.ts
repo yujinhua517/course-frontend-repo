@@ -39,7 +39,7 @@ export class AuthService {
                 // 只有在 UserStore 還沒設定用戶時才恢復
                 if (!this.userStore.isAuthenticated()) {
                     this.userStore.setUser(user);
-                    console.log('已從 sessionStorage 恢復用戶狀態:', user.username);
+                    //console.log('已從 sessionStorage 恢復用戶狀態:', user.username);
                 }
             } catch (error) {
                 // 若解析失敗則清除所有相關資料

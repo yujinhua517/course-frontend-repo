@@ -16,59 +16,59 @@
         <div class="row g-3">
             <!-- 職務代碼 -->
             <div class="col-md-6">
-                <label for="job_role_code" class="form-label required">
+                <label for="jobRoleCode" class="form-label required">
                     <i class="bi bi-hash me-1"></i>
                     職務代碼
                 </label>
-                <input type="text" id="job_role_code" class="form-control"
-                    [class.is-invalid]="isFieldInvalid('job_role_code')" formControlName="job_role_code"
+                <input type="text" id="jobRoleCode" class="form-control"
+                    [class.is-invalid]="isFieldInvalid('jobRoleCode')" formControlName="jobRoleCode"
                     placeholder="請輸入職務代碼" [readonly]="isEditMode()" maxlength="20"
-                    aria-describedby="job_role_code_help job_role_code_error">
-                <div id="job_role_code_help" class="form-text">
+                    aria-describedby="jobRoleCode_help jobRoleCode_error">
+                <div id="jobRoleCode_help" class="form-text">
                     @if (isEditMode()) {
                     編輯模式下職務代碼不可修改
                     } @else {
                     建議使用簡短且具意義的代碼，如 DEV001
                     }
                 </div>
-                @if (getFieldError('job_role_code'); as error) {
-                <div id="job_role_code_error" class="invalid-feedback">{{ error }}</div>
+                @if (getFieldError('jobRoleCode'); as error) {
+                <div id="jobRoleCode_error" class="invalid-feedback">{{ error }}</div>
                 }
             </div>
 
             <!-- 職務名稱 -->
             <div class="col-md-6">
-                <label for="job_role_name" class="form-label required">
+                <label for="jobRoleName" class="form-label required">
                     <i class="bi bi-person-badge me-1"></i>
                     職務名稱
                 </label>
-                <input type="text" id="job_role_name" class="form-control"
-                    [class.is-invalid]="isFieldInvalid('job_role_name')" formControlName="job_role_name"
-                    placeholder="請輸入職務名稱" maxlength="100" aria-describedby="job_role_name_help job_role_name_error">
-                <div id="job_role_name_help" class="form-text">
+                <input type="text" id="jobRoleName" class="form-control"
+                    [class.is-invalid]="isFieldInvalid('jobRoleName')" formControlName="jobRoleName"
+                    placeholder="請輸入職務名稱" maxlength="100" aria-describedby="jobRoleName_help jobRoleName_error">
+                <div id="jobRoleName_help" class="form-text">
                     清楚描述此職務的名稱，如「前端開發工程師」
                 </div>
-                @if (getFieldError('job_role_name'); as error) {
-                <div id="job_role_name_error" class="invalid-feedback">{{ error }}</div>
+                @if (getFieldError('jobRoleName'); as error) {
+                <div id="jobRoleName_error" class="invalid-feedback">{{ error }}</div>
                 }
             </div>
 
             <!-- 狀態 -->
             <div class="col-md-6">
-                <label for="is_active" class="form-label required">
+                <label for="isActive" class="form-label required">
                     <i class="bi bi-toggle-on me-1"></i>
                     狀態
                 </label>
-                <select id="is_active" class="form-select" [class.is-invalid]="isFieldInvalid('is_active')"
-                    formControlName="is_active" aria-describedby="is_active_help is_active_error">
+                <select id="isActive" class="form-select" [class.is-invalid]="isFieldInvalid('isActive')"
+                    formControlName="isActive" aria-describedby="isActive_help isActive_error">
                     <option value="true">啟用</option>
                     <option value="false">停用</option>
                 </select>
-                <div id="is_active_help" class="form-text">
+                <div id="isActive_help" class="form-text">
                     選擇職務的啟用狀態
                 </div>
-                @if (getFieldError('is_active'); as error) {
-                <div id="is_active_error" class="invalid-feedback">{{ error }}</div>
+                @if (getFieldError('isActive'); as error) {
+                <div id="isActive_error" class="invalid-feedback">{{ error }}</div>
                 }
             </div>
 
@@ -104,7 +104,7 @@
                             <i class="bi bi-person me-1"></i>
                             建立者
                         </div>
-                        <div class="system-field-value">{{ jobRole()!.create_user }}</div>
+                        <div class="system-field-value">{{ jobRole()!.createUser }}</div>
                     </div>
                 </div>
                 <div class="col-md-6">
@@ -114,7 +114,7 @@
                             建立時間
                         </div>
                         <div class="system-field-value">
-                            {{ jobRole()!.create_time | date:'yyyy/MM/dd HH:mm:ss' }}
+                            {{ jobRole()!.createTime | date:'yyyy/MM/dd HH:mm:ss' }}
                         </div>
                     </div>
                 </div>
@@ -124,7 +124,7 @@
                             <i class="bi bi-person-check me-1"></i>
                             最後更新者
                         </div>
-                        <div class="system-field-value">{{ jobRole()!.update_user }}</div>
+                        <div class="system-field-value">{{ jobRole()!.updateUser }}</div>
                     </div>
                 </div>
                 <div class="col-md-6">
@@ -134,7 +134,7 @@
                             最後更新時間
                         </div>
                         <div class="system-field-value">
-                            {{ jobRole()!.update_time | date:'yyyy/MM/dd HH:mm:ss' }}
+                            {{ jobRole()!.updateTime | date:'yyyy/MM/dd HH:mm:ss' }}
                         </div>
                     </div>
                 </div>

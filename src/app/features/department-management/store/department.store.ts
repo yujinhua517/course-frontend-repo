@@ -40,9 +40,9 @@ export class DepartmentStore {
     private loadAllDepartmentsCount(): void {
         // 只取一次全公司總數，使用現有的 getDepartments 方法
         this.departmentService.getDepartments(1, 1000, '', {}).subscribe({
-            next: (response: any) => {
-                // 處理 mock 和真實 API 回應格式的差異
-                const total = response.total || response.data?.length || response.departments?.length || 0;
+            next: (response) => {
+                // service 已經標準化回應格式
+                const total = response.total || 0;
                 this._allTotal.set(total);
                 console.log('全公司總部門數:', total);
             },
@@ -74,16 +74,16 @@ export class DepartmentStore {
             searchParams.pageSize || 10,
             searchParams.keyword || '',
             {
-                dept_level: searchParams.dept_level,
-                is_active: searchParams.is_active,
-                parent_dept_id: searchParams.parent_dept_id
+                deptLevel: searchParams.deptLevel,
+                isActive: searchParams.isActive,
+                parentDeptId: searchParams.parentDeptId
             }
         ).subscribe({
             next: (response) => {
                 console.log('Department Service response:', response);
 
-                // 處理兩種可能的回應格式 (mock 和 真實 API)
-                const departments = response.data || response.departments || [];
+                // service 已經標準化回應格式，直接使用
+                const departments = response.data || [];
                 this._departments.set(departments);
                 this._total.set(response.total || departments.length);
                 this._currentPage.set(response.page || searchParams.page || 1);
@@ -127,12 +127,12 @@ export class DepartmentStore {
     //     //console.log('filterByActive called', isActive);
     // }
 
-    filterByStatus(is_active?: boolean): void {
-        console.log('Department Store filterByStatus called with:', is_active, 'Type:', typeof is_active);
+    filterByStatus(isActive?: boolean): void {
+        console.log('Department Store filterByStatus called with:', isActive, 'Type:', typeof isActive);
 
         this.loadDepartments({
             ...this._searchParams(),
-            is_active,
+            isActive,
             page: 1
         });
     }
@@ -142,7 +142,7 @@ export class DepartmentStore {
 
         this.loadDepartments({
             ...this._searchParams(),
-            dept_level: level,
+            deptLevel: level,
             page: 1
         });
     }
@@ -177,14 +177,14 @@ export class DepartmentStore {
     updateDepartment(updatedDepartment: Department): void {
         this._departments.update(departments =>
             departments.map(dept =>
-                dept.dept_id === updatedDepartment.dept_id ? updatedDepartment : dept
+                dept.deptId === updatedDepartment.deptId ? updatedDepartment : dept
             )
         );
     }
 
     removeDepartment(deptId: number): void {
         this._departments.update(departments =>
-            departments.filter(dept => dept.dept_id !== deptId)
+            departments.filter(dept => dept.deptId !== deptId)
         );
         this._total.update(total => total - 1);
         this._allTotal.update(total => total - 1);

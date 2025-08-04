@@ -64,28 +64,28 @@
 
     <!-- 模板定義 -->
     <ng-template #codeTemplate let-department>
-        <span [innerHTML]="department.dept_code | highlight:searchKeyword()"></span>
+        <span [innerHTML]="department.deptCode | highlight:searchKeyword()"></span>
     </ng-template>
 
     <ng-template #nameTemplate let-department>
-        <span [innerHTML]="department.dept_name | highlight:searchKeyword()"></span>
+        <span [innerHTML]="department.deptName | highlight:searchKeyword()"></span>
     </ng-template>
 
     <ng-template #levelTemplate let-department>
-        <span class="badge bg-info">{{ department.dept_level }}</span>
+        <span class="badge bg-info">{{ department.deptLevel }}</span>
     </ng-template>
 
     <ng-template #managerIdTemplate let-department>
-        <span [innerHTML]="department.manager_id || '未指派' | highlight:searchKeyword()"></span>
+        <span [innerHTML]="department.managerId || '未指派' | highlight:searchKeyword()"></span>
     </ng-template>
 
     <ng-template #parentTemplate let-department>
-        <span [innerHTML]="(department.parent_dept_name || '無') | highlight:searchKeyword()"></span>
+        <span [innerHTML]="(department.parentDeptName || '無') | highlight:searchKeyword()"></span>
     </ng-template>
 
     <ng-template #statusTemplate let-department>
         <app-status-badge [config]="getStatusConfig(department)" (statusToggled)="onToggleStatus(department)"
-            [ariaLabel]="'切換 ' + department.dept_name + ' 的狀態'">
+            [ariaLabel]="'切換 ' + department.deptName + ' 的狀態'">
         </app-status-badge>
     </ng-template>
 
@@ -94,7 +94,7 @@
     </ng-template> -->
 
     <ng-template #timeTemplate let-department>
-        {{ department.create_time | date:'yyyy/MM/dd HH:mm' }}
+        {{ department.createTime | date:'yyyy/MM/dd HH:mm' }}
     </ng-template>
 
     <ng-template #actionsTemplate let-department>

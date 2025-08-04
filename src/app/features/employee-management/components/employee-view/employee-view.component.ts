@@ -27,27 +27,27 @@ export class EmployeeViewComponent {
         items: [
             {
                 label: '員工工號',
-                value: this.employee().emp_code,
+                value: this.employee().empCode,
                 icon: 'hash',
                 className: 'fw-medium text-primary'
             },
             {
                 label: '員工姓名',
-                value: this.employee().emp_name,
+                value: this.employee().empName,
                 icon: 'person',
                 className: 'fw-medium'
             },
             {
                 label: '在職狀態',
-                value: this.employee().is_active,
+                value: this.employee().isActive,
                 icon: 'toggle-on',
                 type: 'status'
             },
             {
                 label: '職稱',
-                value: this.employee().job_title,
+                value: this.employee().jobTitle,
                 icon: 'person-badge',
-                visible: !!this.employee().job_title
+                visible: !!this.employee().jobTitle
             }
         ]
     }));
@@ -58,21 +58,21 @@ export class EmployeeViewComponent {
         items: [
             {
                 label: '電子郵件',
-                value: this.employee().emp_email,
+                value: this.employee().empEmail,
                 icon: 'envelope',
                 type: 'email',
-                visible: !!this.employee().emp_email
+                visible: !!this.employee().empEmail
             },
             {
                 label: '聯絡電話',
-                value: this.employee().emp_phone,
+                value: this.employee().empPhone,
                 icon: 'telephone',
                 type: 'phone',
-                visible: !!this.employee().emp_phone
+                visible: !!this.employee().empPhone
             },
             {
                 label: '所屬部門',
-                value: this.employee().dept_name || '未指定',
+                value: this.employee().deptName || '未指定',
                 icon: 'building'
             }
         ]
@@ -84,17 +84,17 @@ export class EmployeeViewComponent {
         items: [
             {
                 label: '入職日期',
-                value: this.employee().hire_date,
+                value: this.employee().hireDate,
                 icon: 'calendar-plus',
                 type: 'date',
-                visible: !!this.employee().hire_date
+                visible: !!this.employee().hireDate
             },
             {
                 label: '離職日期',
-                value: this.employee().resign_date,
+                value: this.employee().resignDate,
                 icon: 'calendar-x',
                 type: 'date',
-                visible: !!this.employee().resign_date
+                visible: !!this.employee().resignDate
             }
         ]
     }));
@@ -105,24 +105,24 @@ export class EmployeeViewComponent {
         items: [
             {
                 label: '建立時間',
-                value: this.employee().create_time,
+                value: this.employee().createTime,
                 icon: 'calendar-plus',
                 type: 'date'
             },
             {
                 label: '最後更新',
-                value: this.employee().update_time,
+                value: this.employee().updateTime,
                 icon: 'calendar-check',
                 type: 'date'
             },
             {
                 label: '建立者',
-                value: this.employee().create_user || '無',
+                value: this.employee().createUser || '無',
                 icon: 'person-plus'
             },
             {
                 label: '更新者',
-                value: this.employee().update_user || '無',
+                value: this.employee().updateUser || '無',
                 icon: 'person-gear'
             }
         ]

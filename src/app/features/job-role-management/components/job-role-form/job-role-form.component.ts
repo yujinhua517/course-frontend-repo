@@ -47,27 +47,27 @@ export class JobRoleFormComponent implements OnInit {
         const jobRoleData = this.jobRole();
 
         this.form = this.fb.group({
-            job_role_code: [
-                jobRoleData?.job_role_code || '',
+            jobRoleCode: [
+                jobRoleData?.jobRoleCode || '',
                 [Validators.required, Validators.maxLength(20)]
             ],
-            job_role_name: [
-                jobRoleData?.job_role_name || '',
+            jobRoleName: [
+                jobRoleData?.jobRoleName || '',
                 [Validators.required, Validators.maxLength(100)]
             ],
             description: [
                 jobRoleData?.description || '',
                 [Validators.maxLength(500)]
             ],
-            is_active: [
-                jobRoleData?.is_active ?? true,
+            isActive: [
+                jobRoleData?.isActive ?? true,
                 [Validators.required]
             ]
         });
 
         // 編輯模式時職務代碼不可修改
         if (this.isEditMode()) {
-            this.form.get('job_role_code')?.disable();
+            this.form.get('jobRoleCode')?.disable();
         }
     }
 
@@ -139,11 +139,11 @@ export class JobRoleFormComponent implements OnInit {
     private updateJobRole(formValue: any): void {
         const jobRoleData = this.jobRole()!;
         const updateDto: JobRoleUpdateDto = {
-            job_role_id: jobRoleData.job_role_id!,
-            job_role_code: formValue.job_role_code,
-            job_role_name: formValue.job_role_name,
+            jobRoleId: jobRoleData.jobRoleId!,
+            jobRoleCode: formValue.jobRoleCode,
+            jobRoleName: formValue.jobRoleName,
             description: formValue.description,
-            is_active: formValue.is_active
+            isActive: formValue.isActive
         };
 
         this.jobRoleService.updateJobRole(updateDto).subscribe({
