@@ -574,7 +574,7 @@ export class DepartmentListComponent implements OnInit {
             this.departmentService.deleteDepartment(department.deptId).subscribe({
                 next: (success) => {
                     if (success) {
-                        this.departmentStore.onDepartmentDeleted(department.deptId);
+                        this.departmentStore.removeDepartment(department.deptId);
                     }
                 },
                 error: (error) => {
@@ -606,7 +606,7 @@ export class DepartmentListComponent implements OnInit {
         Promise.all(deletePromises).then(() => {
             // 從本地狀態移除已刪除的部門
             selected.forEach(dept => {
-                this.departmentStore.onDepartmentDeleted(dept.deptId);
+                this.departmentStore.removeDepartment(dept.deptId);
             });
             this.selectedDepartments.set([]);
             this.bulkDeleteLoading.set(false);
@@ -622,7 +622,7 @@ export class DepartmentListComponent implements OnInit {
         this.departmentService.toggleDepartmentStatus(department.deptId).subscribe({
             next: (updatedDepartment) => {
                 if (updatedDepartment) {
-                    this.departmentStore.onDepartmentUpdated(updatedDepartment);
+                    this.departmentStore.updateDepartment(updatedDepartment);
                 }
             },
             error: (error) => {
@@ -634,9 +634,9 @@ export class DepartmentListComponent implements OnInit {
     // 表單事件
     onFormSaved(department: Department): void {
         if (this.formMode() === 'create') {
-            this.departmentStore.onDepartmentCreated(department);
+            this.departmentStore.addDepartment(department);
         } else {
-            this.departmentStore.onDepartmentUpdated(department);
+            this.departmentStore.updateDepartment(department);
         }
         this.showForm.set(false);
         this.loadDepartments(); // 重新載入以確保資料一致性

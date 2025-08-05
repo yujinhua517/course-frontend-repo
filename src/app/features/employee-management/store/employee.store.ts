@@ -32,14 +32,13 @@ export class EmployeeStore {
     readonly hasPreviousPage = computed(() => this._currentPage() > 1);
 
     loadEmployees(params?: EmployeeSearchParams): void {
-        console.log('Employee Store: Setting loading to true');
         this._loading.set(true);
         this._error.set(null);
 
         const searchParams = {
             ...this._searchParams(),
             ...params,
-            first_index_in_page: ((params?.firstIndexInPage || this._currentPage()) - 1) * this._pageSize() + 1,
+            firstIndexInPage: ((params?.firstIndexInPage || this._currentPage()) - 1) * this._pageSize() + 1,
             pageable: true
         };
 
@@ -51,31 +50,22 @@ export class EmployeeStore {
             searchParams.isActive = params.isActive;
         }
 
-        console.log('Employee Store loadEmployees called with params:', searchParams);
-
         this._searchParams.set(searchParams);
 
         this.employeeService.getEmployees(searchParams).subscribe({
             next: (response) => {
-                //console.log('Employee Service response:', response);
 
                 const totalRecords = response.totalRecords || response.dataList.length;
 
                 this._employees.set(response.dataList);
                 this._total.set(totalRecords);
                 const currentPage = Math.floor((response.firstIndexInPage - 1) / this._pageSize()) + 1;
-                //console.log('Calculated Current Page:', currentPage);
                 this._currentPage.set(currentPage);
                 this._loading.set(false);
-
-                //console.log('API Response Total Records:', totalRecords);
-                //console.log('API Response Data List:', response.data_list);
             },
             error: (error) => {
-                //console.log('Employee Store: Setting loading to false (error)');
                 this._error.set('載入員工資料失敗');
                 this._loading.set(false);
-                //console.error('Error loading employees:', error);
             }
         });
     }
@@ -97,7 +87,6 @@ export class EmployeeStore {
     }
 
     filterByStatus(isActive?: boolean): void {
-        console.log('Employee Store filterByStatus called with:', isActive, 'Type:', typeof isActive);
 
         this.loadEmployees({
             ...this._searchParams(),

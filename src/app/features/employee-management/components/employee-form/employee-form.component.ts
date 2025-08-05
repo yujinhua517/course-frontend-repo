@@ -1,6 +1,7 @@
-import { Component, OnInit, input, output, signal, computed, inject } from '@angular/core';
+import { Component, OnInit, input, output, signal, computed, inject, resource, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
 import { EmployeeService } from '../../services/employee.service';
 import { BaseModalComponent, ModalConfig } from '../../../../shared/components/modal/base-modal.component';
 import { Employee, EmployeeCreateDto, EmployeeUpdateDto } from '../../models/employee.model';
@@ -28,9 +29,32 @@ export class EmployeeFormComponent implements OnInit {
 
     // State
     form!: FormGroup;
-    loading = signal(false);
+    private readonly _submitTrigger = signal<{ action: 'create' | 'update', data: any } | null>(null);
     error = signal<string | null>(null);
-    departments = signal<Department[]>([]);
+
+    // Resource for departments
+    private readonly departmentsResource = resource({
+        loader: () => firstValueFrom(this.departmentService.getActiveDepartments())
+    });
+
+    // Resource for form submission
+    private readonly submitResource = resource({
+        request: this._submitTrigger,
+        loader: async ({ request }) => {
+            if (!request) return null;
+
+            if (request.action === 'create') {
+                return firstValueFrom(this.employeeService.createEmployee(request.data));
+            } else {
+                return firstValueFrom(this.employeeService.updateEmployee(this.employee()!.empId, request.data));
+            }
+        }
+    });
+
+    // Computed properties
+    departments = computed(() => this.departmentsResource.value() || []);
+    loading = computed(() => this.departmentsResource.isLoading() || this.submitResource.isLoading());
+    submitLoading = computed(() => this.submitResource.isLoading());
 
     // Computed
     isEditMode = computed(() => this.mode() === 'edit');
@@ -45,16 +69,24 @@ export class EmployeeFormComponent implements OnInit {
 
     ngOnInit(): void {
         this.initializeForm();
-        this.loadDepartments();
-    }
 
-    private loadDepartments(): void {
-        this.departmentService.getActiveDepartments().subscribe({
-            next: (departments) => {
-                this.departments.set(departments);
-            },
-            error: (error) => {
-                console.error('載入部門資料失敗:', error);
+        // Effect to handle submit result
+        effect(() => {
+            const submitResult = this.submitResource.value();
+            const submitError = this.submitResource.error();
+
+            if (submitResult) {
+                this.saved.emit(submitResult);
+                this.error.set(null);
+            } else if (submitError) {
+                this.error.set(this.isEditMode() ? '更新員工失敗，請稍後再試' : '建立員工失敗，請稍後再試');
+            }
+        });
+
+        // Effect to handle departments loading error
+        effect(() => {
+            const deptError = this.departmentsResource.error();
+            if (deptError) {
                 this.error.set('載入部門資料失敗，請重新整理頁面');
             }
         });
@@ -104,7 +136,7 @@ export class EmployeeFormComponent implements OnInit {
 
         // 編輯模式時員工工號不可修改
         if (this.isEditMode()) {
-            this.form.get('emp_code')?.disable();
+            this.form.get('empCode')?.disable();
         }
     }
 
@@ -136,15 +168,15 @@ export class EmployeeFormComponent implements OnInit {
 
     private getFieldLabel(fieldName: string): string {
         const labels: Record<string, string> = {
-            emp_code: '員工工號',
-            emp_name: '員工姓名',
-            emp_email: '電子郵件',
-            emp_phone: '聯絡電話',
-            dept_id: '所屬部門',
-            job_title: '職稱',
-            hire_date: '到職日',
-            resign_date: '離職日',
-            is_active: '在職狀態'
+            empCode: '員工工號',
+            empName: '員工姓名',
+            empEmail: '電子郵件',
+            empPhone: '聯絡電話',
+            deptId: '所屬部門',
+            jobTitle: '職稱',
+            hireDate: '到職日',
+            resignDate: '離職日',
+            isActive: '在職狀態'
         };
         return labels[fieldName] || fieldName;
     }
@@ -160,56 +192,30 @@ export class EmployeeFormComponent implements OnInit {
             return;
         }
 
-        this.loading.set(true);
         this.error.set(null);
-
         const formValue = this.form.getRawValue(); // 使用 getRawValue 來包含 disabled 欄位
 
         // 轉換日期格式
-        if (formValue.hire_date) {
-            formValue.hire_date = new Date(formValue.hire_date);
+        if (formValue.hireDate) {
+            formValue.hireDate = new Date(formValue.hireDate).toISOString();
         }
-        if (formValue.resign_date) {
-            formValue.resign_date = new Date(formValue.resign_date);
+        if (formValue.resignDate) {
+            formValue.resignDate = new Date(formValue.resignDate).toISOString();
         } else {
-            formValue.resign_date = null;
+            formValue.resignDate = null;
         }
 
         if (this.isEditMode()) {
-            this.updateEmployee({ ...formValue, empId: this.employee()!.empId });
+            this._submitTrigger.set({
+                action: 'update',
+                data: { ...formValue, empId: this.employee()!.empId }
+            });
         } else {
-            this.createEmployee(formValue);
+            this._submitTrigger.set({
+                action: 'create',
+                data: formValue
+            });
         }
-    }
-
-    private createEmployee(formValue: EmployeeCreateDto): void {
-        this.employeeService.createEmployee(formValue).subscribe({
-            next: (newEmployee) => {
-                this.loading.set(false);
-                this.saved.emit(newEmployee);
-            },
-            error: (error) => {
-                this.loading.set(false);
-                this.error.set('建立員工失敗，請稍後再試');
-                console.error('Create employee error:', error);
-            }
-        });
-    }
-
-    private updateEmployee(formValue: EmployeeUpdateDto): void {
-        const id = this.employee()!.empId;
-
-        this.employeeService.updateEmployee(id, formValue).subscribe({
-            next: (updatedEmployee) => {
-                this.loading.set(false);
-                this.saved.emit(updatedEmployee);
-            },
-            error: (error) => {
-                this.loading.set(false);
-                this.error.set('更新員工失敗，請稍後再試');
-                console.error('Update employee error:', error);
-            }
-        });
     }
 
     private markAllFieldsAsTouched(): void {

@@ -1,5 +1,5 @@
 import { Injectable, computed, signal, inject } from '@angular/core';
-import { Department, DepartmentSearchParams } from '../models/department.model';
+import { Department, DepartmentSearchParams, DepartmentQueryOptions } from '../models/department.model';
 import { DepartmentService } from '../services/department.service';
 import { environment } from '../../../../environments/environment';
 
@@ -39,10 +39,12 @@ export class DepartmentStore {
     }
 
     private loadAllDepartmentsCount(): void {
-        // 只取一次全公司總數，使用現有的 getDepartments 方法
-        this.departmentService.getDepartments(1, 1000, '', {}).subscribe({
+        // 只取一次全公司總數，使用新的統一查詢介面
+        this.departmentService.getDepartments({
+            page: 1,
+            pageSize: 1000
+        }).subscribe({
             next: (response) => {
-                // service 已經標準化回應格式
                 const total = response.total || 0;
                 this._allTotal.set(total);
             },
@@ -67,19 +69,21 @@ export class DepartmentStore {
         this._searchParams.set(searchParams);
         console.log('Department Store loadDepartments called with params:', searchParams);
 
-        // 使用現有的 service 方法簽名，並傳遞排序參數
-        this.departmentService.getDepartments(
-            searchParams.page || 1,
-            searchParams.pageSize || 10,
-            searchParams.keyword || '',
-            {
-                deptLevel: searchParams.deptLevel,
+        // 使用新的統一查詢介面
+        this.departmentService.getDepartments({
+            page: searchParams.page || 1,
+            pageSize: searchParams.pageSize || 10,
+            searchTerm: searchParams.keyword || '',
+            filters: {
+                level: searchParams.deptLevel,
                 isActive: searchParams.isActive,
-                parentDeptId: searchParams.parentDeptId
+                parentId: searchParams.parentDeptId
             },
-            searchParams.sortBy,
-            searchParams.sortDirection?.toUpperCase() as 'ASC' | 'DESC'
-        ).subscribe({
+            sort: searchParams.sortBy && searchParams.sortDirection ? {
+                field: searchParams.sortBy,
+                direction: searchParams.sortDirection
+            } : undefined
+        }).subscribe({
             next: (response) => {
                 console.log('Department Service response:', response);
 
@@ -163,26 +167,18 @@ export class DepartmentStore {
         }
     }
 
-    setPageSize(pageSize: number): void {
+    // 頁面大小變更 - 統一方法名稱
+    changePageSize(pageSize: number): void {
         this._pageSize.set(pageSize);
         this._currentPage.set(1);
         this.loadDepartments();
     }
 
-    // 頁面大小變更快捷方法（與component中的調用保持一致）
-    changePageSize(pageSize: number): void {
-        this.setPageSize(pageSize);
-    }
-
+    // CRUD 操作方法
     addDepartment(department: Department): void {
         this._departments.update(departments => [...departments, department]);
         this._total.update(total => total + 1);
         this._allTotal.update(total => total + 1);
-    }
-
-    // CRUD操作事件處理方法（與component中的調用保持一致）
-    onDepartmentCreated(department: Department): void {
-        this.addDepartment(department);
     }
 
     updateDepartment(updatedDepartment: Department): void {
@@ -193,20 +189,12 @@ export class DepartmentStore {
         );
     }
 
-    onDepartmentUpdated(department: Department): void {
-        this.updateDepartment(department);
-    }
-
     removeDepartment(deptId: number): void {
         this._departments.update(departments =>
             departments.filter(dept => dept.deptId !== deptId)
         );
         this._total.update(total => total - 1);
         this._allTotal.update(total => total - 1);
-    }
-
-    onDepartmentDeleted(deptId: number): void {
-        this.removeDepartment(deptId);
     }
 
     // 錯誤處理方法

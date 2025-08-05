@@ -1,3 +1,5 @@
+import { SortDirection } from './department.constants';
+
 export interface Department {
     deptId: number;
     parentDeptId: number | null;
@@ -50,7 +52,35 @@ export interface DepartmentSearchParams {
     pageSize?: number;
     // 排序參數
     sortBy?: keyof Department;
-    sortDirection?: 'asc' | 'desc';
+    sortDirection?: SortDirection;
+}
+
+/**
+ * 統一的部門查詢選項介面
+ * 整合所有查詢需求，避免重複的方法
+ */
+export interface DepartmentQueryOptions {
+    // 分頁參數
+    page?: number;
+    pageSize?: number;
+
+    // 搜尋關鍵字
+    searchTerm?: string;
+
+    // 篩選選項
+    filters?: {
+        activeOnly?: boolean;
+        rootOnly?: boolean;
+        parentId?: number;
+        level?: string;
+        isActive?: boolean;
+    };
+
+    // 排序選項
+    sort?: {
+        field: keyof Department;
+        direction: SortDirection;
+    };
 }
 
 // API 回應包裝器 - 對齊後端 ApiResponse<T>

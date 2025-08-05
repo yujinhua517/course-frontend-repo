@@ -9,13 +9,16 @@ import {
     DepartmentLevel,
     ApiResponse,
     PagerDto,
-    DepartmentSearchParams
+    DepartmentSearchParams,
+    DepartmentQueryOptions
 } from '../models/department.model';
 import {
     DEPARTMENT_LEVEL_ORDER,
     API_STATUS_CODES,
     PAGINATION_DEFAULTS,
-    DepartmentStatusType
+    DepartmentStatusType,
+    SortDirection,
+    SORT_DIRECTIONS
 } from '../models/department.constants';
 import { environment } from '../../../../environments/environment';
 import { UserStore } from '../../../core/auth/user.store';
@@ -93,20 +96,22 @@ export class DepartmentService {
 
     /**
      * 統一的部門查詢方法 - 支援所有查詢需求
-     * 支援分頁、排序、篩選，與employee service保持一致
+     * 使用統一的查詢選項介面，取代多個重複的方法
      */
-    getDepartments(
-        page: number = PAGINATION_DEFAULTS.PAGE,
-        pageSize: number = PAGINATION_DEFAULTS.PAGE_SIZE,
-        searchTerm = '',
-        filters: DepartmentSearchParams & {
-            activeOnly?: boolean,
-            rootOnly?: boolean,
-            childrenOf?: number
-        } = {},
-        sortBy?: keyof Department,
-        sortDirection?: 'ASC' | 'DESC'
-    ): Observable<DepartmentListResponse> {
+    getDepartments(options: DepartmentQueryOptions = {}): Observable<DepartmentListResponse> {
+        const {
+            page = PAGINATION_DEFAULTS.PAGE,
+            pageSize = PAGINATION_DEFAULTS.PAGE_SIZE,
+            searchTerm = '',
+            filters = {},
+            sort
+        } = options;
+
+        const sortBy = sort?.field;
+        const sortDirection = sort?.direction ?
+            (sort.direction === 'asc' ? 'ASC' : 'DESC') as 'ASC' | 'DESC' :
+            undefined;
+
         if (this.useMockData) {
             return this.getMockDepartments(page, pageSize, searchTerm, filters, sortBy, sortDirection);
         }
@@ -118,10 +123,12 @@ export class DepartmentService {
         page: number,
         pageSize: number,
         searchTerm: string,
-        filters: DepartmentSearchParams & {
+        filters: {
             activeOnly?: boolean,
             rootOnly?: boolean,
-            childrenOf?: number
+            parentId?: number,
+            level?: string,
+            isActive?: boolean
         },
         sortBy?: keyof Department,
         sortDirection?: 'ASC' | 'DESC'
@@ -138,12 +145,11 @@ export class DepartmentService {
             sortColumn: sortBy || 'deptCode',
             sortDirection: sortDirection?.toUpperCase() || 'ASC',
             ...(searchTerm && { keyword: searchTerm }),
-            ...(filters.deptLevel && { deptLevel: filters.deptLevel }),
+            ...(filters.level && { deptLevel: filters.level }),
             ...(filters.isActive !== undefined && { isActive: filters.isActive }),
-            ...(filters.parentDeptId !== undefined && { parentDeptId: filters.parentDeptId }),
+            ...(filters.parentId !== undefined && { parentDeptId: filters.parentId }),
             ...(filters.activeOnly && { isActive: true }),
-            ...(filters.rootOnly && { parentDeptId: null }),
-            ...(filters.childrenOf && { parentDeptId: filters.childrenOf })
+            ...(filters.rootOnly && { parentDeptId: null })
         };
 
         return this.http.post<ApiResponse<PagerDto<Department>>>(`${this.apiUrl}/query`, requestParams)
@@ -181,30 +187,42 @@ export class DepartmentService {
     }
 
     /**
-     * 簡化的活躍部門查詢 - 使用統一的 getDepartments 方法
+     * 取得活躍部門 - 使用統一的查詢方法
      */
     getActiveDepartments(): Observable<Department[]> {
-        return this.getDepartments(1, PAGINATION_DEFAULTS.MAX_PAGE_SIZE, '', { activeOnly: true }).pipe(
+        return this.getDepartments({
+            page: 1,
+            pageSize: PAGINATION_DEFAULTS.MAX_PAGE_SIZE,
+            filters: { activeOnly: true }
+        }).pipe(
             map(response => response.data),
             catchError(this.httpErrorHandler.handleError('getActiveDepartments', []))
         );
     }
 
     /**
-     * 簡化的根部門查詢 - 使用統一的 getDepartments 方法
+     * 取得根部門 - 使用統一的查詢方法
      */
     getRootDepartments(): Observable<Department[]> {
-        return this.getDepartments(1, PAGINATION_DEFAULTS.MAX_PAGE_SIZE, '', { rootOnly: true, activeOnly: true }).pipe(
+        return this.getDepartments({
+            page: 1,
+            pageSize: PAGINATION_DEFAULTS.MAX_PAGE_SIZE,
+            filters: { rootOnly: true, activeOnly: true }
+        }).pipe(
             map(response => response.data),
             catchError(this.httpErrorHandler.handleError('getRootDepartments', []))
         );
     }
 
     /**
-     * 簡化的子部門查詢 - 使用統一的 getDepartments 方法
+     * 取得子部門 - 使用統一的查詢方法
      */
     getChildDepartments(parentId: number): Observable<Department[]> {
-        return this.getDepartments(1, PAGINATION_DEFAULTS.MAX_PAGE_SIZE, '', { childrenOf: parentId, activeOnly: true }).pipe(
+        return this.getDepartments({
+            page: 1,
+            pageSize: PAGINATION_DEFAULTS.MAX_PAGE_SIZE,
+            filters: { parentId, activeOnly: true }
+        }).pipe(
             map(response => response.data),
             catchError(this.httpErrorHandler.handleError('getChildDepartments', []))
         );
@@ -212,19 +230,10 @@ export class DepartmentService {
 
     /**
      * 取得部門作為 Observable - 使用統一方法
+     * @deprecated 建議直接使用 getActiveDepartments()
      */
     getDepartmentsAsObservable(): Observable<Department[]> {
-
-        if (this.useMockData) {
-            const activeData = this.mockDepartments.filter(dept => dept.isActive);
-            // 在 mock 模式下，返回所有活躍的部門資料
-            return of(activeData).pipe(delay(100));
-        }
-
-        return this.getDepartments(1, PAGINATION_DEFAULTS.MAX_PAGE_SIZE, '', { activeOnly: true }).pipe(
-            map(response => response.data),
-            catchError(this.httpErrorHandler.handleError('getDepartmentsAsObservable', []))
-        );
+        return this.getActiveDepartments();
     }
 
     /**
@@ -234,10 +243,12 @@ export class DepartmentService {
         page: number,
         pageSize: number,
         searchTerm: string,
-        filters: DepartmentSearchParams & {
+        filters: {
             activeOnly?: boolean,
             rootOnly?: boolean,
-            childrenOf?: number
+            parentId?: number,
+            level?: string,
+            isActive?: boolean
         },
         sortBy?: keyof Department,
         sortDirection?: 'ASC' | 'DESC'
@@ -257,8 +268,8 @@ export class DepartmentService {
                 }
 
                 // Apply filters
-                if (filters.deptLevel) {
-                    filteredDepartments = filteredDepartments.filter(dept => dept.deptLevel === filters.deptLevel);
+                if (filters.level) {
+                    filteredDepartments = filteredDepartments.filter(dept => dept.deptLevel === filters.level);
                 }
 
                 if (filters.isActive !== undefined || filters.activeOnly) {
@@ -266,16 +277,12 @@ export class DepartmentService {
                     filteredDepartments = filteredDepartments.filter(dept => dept.isActive === targetStatus);
                 }
 
-                if (filters.parentDeptId !== undefined) {
-                    filteredDepartments = filteredDepartments.filter(dept => dept.parentDeptId === filters.parentDeptId);
+                if (filters.parentId !== undefined) {
+                    filteredDepartments = filteredDepartments.filter(dept => dept.parentDeptId === filters.parentId);
                 }
 
                 if (filters.rootOnly) {
                     filteredDepartments = filteredDepartments.filter(dept => dept.parentDeptId === null);
-                }
-
-                if (filters.childrenOf) {
-                    filteredDepartments = filteredDepartments.filter(dept => dept.parentDeptId === filters.childrenOf);
                 }
 
                 // Apply sorting

@@ -62,6 +62,19 @@ export const VALIDATION_RULES = {
 } as const;
 
 /**
+ * 統一的排序方向型別
+ */
+export type SortDirection = 'asc' | 'desc';
+
+/**
+ * 排序方向常數
+ */
+export const SORT_DIRECTIONS = {
+    ASC: 'asc' as const,
+    DESC: 'desc' as const
+} as const;
+
+/**
  * 型別定義
  */
 export type DepartmentLevelType = keyof typeof DEPARTMENT_LEVEL_ORDER;

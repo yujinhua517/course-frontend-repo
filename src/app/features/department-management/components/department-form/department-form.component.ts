@@ -170,7 +170,7 @@ export class DepartmentFormComponent implements OnInit {
     //             console.error('Failed to load parent departments:', error);
     private loadParentDepartments(): Promise<void> {
         return new Promise(resolve => {
-            this.departmentService.getDepartmentsAsObservable().subscribe({
+            this.departmentService.getActiveDepartments().subscribe({
                 next: (departments: Department[]) => {
 
                     const currentDeptId = this.department()?.deptId;
