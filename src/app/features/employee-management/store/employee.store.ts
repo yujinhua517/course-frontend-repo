@@ -1,4 +1,4 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
 import { EmployeeService } from '../services/employee.service';
 import { Employee, EmployeeSearchParams } from '../models/employee.model';
 
@@ -6,14 +6,16 @@ import { Employee, EmployeeSearchParams } from '../models/employee.model';
     providedIn: 'root'
 })
 export class EmployeeStore {
+    private readonly employeeService = inject(EmployeeService);
+
     // State signals
-    private _employees = signal<Employee[]>([]);
-    private _loading = signal<boolean>(false);
-    private _error = signal<string | null>(null);
-    private _total = signal<number>(0);
-    private _currentPage = signal<number>(1);
-    private _pageSize = signal<number>(10);
-    private _searchParams = signal<EmployeeSearchParams>({});
+    private readonly _employees = signal<Employee[]>([]);
+    private readonly _loading = signal<boolean>(false);
+    private readonly _error = signal<string | null>(null);
+    private readonly _total = signal<number>(0);
+    private readonly _currentPage = signal<number>(1);
+    private readonly _pageSize = signal<number>(10);
+    private readonly _searchParams = signal<EmployeeSearchParams>({});
 
     // Public readonly signals
     employees = this._employees.asReadonly();
@@ -25,11 +27,9 @@ export class EmployeeStore {
     searchParams = this._searchParams.asReadonly();
 
     // Computed signals
-    totalPages = computed(() => Math.ceil(this._total() / this._pageSize()));
-    hasNextPage = computed(() => this._currentPage() < this.totalPages());
-    hasPreviousPage = computed(() => this._currentPage() > 1);
-
-    constructor(private employeeService: EmployeeService) { }
+    readonly totalPages = computed(() => Math.ceil(this._total() / this._pageSize()));
+    readonly hasNextPage = computed(() => this._currentPage() < this.totalPages());
+    readonly hasPreviousPage = computed(() => this._currentPage() > 1);
 
     loadEmployees(params?: EmployeeSearchParams): void {
         console.log('Employee Store: Setting loading to true');

@@ -17,121 +17,112 @@ import { HttpErrorHandlerService } from '../../../core/services/http-error-handl
     providedIn: 'root'
 })
 export class EmployeeService {
-    private http = inject(HttpClient);
-    private httpErrorHandler = inject(HttpErrorHandlerService);
+    private readonly http = inject(HttpClient);
+    private readonly httpErrorHandler = inject(HttpErrorHandlerService);
     private readonly apiUrl = `${environment.apiBaseUrl}/employees`;
 
-    // Toggle between mock data and real API
+    // 一鍵切換 mock data 和真實 API
     private readonly useMockData = false;
-    // static employeeService: any;
 
     /**
-     * 查詢員工列表
+     * 查詢員工列表 - 支援分頁、排序、篩選
      * @param params 搜尋參數
      * @returns 員工列表分頁結果
      */
     getEmployees(params?: EmployeeSearchParams): Observable<PagerDto<Employee>> {
         if (this.useMockData) {
-            let all = this.getMockEmployeeList().dataList;
-
-            // console.log('原始員工數據數量:', all.length);
-            // console.log('搜尋參數:', params);
-
-            // 根據搜尋參數過濾
-            if (params?.deptId !== undefined) {
-                all = all.filter(e => e.deptId === params.deptId);
-                //console.log('按部門過濾後數量:', all.length);
-            }
-
-            if (params?.isActive !== undefined) {
-                //console.log('按狀態過濾，目標狀態:', params.isActive, '類型:', typeof params.isActive);
-
-                // 確保比較時類型一致
-                const targetStatus = Boolean(params.isActive);
-                all = all.filter(e => {
-                    const employeeStatus = Boolean(e.isActive);
-                    //console.log(`員工 ${e.empName} 狀態: ${employeeStatus}, 目標: ${targetStatus}, 匹配: ${employeeStatus === targetStatus}`);
-                    return employeeStatus === targetStatus;
-                });
-                //console.log('按狀態過濾後數量:', all.length);
-            }
-
-            if (params?.empName) {
-                all = all.filter(e => e.empName.includes(params.empName as string));
-                //console.log('按姓名過濾後數量:', all.length);
-            }
-
-            // 通用關鍵字搜尋 (搜尋員工姓名、工號、電子郵件)
-            if (params?.keyword) {
-                const keyword = params.keyword.toLowerCase();
-                all = all.filter(e => 
-                    e.empName.toLowerCase().includes(keyword) ||
-                    e.empCode.toLowerCase().includes(keyword) ||
-                    (e.empEmail && e.empEmail.toLowerCase().includes(keyword))
-                );
-                //console.log('按關鍵字過濾後數量:', all.length);
-            }
-            // 其他欄位可依需求補充
-
-            // 排序
-            if (params?.sortColumn && params?.sortDirection) {
-                all.sort((a, b) => {
-                    const aValue = (a as any)[params.sortColumn!];
-                    const bValue = (b as any)[params.sortColumn!];
-
-                    if (aValue === undefined || bValue === undefined) return 0;
-
-                    let comparison = 0;
-                    if (aValue < bValue) comparison = -1;
-                    else if (aValue > bValue) comparison = 1;
-
-                    return params.sortDirection === 'DESC' ? -comparison : comparison;
-                });
-                //console.log('按排序條件排序:', params.sort_column, params.sort_direction);
-            }
-
-            // 分頁
-            const page = params?.page ?? 1;
-            const pageSize = params?.pageSize ?? 10;
-            const start = (page - 1) * pageSize;
-            const end = start + pageSize;
-            const paged = all.slice(start, end);
-
-            //console.log('最終返回數據數量:', paged.length);
-
-            return of({
-                dataList: paged,
-                totalRecords: all.length,
-                firstIndexInPage: start + 1,
-                lastIndexInPage: Math.min(end, all.length),
-                pageable: true,
-                sortColumn: params?.sortColumn ?? 'empCode',
-                sortDirection: params?.sortDirection ?? 'ASC'
-            }).pipe(delay(300)); // 添加 300ms 延遲以模擬網路請求
+            return this.getMockEmployeesPaged(params);
         }
 
-        // 前端適配後端的 PageBean 分頁格式
-        // 將前端的 page(1-based) 和 pageSize 轉換為後端的 first_index_in_page 和 last_index_in_page
-        const page = params?.page || 1; // 前端頁碼從 1 開始
-        const pageSize = params?.pageSize || 10;
-        
-        // 計算後端 PageBean 需要的索引 (1-based)
-        const firstIndex = (page - 1) * pageSize + 1; // 第一筆資料的索引
-        const lastIndex = page * pageSize; // 最後一筆資料的索引
+        return this.getRealEmployeesPaged(params);
+    }
+
+    private getMockEmployeesPaged(params?: EmployeeSearchParams): Observable<PagerDto<Employee>> {
+        let allEmployees = this.getMockEmployeeList().dataList;
+
+        // 應用篩選條件
+        allEmployees = this.applyFilters(allEmployees, params);
+
+        // 應用排序
+        allEmployees = this.applySorting(allEmployees, params);
+
+        // 應用分頁
+        const { page = 1, pageSize = 10 } = params || {};
+        const start = (page - 1) * pageSize;
+        const end = start + pageSize;
+        const pagedData = allEmployees.slice(start, end);
+
+        return of({
+            dataList: pagedData,
+            totalRecords: allEmployees.length,
+            firstIndexInPage: start + 1,
+            lastIndexInPage: Math.min(end, allEmployees.length),
+            pageable: true,
+            sortColumn: params?.sortColumn ?? 'empCode',
+            sortDirection: params?.sortDirection ?? 'ASC'
+        }).pipe(delay(300));
+    }
+
+    private applyFilters(employees: Employee[], params?: EmployeeSearchParams): Employee[] {
+        let filtered = [...employees];
+
+        if (params?.deptId !== undefined) {
+            filtered = filtered.filter(e => e.deptId === params.deptId);
+        }
+
+        if (params?.isActive !== undefined) {
+            const targetStatus = Boolean(params.isActive);
+            filtered = filtered.filter(e => Boolean(e.isActive) === targetStatus);
+        }
+
+        if (params?.empName) {
+            filtered = filtered.filter(e => e.empName.includes(params.empName as string));
+        }
+
+        if (params?.keyword) {
+            const keyword = params.keyword.toLowerCase();
+            filtered = filtered.filter(e =>
+                e.empName.toLowerCase().includes(keyword) ||
+                e.empCode.toLowerCase().includes(keyword) ||
+                (e.empEmail && e.empEmail.toLowerCase().includes(keyword))
+            );
+        }
+
+        return filtered;
+    }
+
+    private applySorting(employees: Employee[], params?: EmployeeSearchParams): Employee[] {
+        if (!params?.sortColumn || !params?.sortDirection) {
+            return employees;
+        }
+
+        return [...employees].sort((a, b) => {
+            const aValue = (a as any)[params.sortColumn!];
+            const bValue = (b as any)[params.sortColumn!];
+
+            if (aValue === undefined || bValue === undefined) return 0;
+
+            let comparison = 0;
+            if (aValue < bValue) comparison = -1;
+            else if (aValue > bValue) comparison = 1;
+
+            return params.sortDirection === 'DESC' ? -comparison : comparison;
+        });
+    }
+
+    private getRealEmployeesPaged(params?: EmployeeSearchParams): Observable<PagerDto<Employee>> {
+        const { page = 1, pageSize = 10 } = params || {};
+        const firstIndex = (page - 1) * pageSize + 1;
+        const lastIndex = page * pageSize;
 
         const requestParams = {
-            // 分頁參數
-            page: page,
-            pageSize: pageSize,
+            page,
+            pageSize,
             firstIndexInPage: firstIndex,
             lastIndexInPage: lastIndex,
             pageable: true,
-            
-            // 排序參數
             sortColumn: params?.sortColumn || 'empCode',
             sortDirection: params?.sortDirection || 'ASC',
-
-            // 搜尋條件
             ...(params?.keyword && { keyword: params.keyword }),
             ...(params?.isActive !== undefined && { isActive: params.isActive }),
             ...(params?.deptId && { deptId: params.deptId }),
@@ -140,50 +131,46 @@ export class EmployeeService {
             ...(params?.empEmail && { empEmail: params.empEmail })
         };
 
-        //console.log(`前端分頁參數轉換: page=${page}, pageSize=${pageSize} -> first_index=${firstIndex}, last_index=${lastIndex}`);
-        //console.log('發送到後端的參數:', requestParams);
-
         return this.http.post<ApiResponse<PagerDto<Employee>>>(`${this.apiUrl}/query`, requestParams)
             .pipe(
-                map(response => {
-                    //console.log('後端回應:', response);
-                    if (response.code === 1000) {
-                        // 後端回傳的資料可能分頁資訊不正確，前端重新計算
-                        const backendData = response.data;
-                        const actualDataCount = backendData.dataList?.length || 0;
-
-                        // 重新計算正確的分頁資訊
-                        const adaptedData: PagerDto<Employee> = {
-                            dataList: backendData.dataList,
-                            totalRecords: backendData.totalRecords,
-                            // 使用前端計算的正確分頁資訊
-                            firstIndexInPage: firstIndex,
-                            lastIndexInPage: Math.min(lastIndex, backendData.totalRecords),
-                            pageable: backendData.pageable,
-                            sortColumn: backendData.sortColumn,
-                            sortDirection: backendData.sortDirection
-                        };
-                        
-                        //console.log(`前端修正分頁資訊: 請求範圍=${firstIndex}-${lastIndex}, 實際回傳=${actualDataCount}筆, 總計=${backendData.total_records}筆`);
-                        return adaptedData;
-                    } else {
-                        throw new Error(response.message || '查詢失敗');
-                    }
-                }),
-                catchError(this.httpErrorHandler.handleError('getEmployees', {
-                    dataList: [],
-                    totalRecords: 0,
-                    firstIndexInPage: 0,
-                    lastIndexInPage: 0,
-                    pageable: true
-                } as PagerDto<Employee>))
+                map(response => this.adaptBackendResponse(response, firstIndex, lastIndex)),
+                catchError(this.httpErrorHandler.handleError('getEmployees', this.getEmptyPagerDto()))
             );
+    }
+
+    private adaptBackendResponse(
+        response: ApiResponse<PagerDto<Employee>>,
+        firstIndex: number,
+        lastIndex: number
+    ): PagerDto<Employee> {
+        if (response.code !== 1000) {
+            throw new Error(response.message || '查詢失敗');
+        }
+
+        const backendData = response.data;
+        return {
+            dataList: backendData.dataList,
+            totalRecords: backendData.totalRecords,
+            firstIndexInPage: firstIndex,
+            lastIndexInPage: Math.min(lastIndex, backendData.totalRecords),
+            pageable: backendData.pageable,
+            sortColumn: backendData.sortColumn,
+            sortDirection: backendData.sortDirection
+        };
+    }
+
+    private getEmptyPagerDto(): PagerDto<Employee> {
+        return {
+            dataList: [],
+            totalRecords: 0,
+            firstIndexInPage: 0,
+            lastIndexInPage: 0,
+            pageable: true
+        };
     }
 
     /**
      * 根據 ID 取得單一員工
-     * @param id 員工 ID
-     * @returns 員工資料
      */
     getEmployeeById(id: number): Observable<Employee | null> {
         if (this.useMockData) {
@@ -199,8 +186,6 @@ export class EmployeeService {
 
     /**
      * 建立新員工
-     * @param employeeData 員工建立資料
-     * @returns 建立的員工資料
      */
     createEmployee(employeeData: EmployeeCreateDto): Observable<Employee> {
         if (this.useMockData) {
@@ -216,9 +201,6 @@ export class EmployeeService {
 
     /**
      * 更新員工資料
-     * @param id 員工 ID
-     * @param employeeData 員工更新資料
-     * @returns 更新後的員工資料
      */
     updateEmployee(id: number, employeeData: EmployeeUpdateDto): Observable<Employee> {
         if (this.useMockData) {
@@ -237,8 +219,6 @@ export class EmployeeService {
 
     /**
      * 刪除員工
-     * @param id 員工 ID
-     * @returns 是否刪除成功
      */
     deleteEmployee(id: number): Observable<boolean> {
         if (this.useMockData) {
@@ -254,8 +234,6 @@ export class EmployeeService {
 
     /**
      * 批量刪除員工
-     * @param ids 員工 ID 陣列
-     * @returns 是否刪除成功
      */
     bulkDeleteEmployees(ids: number[]): Observable<boolean> {
         if (this.useMockData) {
@@ -271,8 +249,6 @@ export class EmployeeService {
 
     /**
      * 切換員工啟用狀態
-     * @param id 員工 ID
-     * @returns 更新後的員工資料
      */
     toggleActiveStatus(id: number): Observable<Employee | null> {
         if (this.useMockData) {

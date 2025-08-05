@@ -41,23 +41,37 @@ export class TableHeaderComponent {
     config = input.required<TableHeaderConfig>();
 
     // Outputs
-    sortChanged = output<{ column: string; direction: 'asc' | 'desc' }>();
+    sortChanged = output<{ column: string; direction: 'asc' | 'desc' | null }>();
     selectAllChanged = output<boolean>();
 
     /**
-     * 處理排序點擊
+     * 處理排序點擊 - 支援三階段排序（升冪/降冪/無排序）
      */
     onSort(column: TableColumn): void {
         if (!column.sortable) return;
 
+        console.log('表頭排序點擊:', column.key);
         const currentSort = this.config();
-        let newDirection: 'asc' | 'desc' = 'asc';
+        let newDirection: 'asc' | 'desc' | null = 'asc';
+        let newColumn = column.key;
 
         if (currentSort.sortBy === column.key) {
-            newDirection = currentSort.sortDirection === 'asc' ? 'desc' : 'asc';
+            // 同一欄位：asc -> desc -> null（無排序）
+            if (currentSort.sortDirection === 'asc') {
+                newDirection = 'desc';
+            } else if (currentSort.sortDirection === 'desc') {
+                newDirection = null; // 重設為無排序
+                newColumn = ''; // 清空排序欄位
+            } else {
+                newDirection = 'asc';
+            }
         }
 
-        this.sortChanged.emit({ column: column.key, direction: newDirection });
+        console.log('發送排序事件:', { column: newColumn, direction: newDirection });
+        this.sortChanged.emit({
+            column: newColumn,
+            direction: newDirection
+        });
     }
 
     /**
@@ -69,14 +83,17 @@ export class TableHeaderComponent {
     }
 
     /**
-     * 獲取排序圖示
+     * 獲取排序圖示 - 支援三階段顯示
      */
     getSortIcon(column: TableColumn): string {
         if (!column.sortable) return '';
 
         const config = this.config();
         if (config.sortBy !== column.key) return 'bi-chevron-expand';
-        return config.sortDirection === 'asc' ? 'bi-chevron-up' : 'bi-chevron-down';
+
+        if (config.sortDirection === 'asc') return 'bi-chevron-up';
+        if (config.sortDirection === 'desc') return 'bi-chevron-down';
+        return 'bi-chevron-expand'; // 無排序狀態
     }
 
     /**

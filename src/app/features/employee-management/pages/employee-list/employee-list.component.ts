@@ -49,21 +49,29 @@ import { HighlightPipe } from '../../../../shared/pipes/highlight.pipe';
 export class EmployeeListComponent implements OnInit {
     private employeeStore = inject(EmployeeStore);
     private employeeService = inject(EmployeeService);
-    // 權限判斷：基於 action 欄位的細緻權限控制
+    // 權限管理
     private readonly userStore = inject(UserStore);
 
-    // 檢查是否有指定 resource + action 的權限
-    private hasResourceActionPermission(resource: string, action: string): boolean {
-        const user = this.userStore.user() as User | null;
-        if (!user) return false;
-        return (user.permissions ?? []).some((p: Permission) =>
-            p.resource === resource && p.action === action
-        );
-    }
-    readonly hasCreatePermission = computed(() => this.hasResourceActionPermission('employee', 'create'));
-    readonly hasUpdatePermission = computed(() => this.hasResourceActionPermission('employee', 'update'));
-    readonly hasDeletePermission = computed(() => this.hasResourceActionPermission('employee', 'delete'));
-    readonly hasReadPermission = computed(() => this.hasResourceActionPermission('employee', 'read'));
+    private readonly hasResourceActionPermission = computed(() => {
+        return (resource: string, action: string): boolean => {
+            const user = this.userStore.user() as User | null;
+            if (!user) return false;
+            return (user.permissions ?? []).some((p: Permission) =>
+                p.resource === resource && p.action === action
+            );
+        };
+    });
+
+    // 權限快捷計算屬性
+    readonly permissions = computed(() => {
+        const hasPermission = this.hasResourceActionPermission();
+        return {
+            create: hasPermission('employee', 'create'),
+            read: hasPermission('employee', 'read'),
+            update: hasPermission('employee', 'update'),
+            delete: hasPermission('employee', 'delete')
+        };
+    });
 
     // State signals
     searchKeyword = signal('');
@@ -126,7 +134,7 @@ export class EmployeeListComponent implements OnInit {
 
     // 表頭配置
     readonly tableHeaderConfig = computed<TableHeaderConfig>(() => ({
-        showSelectColumn: this.hasDeletePermission(),
+        showSelectColumn: this.permissions().delete,
         isAllSelected: this.isAllSelected(),
         isPartiallySelected: this.isPartiallySelected(),
         sortBy: this.sortBy(),
@@ -206,7 +214,7 @@ export class EmployeeListComponent implements OnInit {
 
         return {
             data: this.employees(),
-            showSelectColumn: this.hasDeletePermission(),
+            showSelectColumn: this.permissions().delete,
             trackByFn: (index: number, item: Employee) => item.empId,
             rowCssClass: (item: Employee) => this.isSelected(item) ? 'table-active' : '',
             columns: [
@@ -378,22 +386,33 @@ export class EmployeeListComponent implements OnInit {
         });
     }
 
-    onSearch(): void {
-        this.employeeStore.searchEmployees(this.searchKeyword());
-    }
-
-    // 篩選
+    // 篩選與搜尋操作
     onFilterChange(event: { key: string; value: any }): void {
-        switch (event.key) {
-            case 'is_active':
+        const actions = {
+            'isActive': () => {
                 this.statusFilter.set(event.value as boolean | undefined);
                 this.employeeStore.filterByStatus(event.value as boolean | undefined);
-                break;
-            case 'dept_id':
+            },
+            'deptId': () => {
                 this.departmentFilter.set(event.value);
-                // 這裡暫時只設定過濾器值，如果 store 有實作相關方法可以調用
-                break;
-        }
+                // 若需要可以實作相關的 store 方法
+            }
+        };
+
+        const action = actions[event.key as keyof typeof actions];
+        if (action) action();
+    }
+
+    onSearchChange(keyword: string): void {
+        this.searchKeyword.set(keyword);
+        this.employeeStore.searchEmployees(keyword);
+    }
+
+    onClearFilters(): void {
+        this.searchKeyword.set('');
+        this.statusFilter.set(undefined);
+        this.departmentFilter.set(undefined);
+        this.loadEmployees();
     }
 
     // 分頁
@@ -412,17 +431,6 @@ export class EmployeeListComponent implements OnInit {
             pageSize = parseInt(select.value, 10);
         }
         this.employeeStore.setPageSize(pageSize);
-    }
-
-    // 排序
-    onSort(column: keyof Employee): void {
-        if (this.sortBy() === column) {
-            this.sortDirection.set(this.sortDirection() === 'asc' ? 'desc' : 'asc');
-        } else {
-            this.sortBy.set(column);
-            this.sortDirection.set('asc');
-        }
-        this.employeeStore.sortEmployees(this.sortBy(), this.sortDirection());
     }
 
     // 表頭事件處理方法
@@ -568,24 +576,15 @@ export class EmployeeListComponent implements OnInit {
         this.showView.set(false);
     }
 
-    // 清除篩選
-    onClearFilters(): void {
-        this.searchKeyword.set('');
-        this.statusFilter.set(undefined);
-        this.departmentFilter.set(undefined);
-        this.loadEmployees();
-    }
-
-    // 空狀態動作
+    // 空狀態動作處理
     onEmptyStateAction(action: string): void {
-        switch (action) {
-            case 'clear-filters':
-                this.onClearFilters();
-                break;
-            case 'create-new':
-                this.onAdd();
-                break;
-        }
+        const actionMap = {
+            'clear-filters': () => this.onClearFilters(),
+            'create-new': () => this.onAdd()
+        };
+
+        const handler = actionMap[action as keyof typeof actionMap];
+        if (handler) handler();
     }
 
     // 動作按鈕配置
@@ -624,19 +623,20 @@ export class EmployeeListComponent implements OnInit {
     // }
 
     getActionConfig(employee: Employee): ActionButtonConfig {
+        const perms = this.permissions();
         return {
             buttons: [
                 {
                     type: 'view',
-                    visible: this.hasReadPermission()
+                    visible: perms.read
                 },
                 {
                     type: 'edit',
-                    visible: this.hasUpdatePermission()
+                    visible: perms.update
                 },
                 {
                     type: 'delete',
-                    visible: this.hasDeletePermission()
+                    visible: perms.delete
                 }
             ],
             size: 'sm',
@@ -681,7 +681,7 @@ export class EmployeeListComponent implements OnInit {
         });
     }
 
-    // 模板兼容性方法 - 用於舊模板
+    // 模板兼容性方法
     exportData(): void {
         // TODO: 實現資料匯出功能
         console.log('匯出資料功能待實現');
@@ -691,24 +691,11 @@ export class EmployeeListComponent implements OnInit {
         this.onAdd();
     }
 
-    // 共享組件事件處理方法
-    onSearchChange(keyword: string): void {
-        this.searchKeyword.set(keyword);
-        this.employeeStore.searchEmployees(keyword);
-    }
-
     clearSearch(): void {
-        // 清除所有搜尋和篩選條件
-        this.searchKeyword.set('');
-        this.statusFilter.set(undefined);
-        this.departmentFilter.set(undefined);
-
-        // 重新載入資料
-        this.employeeStore.searchEmployees('');
+        this.onClearFilters();
     }
 
     clearError(): void {
-        // 清除錯誤狀態的邏輯
         this.employeeStore.clearError?.();
     }
 

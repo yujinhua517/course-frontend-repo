@@ -3,16 +3,16 @@ export interface Department {
     parentDeptId: number | null;
     deptCode: string;
     deptName: string;
-    deptLevel: string; // 後端為 string，前端可用 enum 或 union type
+    deptLevel: string; // 後端為 string，對應 DepartmentLevel union type
     managerEmpId: number | null;
     isActive: boolean;
-    deptDesc?: string; // 後端有此欄位
-    createTime: string; // API 回傳字串格式
+    deptDesc?: string; // 後端DepartmentDto有此欄位，但Entity沒有
+    createTime: string; // API 回傳字串格式 (LocalDateTime 序列化)
     createUser: string;
-    updateTime?: string; // API 回傳字串格式
+    updateTime?: string; // API 回傳字串格式 (LocalDateTime 序列化)
     updateUser?: string;
-    parentDeptName?: string; // 後端 UI 額外欄位
-    managerName?: string; // 後端 UI 額外欄位
+    parentDeptName?: string; // 後端 DepartmentDto UI 額外欄位
+    managerName?: string; // 後端 DepartmentDto UI 額外欄位
 }
 
 export type DepartmentLevel = 'BI' | 'BU' | 'TU' | 'SU' | 'LOB-S' | 'LOB-T' | string;
@@ -39,41 +39,41 @@ export interface DepartmentListResponse {
     pageSize: number;
 }
 
-export interface DepartmentSearchFilters {
-    keyword?: string;
-    deptLevel?: string;
-    isActive?: boolean;
-    parentDeptId?: number;
-}
-
 export interface DepartmentSearchParams {
+    // 篩選條件
     keyword?: string;
     deptLevel?: string;
     isActive?: boolean;
     parentDeptId?: number;
+    // 分頁參數
     page?: number;
     pageSize?: number;
+    // 排序參數
     sortBy?: keyof Department;
     sortDirection?: 'asc' | 'desc';
 }
 
-// API 回應包裝器
+// API 回應包裝器 - 對齊後端 ApiResponse<T>
 export interface ApiResponse<T> {
-    code: number;
-    message: string;
-    data: T;
+    code: number; // 對應後端 Integer code (1000=成功)
+    message: string; // 對應後端 String message
+    data: T; // 對應後端 T data
 }
 
-// 分頁回應 DTO (前端使用 camelCase)
+// 分頁回應 DTO - 對齊後端 PagerDto<T> + PageBean
 export interface PagerDto<T> {
-    dataList: T[];
-    totalRecords: number;
-    firstIndexInPage: number;
-    lastIndexInPage: number;
-    pageable: boolean;
-    sortColumn?: string;
-    sortDirection?: string;
-    // 額外的分頁資訊（匹配後端 Spring Data Page）
+    // 後端 PagerDto 的 dataList 欄位 (使用 @JsonProperty("data_list"))
+    dataList: T[]; // 對應後端 @JsonProperty("data_list") List<T> dataList
+
+    // 後端 PageBean 的分頁欄位 (使用 snake_case JsonProperty)
+    totalRecords: number; // 對應 @JsonProperty("total_records") int totalRecords
+    firstIndexInPage: number; // 對應 @JsonProperty("first_index_in_page") int firstIndexInPage
+    lastIndexInPage: number; // 對應 @JsonProperty("last_index_in_page") int lastIndexInPage
+    pageable: boolean; // 對應 @JsonProperty("pageable") boolean pageable
+    sortColumn?: string; // 對應 @JsonProperty("sort_column") String sortColumn
+    sortDirection?: string; // 對應 @JsonProperty("sort_direction") String sortDirection
+
+    // Spring Data Page 額外資訊（前端計算用）
     totalPages?: number;
     page?: number;
     size?: number;

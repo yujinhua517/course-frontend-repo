@@ -1,7 +1,5 @@
-import { Component, OnInit, signal, computed, inject, ViewChild, TemplateRef } from '@angular/core';
+import { Component, OnInit, signal, computed, inject, ViewChild, TemplateRef, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
-// import { FormsModule } from '@angular/forms';
-// import { RouterModule } from '@angular/router';
 import { DepartmentStore } from '../../store/department.store';
 import { DepartmentService } from '../../services/department.service';
 import { DepartmentFormComponent } from '../../components/department-form/department-form.component';
@@ -28,8 +26,6 @@ import { HighlightPipe } from '../../../../shared/pipes/highlight.pipe';
     styleUrls: ['./department-list.component.scss'],
     imports: [
         CommonModule,
-        // FormsModule,
-        // RouterModule,
         DepartmentFormComponent,
         DepartmentViewComponent,
         TableHeaderComponent,
@@ -48,22 +44,29 @@ import { HighlightPipe } from '../../../../shared/pipes/highlight.pipe';
 export class DepartmentListComponent implements OnInit {
     private departmentStore = inject(DepartmentStore);
     private departmentService = inject(DepartmentService);
-    // 權限判斷：基於 action 欄位的細緻權限控制
+    // 權限管理
     private readonly userStore = inject(UserStore);
 
+    private readonly hasResourceActionPermission = computed(() => {
+        return (resource: string, action: string): boolean => {
+            const user = this.userStore.user() as User | null;
+            if (!user) return false;
+            return (user.permissions ?? []).some((p: Permission) =>
+                p.resource === resource && p.action === action
+            );
+        };
+    });
 
-    // 檢查是否有指定 resource + action 的權限
-    private hasResourceActionPermission(resource: string, action: string): boolean {
-        const user = this.userStore.user() as User | null;
-        if (!user) return false;
-        return (user.permissions ?? []).some((p: Permission) =>
-            p.resource === resource && p.action === action
-        );
-    }
-    readonly hasCreatePermission = computed(() => this.hasResourceActionPermission('department', 'create'));
-    readonly hasUpdatePermission = computed(() => this.hasResourceActionPermission('department', 'update'));
-    readonly hasDeletePermission = computed(() => this.hasResourceActionPermission('department', 'delete'));
-    readonly hasReadPermission = computed(() => this.hasResourceActionPermission('department', 'read'));
+    // 權限快捷計算屬性
+    readonly permissions = computed(() => {
+        const hasPermission = this.hasResourceActionPermission();
+        return {
+            create: hasPermission('department', 'create'),
+            read: hasPermission('department', 'read'),
+            update: hasPermission('department', 'update'),
+            delete: hasPermission('department', 'delete')
+        };
+    });
 
     // State signals
     searchKeyword = signal('');
@@ -111,8 +114,8 @@ export class DepartmentListComponent implements OnInit {
 
     // 計算當前篩選器值
     readonly currentFilterValues = computed(() => ({
-        is_active: this.statusFilter(),
-        dept_level: this.levelFilter()
+        isActive: this.statusFilter(),
+        deptLevel: this.levelFilter()
     }));
 
     // 分頁配置
@@ -133,7 +136,7 @@ export class DepartmentListComponent implements OnInit {
 
     // 表頭配置
     readonly tableHeaderConfig = computed<TableHeaderConfig>(() => ({
-        showSelectColumn: this.hasDeletePermission(),
+        showSelectColumn: this.permissions().delete,
         isAllSelected: this.isAllSelected(),
         isPartiallySelected: this.isPartiallySelected(),
         sortBy: this.sortBy(),
@@ -206,7 +209,7 @@ export class DepartmentListComponent implements OnInit {
 
         return {
             data: this.departments(),
-            showSelectColumn: this.hasDeletePermission(),
+            showSelectColumn: this.permissions().delete,
             trackByFn: (index: number, item: Department) => item.deptId,
             rowCssClass: (item: Department) => this.isSelected(item) ? 'table-active' : '',
             columns: [
@@ -337,6 +340,13 @@ export class DepartmentListComponent implements OnInit {
     hasNextPage = this.departmentStore.hasNextPage;
     hasPreviousPage = this.departmentStore.hasPreviousPage;
 
+    constructor() {
+        // 監聽 loading 狀態變化（如employee實作）
+        effect(() => {
+            console.log('Department List Component: Loading state changed to:', this.loading());
+        });
+    }
+
     // Computed
     isAllSelected = computed(() => {
         const departments = this.departments();
@@ -357,19 +367,20 @@ export class DepartmentListComponent implements OnInit {
         this.departmentStore.loadDepartments({
             keyword: this.searchKeyword() || undefined,
             isActive: this.statusFilter() ?? undefined,
+            deptLevel: this.levelFilter() ?? undefined,
             sortBy: this.sortBy(),
             sortDirection: this.sortDirection()
         });
     }
 
     onSearch(): void {
-        this.departmentStore.searchDepartments(this.searchKeyword());
+        this.departmentStore.search(this.searchKeyword());
     }
 
     // 共享組件事件處理方法
     onSearchChange(keyword: string): void {
         this.searchKeyword.set(keyword);
-        this.departmentStore.searchDepartments(keyword);
+        this.departmentStore.search(keyword);
     }
 
     clearSearch(): void {
@@ -379,18 +390,24 @@ export class DepartmentListComponent implements OnInit {
         this.levelFilter.set(undefined);
 
         // 重新載入資料
-        this.departmentStore.searchDepartments('');
+        this.departmentStore.clearFilters();
     }
 
     clearError(): void {
-        // 清除錯誤狀態的邏輯
-        // 如果 department store 沒有 clearError 方法，可以留空或實作其他邏輯
+        this.departmentStore.clearError();
     }
 
-    onTableSort(event: { column: string; direction: 'asc' | 'desc' }): void {
-        this.sortBy.set(event.column as keyof Department);
-        this.sortDirection.set(event.direction);
-        this.departmentStore.sortDepartments(this.sortBy(), this.sortDirection());
+    onTableSort(event: { column: string; direction: 'asc' | 'desc' | null }): void {
+        // 支援三階段排序：如果 column 為空字串或 direction 為 null，表示重設為無排序
+        if (!event.column || event.direction === null) {
+            this.sortBy.set('deptCode'); // 重設為預設排序欄位
+            this.sortDirection.set('asc');
+        } else {
+            this.sortBy.set(event.column as keyof Department);
+            this.sortDirection.set(event.direction);
+        }
+
+        this.loadDepartments();
     }
 
     onTableSelectAll(selected: boolean): void {
@@ -405,60 +422,20 @@ export class DepartmentListComponent implements OnInit {
         //this.onView(department);
     }
 
-    // getActionConfig(department: Department): ActionButtonConfig {
-    //     const buttons: ActionButton[] = [];
-
-    //     if (this.hasReadPermission()) {
-    //         buttons.push({
-    //             type: 'view',
-    //             icon: 'bi bi-eye',
-    //             text: '檢視',
-    //             variant: 'info',
-    //             visible: true
-    //         });
-    //     }
-
-    //     if (this.hasUpdatePermission()) {
-    //         buttons.push({
-    //             type: 'edit',
-    //             icon: 'bi bi-pencil',
-    //             text: '編輯',
-    //             variant: 'secondary',
-    //             visible: true
-    //         });
-    //     }
-
-    //     if (this.hasDeletePermission()) {
-    //         buttons.push({
-    //             type: 'delete',
-    //             icon: 'bi bi-trash',
-    //             text: '刪除',
-    //             variant: 'danger',
-    //             visible: true
-    //         });
-    //     }
-
-    //     return {
-    //         buttons,
-    //         size: 'sm',
-    //         itemName: department.dept_name
-    //     };
-    // }
-
     getActionConfig(department: Department): ActionButtonConfig {
         return {
             buttons: [
                 {
                     type: 'view',
-                    visible: this.hasReadPermission()
+                    visible: this.permissions().read
                 },
                 {
                     type: 'edit',
-                    visible: this.hasUpdatePermission()
+                    visible: this.permissions().update
                 },
                 {
                     type: 'delete',
-                    visible: this.hasDeletePermission()
+                    visible: this.permissions().delete
                 }
             ],
             size: 'sm',
@@ -495,17 +472,20 @@ export class DepartmentListComponent implements OnInit {
     }
 
     onFilterChange(event: { key: string; value: any }): void {
-        //console.log('Department Filter Change:', event);
-
-        switch (event.key) {
-            case 'is_active':
+        const actions = {
+            'is_active': () => {
                 this.statusFilter.set(event.value as boolean | undefined);
                 this.departmentStore.filterByStatus(event.value as boolean | undefined);
-                break;
-            case 'dept_level':
+            },
+            'dept_level': () => {
                 this.levelFilter.set(event.value);
                 this.departmentStore.filterByLevel(event.value);
-                break;
+            }
+        };
+
+        const action = actions[event.key as keyof typeof actions];
+        if (action) {
+            action();
         }
     }
 
@@ -524,18 +504,25 @@ export class DepartmentListComponent implements OnInit {
             const select = eventOrSize.target as HTMLSelectElement;
             pageSize = parseInt(select.value, 10);
         }
-        this.departmentStore.setPageSize(pageSize);
+        this.departmentStore.changePageSize(pageSize);
     }
 
-    // 排序
+    // 排序 - 支援三階段排序（升冪/降冪/無排序）
     onSort(column: keyof Department): void {
         if (this.sortBy() === column) {
-            this.sortDirection.set(this.sortDirection() === 'asc' ? 'desc' : 'asc');
+            // 同一欄位：asc -> desc -> 重設為預設排序
+            if (this.sortDirection() === 'asc') {
+                this.sortDirection.set('desc');
+            } else {
+                // 重設為預設排序（部門代碼升冪）
+                this.sortBy.set('deptCode');
+                this.sortDirection.set('asc');
+            }
         } else {
             this.sortBy.set(column);
             this.sortDirection.set('asc');
         }
-        this.departmentStore.sortDepartments(this.sortBy(), this.sortDirection());
+        this.loadDepartments();
     }
 
     // 選擇操作
@@ -587,7 +574,7 @@ export class DepartmentListComponent implements OnInit {
             this.departmentService.deleteDepartment(department.deptId).subscribe({
                 next: (success) => {
                     if (success) {
-                        this.departmentStore.removeDepartment(department.deptId);
+                        this.departmentStore.onDepartmentDeleted(department.deptId);
                     }
                 },
                 error: (error) => {
@@ -617,34 +604,25 @@ export class DepartmentListComponent implements OnInit {
         );
 
         Promise.all(deletePromises).then(() => {
+            // 從本地狀態移除已刪除的部門
+            selected.forEach(dept => {
+                this.departmentStore.onDepartmentDeleted(dept.deptId);
+            });
             this.selectedDepartments.set([]);
             this.bulkDeleteLoading.set(false);
-            this.loadDepartments(); // 重新載入資料
         }).catch((error: any) => {
             console.error('批量刪除失敗:', error);
             this.bulkDeleteLoading.set(false);
         });
     }
 
-    // 狀態切換
-    // onToggleStatus(department: Department): void {
-    //     const updatedDepartment = { ...department, is_active: !department.is_active };
-    //     this.departmentService.updateDepartment(updatedDepartment.dept_id!, updatedDepartment).subscribe({
-    //         next: () => {
-    //             this.loadDepartments();
-    //         },
-    //         error: (error) => {
-    //             console.error('切換狀態失敗:', error);
-    //         }
-    //     });
-    // }
     onToggleStatus(department: Department): void {
         const targetStatus = department.isActive ? '停用' : '啟用';
         if (!confirm(`確定要將「${department.deptName}」的狀態切換至「${targetStatus}」嗎？`)) return;
         this.departmentService.toggleDepartmentStatus(department.deptId).subscribe({
             next: (updatedDepartment) => {
                 if (updatedDepartment) {
-                    this.departmentStore.updateDepartment(updatedDepartment);
+                    this.departmentStore.onDepartmentUpdated(updatedDepartment);
                 }
             },
             error: (error) => {
@@ -656,9 +634,9 @@ export class DepartmentListComponent implements OnInit {
     // 表單事件
     onFormSaved(department: Department): void {
         if (this.formMode() === 'create') {
-            this.departmentStore.addDepartment(department);
+            this.departmentStore.onDepartmentCreated(department);
         } else {
-            this.departmentStore.updateDepartment(department);
+            this.departmentStore.onDepartmentUpdated(department);
         }
         this.showForm.set(false);
         this.loadDepartments(); // 重新載入以確保資料一致性
@@ -677,7 +655,7 @@ export class DepartmentListComponent implements OnInit {
         this.searchKeyword.set('');
         this.statusFilter.set(undefined);
         this.levelFilter.set(undefined);
-        this.loadDepartments();
+        this.departmentStore.clearFilters();
     }
 
     // 空狀態動作

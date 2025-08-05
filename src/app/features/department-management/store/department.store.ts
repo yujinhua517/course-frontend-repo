@@ -1,6 +1,7 @@
 import { Injectable, computed, signal, inject } from '@angular/core';
 import { Department, DepartmentSearchParams } from '../models/department.model';
 import { DepartmentService } from '../services/department.service';
+import { environment } from '../../../../environments/environment';
 
 @Injectable({
     providedIn: 'root'
@@ -44,7 +45,6 @@ export class DepartmentStore {
                 // service 已經標準化回應格式
                 const total = response.total || 0;
                 this._allTotal.set(total);
-                console.log('全公司總部門數:', total);
             },
             error: (error: any) => {
                 console.error('取得全公司總部門數失敗', error);
@@ -64,11 +64,10 @@ export class DepartmentStore {
             pageSize: params?.pageSize || this._pageSize()
         };
 
+        this._searchParams.set(searchParams);
         console.log('Department Store loadDepartments called with params:', searchParams);
 
-        this._searchParams.set(searchParams);
-
-        // 使用現有的 service 方法簽名
+        // 使用現有的 service 方法簽名，並傳遞排序參數
         this.departmentService.getDepartments(
             searchParams.page || 1,
             searchParams.pageSize || 10,
@@ -77,7 +76,9 @@ export class DepartmentStore {
                 deptLevel: searchParams.deptLevel,
                 isActive: searchParams.isActive,
                 parentDeptId: searchParams.parentDeptId
-            }
+            },
+            searchParams.sortBy,
+            searchParams.sortDirection?.toUpperCase() as 'ASC' | 'DESC'
         ).subscribe({
             next: (response) => {
                 console.log('Department Service response:', response);
@@ -118,17 +119,15 @@ export class DepartmentStore {
         }
     }
 
-    // filterByActive(isActive: false | true | undefined): void {
-    //     this.loadDepartments({
-    //         ...this._searchParams(),
-    //         is_active: isActive,
-    //         page: 1
-    //     });
-    //     //console.log('filterByActive called', isActive);
-    // }
+    // 搜尋快捷方法（與component中的調用保持一致）
+    search(keyword: string): void {
+        this.searchDepartments(keyword);
+    }
 
     filterByStatus(isActive?: boolean): void {
-        console.log('Department Store filterByStatus called with:', isActive, 'Type:', typeof isActive);
+        if (!environment.production) {
+            console.log('Department Store filterByStatus called with:', isActive, 'Type:', typeof isActive);
+        }
 
         this.loadDepartments({
             ...this._searchParams(),
@@ -138,7 +137,9 @@ export class DepartmentStore {
     }
 
     filterByLevel(level: string | undefined): void {
-        console.log('Department Store filterByLevel called with:', level, 'Type:', typeof level);
+        if (!environment.production) {
+            console.log('Department Store filterByLevel called with:', level, 'Type:', typeof level);
+        }
 
         this.loadDepartments({
             ...this._searchParams(),
@@ -168,10 +169,20 @@ export class DepartmentStore {
         this.loadDepartments();
     }
 
+    // 頁面大小變更快捷方法（與component中的調用保持一致）
+    changePageSize(pageSize: number): void {
+        this.setPageSize(pageSize);
+    }
+
     addDepartment(department: Department): void {
         this._departments.update(departments => [...departments, department]);
         this._total.update(total => total + 1);
         this._allTotal.update(total => total + 1);
+    }
+
+    // CRUD操作事件處理方法（與component中的調用保持一致）
+    onDepartmentCreated(department: Department): void {
+        this.addDepartment(department);
     }
 
     updateDepartment(updatedDepartment: Department): void {
@@ -182,11 +193,41 @@ export class DepartmentStore {
         );
     }
 
+    onDepartmentUpdated(department: Department): void {
+        this.updateDepartment(department);
+    }
+
     removeDepartment(deptId: number): void {
         this._departments.update(departments =>
             departments.filter(dept => dept.deptId !== deptId)
         );
         this._total.update(total => total - 1);
         this._allTotal.update(total => total - 1);
+    }
+
+    onDepartmentDeleted(deptId: number): void {
+        this.removeDepartment(deptId);
+    }
+
+    // 錯誤處理方法
+    clearError(): void {
+        this._error.set(null);
+    }
+
+    // 清除篩選條件
+    clearFilters(): void {
+        this._searchParams.set({});
+        this._currentPage.set(1);
+        this.loadDepartments();
+    }
+
+    // 重設所有狀態
+    reset(): void {
+        this._departments.set([]);
+        this._total.set(0);
+        this._currentPage.set(1);
+        this._searchParams.set({});
+        this._error.set(null);
+        this._loading.set(false);
     }
 }

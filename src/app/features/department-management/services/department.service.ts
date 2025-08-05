@@ -1,19 +1,26 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of, BehaviorSubject, map, delay, catchError, switchMap } from 'rxjs';
+import { Observable, of, map, delay, catchError, switchMap } from 'rxjs';
 import {
     Department,
     CreateDepartmentRequest,
     UpdateDepartmentRequest,
     DepartmentListResponse,
-    DepartmentSearchFilters,
     DepartmentLevel,
     ApiResponse,
-    PagerDto
+    PagerDto,
+    DepartmentSearchParams
 } from '../models/department.model';
+import {
+    DEPARTMENT_LEVEL_ORDER,
+    API_STATUS_CODES,
+    PAGINATION_DEFAULTS,
+    DepartmentStatusType
+} from '../models/department.constants';
 import { environment } from '../../../../environments/environment';
 import { UserStore } from '../../../core/auth/user.store';
 import { HttpErrorHandlerService } from '../../../core/services/http-error-handler.service';
+import { MOCK_DEPARTMENTS } from '../services/mock-departments.data';
 
 @Injectable({
     providedIn: 'root'
@@ -27,6 +34,13 @@ export class DepartmentService {
     private readonly useMockData = false;
     private readonly apiUrl = `${environment.apiBaseUrl}/departments`;
 
+    private mockDepartments: Department[] = MOCK_DEPARTMENTS;
+    // 使用 signals 替代 BehaviorSubject - 符合 Angular 19+ 規範
+    private readonly departmentsSignal = signal<Department[]>(this.mockDepartments);
+    public readonly departments = this.departmentsSignal.asReadonly();
+
+    constructor() { }
+
     /**
      * Get current logged-in user's username
      */
@@ -35,464 +49,203 @@ export class DepartmentService {
         return currentUser?.username || 'system';
     }
 
-    private mockDepartments: Department[] = [
-        // BI層（最高層，通常1-3個）
-        {
-            deptId: 1,
-            parentDeptId: null,
-            deptCode: 'CORP',
-            deptName: '企業發展事業群',
-            deptLevel: 'BI',
-            managerEmpId: 1,
-            isActive: true,
-            deptDesc: '負責公司整體發展與決策，涵蓋策略與規劃等。',
-            createTime: '2024-01-10T08:00:00',
-            createUser: 'sysadmin',
-            updateTime: '2024-06-01T08:30:00',
-            updateUser: 'sysadmin',
-            parentDeptName: undefined,
-            managerName: '林泰安'
-        },
-        {
-            deptId: 2,
-            parentDeptId: null,
-            deptCode: 'TECH',
-            deptName: '技術策略事業群',
-            deptLevel: 'BI',
-            managerEmpId: 2,
-            isActive: true,
-            deptDesc: '主導技術方向與產品創新策略。',
-            createTime: '2024-01-12T09:00:00',
-            createUser: 'sysadmin',
-            updateTime: '2024-06-03T09:45:00',
-            updateUser: 'sysadmin',
-            parentDeptName: undefined,
-            managerName: '張偉翔'
-        },
-
-        // BU 層
-        {
-            deptId: 3,
-            parentDeptId: 1,
-            deptCode: 'OPS',
-            deptName: '營運管理中心',
-            deptLevel: 'BU',
-            managerEmpId: 3,
-            isActive: true,
-            deptDesc: '統籌營運資源，確保業務穩定發展。',
-            createTime: '2024-02-01T10:00:00',
-            createUser: 'admin1',
-            updateTime: '2024-06-08T10:00:00',
-            updateUser: 'admin1',
-            parentDeptName: '企業發展事業群',
-            managerName: '蘇怡君'
-        },
-        {
-            deptId: 4,
-            parentDeptId: 1,
-            deptCode: 'SALE',
-            deptName: '銷售服務中心',
-            deptLevel: 'BU',
-            managerEmpId: 4,
-            isActive: true,
-            deptDesc: '負責全公司銷售目標與客戶關係管理。',
-            createTime: '2024-02-02T13:00:00',
-            createUser: 'admin2',
-            updateTime: '2024-06-10T13:00:00',
-            updateUser: 'admin2',
-            parentDeptName: '企業發展事業群',
-            managerName: '高家豪'
-        },
-        {
-            deptId: 5,
-            parentDeptId: 2,
-            deptCode: 'ENG',
-            deptName: '工程研發中心',
-            deptLevel: 'BU',
-            managerEmpId: 5,
-            isActive: true,
-            deptDesc: '技術開發與產品維護的核心部門。',
-            createTime: '2024-02-03T11:00:00',
-            createUser: 'admin3',
-            updateTime: '2024-06-11T11:00:00',
-            updateUser: 'admin3',
-            parentDeptName: '技術策略事業群',
-            managerName: '許惠玲'
-        },
-        {
-            deptId: 6,
-            parentDeptId: 2,
-            deptCode: 'QA',
-            deptName: '品質管理中心',
-            deptLevel: 'BU',
-            managerEmpId: 6,
-            isActive: true,
-            deptDesc: '確保產品服務品質、制定品質標準。',
-            createTime: '2024-02-04T15:00:00',
-            createUser: 'admin4',
-            updateTime: '2024-06-12T15:00:00',
-            updateUser: 'admin4',
-            parentDeptName: '技術策略事業群',
-            managerName: '吳志軒'
-        },
-
-        // LOB 層
-        {
-            deptId: 7,
-            parentDeptId: 3,
-            deptCode: 'CUST',
-            deptName: '客服組',
-            deptLevel: 'LOB',
-            managerEmpId: 7,
-            isActive: true,
-            deptDesc: '第一線客戶回應與問題處理。',
-            createTime: '2024-03-01T09:00:00',
-            createUser: 'ops_mgr',
-            updateTime: '2024-07-01T09:30:00',
-            updateUser: 'ops_mgr',
-            parentDeptName: '營運管理中心',
-            managerName: '鄭佳珊'
-        },
-        {
-            deptId: 8,
-            parentDeptId: 3,
-            deptCode: 'PROC',
-            deptName: '採購組',
-            deptLevel: 'LOB',
-            managerEmpId: 8,
-            isActive: true,
-            deptDesc: '原物料與外包服務採購。',
-            createTime: '2024-03-02T10:00:00',
-            createUser: 'ops_mgr',
-            updateTime: '2024-07-01T10:15:00',
-            updateUser: 'ops_mgr',
-            parentDeptName: '營運管理中心',
-            managerName: '王柏廷'
-        },
-        {
-            deptId: 9,
-            parentDeptId: 4,
-            deptCode: 'DOMS',
-            deptName: '國內銷售組',
-            deptLevel: 'LOB',
-            managerEmpId: 9,
-            isActive: true,
-            deptDesc: '負責國內客戶與經銷商業務。',
-            createTime: '2024-03-03T11:00:00',
-            createUser: 'sale_mgr',
-            updateTime: '2024-07-01T11:25:00',
-            updateUser: 'sale_mgr',
-            parentDeptName: '銷售服務中心',
-            managerName: '林家宏'
-        },
-        {
-            deptId: 10,
-            parentDeptId: 4,
-            deptCode: 'INTR',
-            deptName: '國際銷售組',
-            deptLevel: 'LOB',
-            managerEmpId: 10,
-            isActive: true,
-            deptDesc: '拓展海外市場，協助出口業務。',
-            createTime: '2024-03-04T12:00:00',
-            createUser: 'sale_mgr',
-            updateTime: '2024-07-01T12:35:00',
-            updateUser: 'sale_mgr',
-            parentDeptName: '銷售服務中心',
-            managerName: '葉欣怡'
-        },
-        {
-            deptId: 11,
-            parentDeptId: 5,
-            deptCode: 'DEV',
-            deptName: '後端開發組',
-            deptLevel: 'LOB',
-            managerEmpId: 11,
-            isActive: true,
-            deptDesc: '專注於後端系統設計與維護。',
-            createTime: '2024-03-05T13:00:00',
-            createUser: 'eng_mgr',
-            updateTime: '2024-07-01T13:45:00',
-            updateUser: 'eng_mgr',
-            parentDeptName: '工程研發中心',
-            managerName: '曾國凱'
-        },
-        {
-            deptId: 12,
-            parentDeptId: 5,
-            deptCode: 'FRONT',
-            deptName: '前端開發組',
-            deptLevel: 'LOB',
-            managerEmpId: 12,
-            isActive: true,
-            deptDesc: '前端UI與互動介面設計。',
-            createTime: '2024-03-06T14:00:00',
-            createUser: 'eng_mgr',
-            updateTime: '2024-07-01T14:55:00',
-            updateUser: 'eng_mgr',
-            parentDeptName: '工程研發中心',
-            managerName: '陳韋廷'
-        },
-        {
-            deptId: 13,
-            parentDeptId: 6,
-            deptCode: 'TEST',
-            deptName: '軟體測試組',
-            deptLevel: 'LOB',
-            managerEmpId: 13,
-            isActive: true,
-            deptDesc: '產品測試與自動化回歸測試。',
-            createTime: '2024-03-07T15:00:00',
-            createUser: 'qa_mgr',
-            updateTime: '2024-07-01T15:20:00',
-            updateUser: 'qa_mgr',
-            parentDeptName: '品質管理中心',
-            managerName: '賴信瑋'
-        },
-        {
-            deptId: 14,
-            parentDeptId: 6,
-            deptCode: 'CTRL',
-            deptName: '品管稽核組',
-            deptLevel: 'LOB',
-            managerEmpId: 14,
-            isActive: true,
-            deptDesc: '協助品質稽核與標準作業稽查。',
-            createTime: '2024-03-08T16:00:00',
-            createUser: 'qa_mgr',
-            updateTime: '2024-07-01T16:40:00',
-            updateUser: 'qa_mgr',
-            parentDeptName: '品質管理中心',
-            managerName: '簡雅婷'
-        },
-        {
-            deptId: 15,
-            parentDeptId: 3,
-            deptCode: 'RISK',
-            deptName: '風險控管組',
-            deptLevel: 'LOB',
-            managerEmpId: 15,
-            isActive: false,
-            deptDesc: '內部稽核、企業風險評估與控管。',
-            createTime: '2024-03-09T17:00:00',
-            createUser: 'ops_mgr',
-            updateTime: '2024-07-02T17:10:00',
-            updateUser: 'ops_mgr',
-            parentDeptName: '營運管理中心',
-            managerName: '許榮華'
-        },
-        {
-            deptId: 16,
-            parentDeptId: 4,
-            deptCode: 'MARK',
-            deptName: '行銷推廣組',
-            deptLevel: 'LOB',
-            managerEmpId: 16,
-            isActive: true,
-            deptDesc: '產品推廣、品牌行銷與活動執行。',
-            createTime: '2024-03-10T18:00:00',
-            createUser: 'sale_mgr',
-            updateTime: '2024-07-02T18:30:00',
-            updateUser: 'sale_mgr',
-            parentDeptName: '銷售服務中心',
-            managerName: '葉姿君'
-        },
-        {
-            deptId: 17,
-            parentDeptId: 5,
-            deptCode: 'UXUI',
-            deptName: 'UX設計組',
-            deptLevel: 'LOB',
-            managerEmpId: 17,
-            isActive: true,
-            deptDesc: '使用者體驗與介面設計團隊。',
-            createTime: '2024-03-11T19:00:00',
-            createUser: 'eng_mgr',
-            updateTime: '2024-07-02T19:10:00',
-            updateUser: 'eng_mgr',
-            parentDeptName: '工程研發中心',
-            managerName: '鄧宜樺'
-        },
-        {
-            deptId: 18,
-            parentDeptId: 6,
-            deptCode: 'SQA',
-            deptName: '自動化測試組',
-            deptLevel: 'LOB',
-            managerEmpId: 18,
-            isActive: true,
-            deptDesc: '軟體測試自動化開發、測試效率提升。',
-            createTime: '2024-03-12T20:00:00',
-            createUser: 'qa_mgr',
-            updateTime: '2024-07-02T20:10:00',
-            updateUser: 'qa_mgr',
-            parentDeptName: '品質管理中心',
-            managerName: '方承睿'
-        },
-        {
-            deptId: 19,
-            parentDeptId: 5,
-            deptCode: 'DOCS',
-            deptName: '技術文件組',
-            deptLevel: 'LOB',
-            managerEmpId: 19,
-            isActive: true,
-            deptDesc: '撰寫、管理技術與開發文件。',
-            createTime: '2024-03-13T21:00:00',
-            createUser: 'eng_mgr',
-            updateTime: '2024-07-02T21:10:00',
-            updateUser: 'eng_mgr',
-            parentDeptName: '工程研發中心',
-            managerName: '廖立文'
-        },
-        {
-            deptId: 20,
-            parentDeptId: 3,
-            deptCode: 'SUP',
-            deptName: '支援服務組',
-            deptLevel: 'LOB',
-            managerEmpId: 20,
-            isActive: true,
-            deptDesc: '內部技術與行政支援服務窗口。',
-            createTime: '2024-03-14T22:00:00',
-            createUser: 'ops_mgr',
-            updateTime: '2024-07-02T22:10:00',
-            updateUser: 'ops_mgr',
-            parentDeptName: '營運管理中心',
-            managerName: '林品妤'
+    /**
+     * 統一的 API 回應處理器
+     * 確保所有 API 調用都使用相同的錯誤處理邏輯
+     */
+    private handleApiResponse<T>(response: ApiResponse<T>): T {
+        if (response.code === API_STATUS_CODES.SUCCESS && response.data) {
+            return response.data;
         }
-    ];
-
-    // BehaviorSubject for reactive updates
-    private departmentsSubject = new BehaviorSubject<Department[]>(this.mockDepartments);
-
-    constructor() { }
+        throw new Error(response.message || '操作失敗');
+    }
 
     /**
-     * Get departments with search, filtering, and pagination
+     * 統一的資料映射器 - HTTP 攔截器已處理 camelCase 轉換
+     * 這裡主要用於 mock 資料或特殊情況的相容性處理
+     */
+    private mapApiToDepartment(apiDept: any): Department {
+        // HTTP 攔截器已經處理 snake_case 到 camelCase 的轉換
+        // 這裡主要確保資料格式的一致性
+        return {
+            deptId: apiDept.deptId ?? apiDept.dept_id,
+            parentDeptId: apiDept.parentDeptId ?? apiDept.parent_dept_id ?? null,
+            deptCode: apiDept.deptCode ?? apiDept.dept_code,
+            deptName: apiDept.deptName ?? apiDept.dept_name,
+            deptLevel: apiDept.deptLevel ?? apiDept.dept_level,
+            managerEmpId: apiDept.managerEmpId ?? apiDept.manager_emp_id ?? null,
+            isActive: apiDept.isActive ?? apiDept.is_active ?? false,
+            deptDesc: apiDept.deptDesc ?? apiDept.dept_desc,
+            createTime: apiDept.createTime ?? apiDept.create_time ?? new Date().toISOString(),
+            createUser: apiDept.createUser ?? apiDept.create_user ?? 'system',
+            updateTime: apiDept.updateTime ?? apiDept.update_time,
+            updateUser: apiDept.updateUser ?? apiDept.update_user
+        };
+    }
+
+    /**
+     * 統一的 API 回應列表處理器
+     */
+    private mapApiResponseToList(response: ApiResponse<any[]>): Department[] {
+        const data = this.handleApiResponse(response);
+        return data.map(item => this.mapApiToDepartment(item));
+    }
+
+    /**
+     * 統一的部門查詢方法 - 支援所有查詢需求
+     * 支援分頁、排序、篩選，與employee service保持一致
      */
     getDepartments(
-        page = 1,
-        pageSize = 10,
+        page: number = PAGINATION_DEFAULTS.PAGE,
+        pageSize: number = PAGINATION_DEFAULTS.PAGE_SIZE,
         searchTerm = '',
-        filters: DepartmentSearchFilters = {}
+        filters: DepartmentSearchParams & {
+            activeOnly?: boolean,
+            rootOnly?: boolean,
+            childrenOf?: number
+        } = {},
+        sortBy?: keyof Department,
+        sortDirection?: 'ASC' | 'DESC'
     ): Observable<DepartmentListResponse> {
         if (this.useMockData) {
-            return this.getMockDepartments(page, pageSize, searchTerm, filters);
+            return this.getMockDepartments(page, pageSize, searchTerm, filters, sortBy, sortDirection);
         }
 
-        // 使用 camelCase 參數，HTTP 攔截器會自動轉換為 snake_case
-        const params: any = {
+        return this.getRealDepartmentsPaged(page, pageSize, searchTerm, filters, sortBy, sortDirection);
+    }
+
+    private getRealDepartmentsPaged(
+        page: number,
+        pageSize: number,
+        searchTerm: string,
+        filters: DepartmentSearchParams & {
+            activeOnly?: boolean,
+            rootOnly?: boolean,
+            childrenOf?: number
+        },
+        sortBy?: keyof Department,
+        sortDirection?: 'ASC' | 'DESC'
+    ): Observable<DepartmentListResponse> {
+        const firstIndex = (page - 1) * pageSize + 1;
+        const lastIndex = page * pageSize;
+
+        const requestParams = {
             page,
-            pageSize
+            pageSize,
+            firstIndexInPage: firstIndex,
+            lastIndexInPage: lastIndex,
+            pageable: true,
+            sortColumn: sortBy || 'deptCode',
+            sortDirection: sortDirection?.toUpperCase() || 'ASC',
+            ...(searchTerm && { keyword: searchTerm }),
+            ...(filters.deptLevel && { deptLevel: filters.deptLevel }),
+            ...(filters.isActive !== undefined && { isActive: filters.isActive }),
+            ...(filters.parentDeptId !== undefined && { parentDeptId: filters.parentDeptId }),
+            ...(filters.activeOnly && { isActive: true }),
+            ...(filters.rootOnly && { parentDeptId: null }),
+            ...(filters.childrenOf && { parentDeptId: filters.childrenOf })
         };
 
-        if (searchTerm) {
-            params.keyword = searchTerm;
-        }
-        if (filters.deptLevel) {
-            params.deptLevel = filters.deptLevel;  // 轉為 camelCase
-        }
-        if (filters.isActive !== undefined) {
-            params.isActive = filters.isActive;  // 轉為 camelCase
-        }
-        if (filters.parentDeptId !== undefined) {
-            params.parentDeptId = filters.parentDeptId;  // 轉為 camelCase
+        return this.http.post<ApiResponse<PagerDto<Department>>>(`${this.apiUrl}/query`, requestParams)
+            .pipe(
+                map(response => this.adaptBackendResponse(response, page, pageSize)),
+                catchError(this.httpErrorHandler.handleError('getDepartments', this.getEmptyDepartmentListResponse(page, pageSize)))
+            );
+    }
+
+    private adaptBackendResponse(
+        response: ApiResponse<PagerDto<Department>>,
+        page: number,
+        pageSize: number
+    ): DepartmentListResponse {
+        if (response.code !== 1000) {
+            throw new Error(response.message || '查詢失敗');
         }
 
-        console.log('Sending HTTP GET request with params (camelCase, 攔截器會自動轉換):', params);
+        const backendData = response.data;
+        return {
+            data: backendData.dataList || [],
+            total: backendData.totalRecords || 0,
+            page: page,
+            pageSize: pageSize
+        };
+    }
 
-        return this.http.get<ApiResponse<PagerDto<Department>>>(`${this.apiUrl}/query`, { params }).pipe(
-            map(response => {
-                // HTTP 攔截器已經自動轉換為 camelCase，直接使用
-                if (response.code === 1000 && response.data) {
-                    const pagerDto = response.data;
-                    const departments = pagerDto.dataList || [];
+    private getEmptyDepartmentListResponse(page: number, pageSize: number): DepartmentListResponse {
+        return {
+            data: [],
+            total: 0,
+            page: page,
+            pageSize: pageSize
+        };
+    }
 
-                    return {
-                        data: departments,
-                        total: pagerDto.totalRecords || departments.length,
-                        page: page,
-                        pageSize: pageSize
-                    };
-                } else {
-                    throw new Error(response.message || '載入部門資料失敗');
-                }
-            })
+    /**
+     * 簡化的活躍部門查詢 - 使用統一的 getDepartments 方法
+     */
+    getActiveDepartments(): Observable<Department[]> {
+        return this.getDepartments(1, PAGINATION_DEFAULTS.MAX_PAGE_SIZE, '', { activeOnly: true }).pipe(
+            map(response => response.data),
+            catchError(this.httpErrorHandler.handleError('getActiveDepartments', []))
         );
     }
 
     /**
-     * 獲取所有活躍部門的簡單方法（用於下拉選單）
+     * 簡化的根部門查詢 - 使用統一的 getDepartments 方法
      */
-    getActiveDepartments(): Observable<Department[]> {
-        //console.log('getActiveDepartments called, useMockData:', this.useMockData);
-
-        if (this.useMockData) {
-            const activeDepts = this.mockDepartments.filter(dept => dept.isActive === true);
-            //console.log('返回 mock 活躍部門:', activeDepts);
-            return of(activeDepts).pipe(delay(300));
-        }
-
-        return this.http.get<any>(this.apiUrl).pipe(
-            map(response => {
-                //console.log('API 完整回應:', response);
-                //console.log('回應類型:', typeof response);
-                //console.log('response.code:', response?.code);
-                //console.log('response.data:', response?.data);
-
-                if (response?.code === 1000 && response?.data) {
-                    //console.log('API 回應驗證成功，資料數量:', response.data.length);
-
-                    // 過濾只取活躍的部門 - 後端回傳的欄位可能是 is_active 或 isActive
-                    const activeDepts = response.data.filter((dept: any) => {
-                        //console.log('檢查部門:', dept.dept_name || dept.deptName, 'is_active:', dept.is_active, 'isActive:', dept.isActive);
-                        return dept.is_active === true || dept.isActive === true;
-                    });
-                    //console.log('過濾後的活躍部門數量:', activeDepts.length);
-                    //console.log('過濾後的活躍部門:', activeDepts);
-
-                    // 轉換後端格式到前端期望的格式
-                    const mappedDepts = activeDepts.map((dept: any) => ({
-                        dept_id: dept.dept_id || dept.deptId,
-                        dept_code: dept.dept_code || dept.deptCode,
-                        dept_name: dept.dept_name || dept.deptName,
-                        dept_level: dept.dept_level || dept.deptLevel || 'BU',
-                        parent_dept_id: dept.parent_dept_id || dept.parentDeptId || null,
-                        manager_emp_id: dept.manager_emp_id || dept.managerEmpId || null,
-                        is_active: dept.is_active === true || dept.isActive === true,
-                        create_time: dept.create_time || dept.createTime || new Date().toISOString(),
-                        create_user: dept.create_user || dept.createUser || 'system',
-                        update_time: dept.update_time || dept.updateTime || undefined,
-                        update_user: dept.update_user || dept.updateUser
-                    }));
-
-                    //console.log('映射後的部門資料數量:', mappedDepts.length);
-                    //console.log('映射後的部門資料:', mappedDepts);
-                    return mappedDepts;
-                } else {
-                    console.error('API 回應格式錯誤 - code:', response?.code, 'data:', response?.data);
-                    throw new Error(response?.message || '載入部門資料失敗');
-                }
-            }),
-            catchError(this.httpErrorHandler.handleError('getDepartments', []))
+    getRootDepartments(): Observable<Department[]> {
+        return this.getDepartments(1, PAGINATION_DEFAULTS.MAX_PAGE_SIZE, '', { rootOnly: true, activeOnly: true }).pipe(
+            map(response => response.data),
+            catchError(this.httpErrorHandler.handleError('getRootDepartments', []))
         );
     }
 
+    /**
+     * 簡化的子部門查詢 - 使用統一的 getDepartments 方法
+     */
+    getChildDepartments(parentId: number): Observable<Department[]> {
+        return this.getDepartments(1, PAGINATION_DEFAULTS.MAX_PAGE_SIZE, '', { childrenOf: parentId, activeOnly: true }).pipe(
+            map(response => response.data),
+            catchError(this.httpErrorHandler.handleError('getChildDepartments', []))
+        );
+    }
+
+    /**
+     * 取得部門作為 Observable - 使用統一方法
+     */
+    getDepartmentsAsObservable(): Observable<Department[]> {
+
+        if (this.useMockData) {
+            const activeData = this.mockDepartments.filter(dept => dept.isActive);
+            // 在 mock 模式下，返回所有活躍的部門資料
+            return of(activeData).pipe(delay(100));
+        }
+
+        return this.getDepartments(1, PAGINATION_DEFAULTS.MAX_PAGE_SIZE, '', { activeOnly: true }).pipe(
+            map(response => response.data),
+            catchError(this.httpErrorHandler.handleError('getDepartmentsAsObservable', []))
+        );
+    }
+
+    /**
+     * 優化的 Mock 資料處理方法 - 支援排序功能
+     */
     private getMockDepartments(
         page: number,
         pageSize: number,
         searchTerm: string,
-        filters: DepartmentSearchFilters
+        filters: DepartmentSearchParams & {
+            activeOnly?: boolean,
+            rootOnly?: boolean,
+            childrenOf?: number
+        },
+        sortBy?: keyof Department,
+        sortDirection?: 'ASC' | 'DESC'
     ): Observable<DepartmentListResponse> {
         return of(null).pipe(
-            delay(300), // Simulate network delay
+            delay(300),
             map(() => {
                 let filteredDepartments = [...this.mockDepartments];
-
-                console.log('原始部門數據數量:', filteredDepartments.length);
-                console.log('搜尋關鍵字:', searchTerm);
-                console.log('篩選條件:', filters);
 
                 // Apply search filter
                 if (searchTerm.trim()) {
@@ -501,51 +254,60 @@ export class DepartmentService {
                         dept.deptName.toLowerCase().includes(term) ||
                         dept.deptCode.toLowerCase().includes(term)
                     );
-                    console.log('按關鍵字過濾後數量:', filteredDepartments.length);
                 }
 
                 // Apply filters
-                if (filters.deptLevel && filters.deptLevel.trim() !== '') {
-                    console.log('按層級過濾，目標層級:', filters.deptLevel);
-                    filteredDepartments = filteredDepartments.filter(dept => {
-                        const match = dept.deptLevel === filters.deptLevel;
-                        console.log(`部門 ${dept.deptName} 層級: ${dept.deptLevel}, 目標: ${filters.deptLevel}, 匹配: ${match}`);
-                        return match;
-                    });
-                    console.log('按層級過濾後數量:', filteredDepartments.length);
+                if (filters.deptLevel) {
+                    filteredDepartments = filteredDepartments.filter(dept => dept.deptLevel === filters.deptLevel);
                 }
 
-                if (filters.isActive !== undefined) {
-                    console.log('按狀態過濾，目標狀態:', filters.isActive, '類型:', typeof filters.isActive);
-
-                    // 確保比較時類型一致
-                    const targetStatus = Boolean(filters.isActive);
-                    filteredDepartments = filteredDepartments.filter(dept => {
-                        const deptStatus = Boolean(dept.isActive);
-                        console.log(`部門 ${dept.deptName} 狀態: ${deptStatus}, 目標: ${targetStatus}, 匹配: ${deptStatus === targetStatus}`);
-                        return deptStatus === targetStatus;
-                    });
-                    console.log('按狀態過濾後數量:', filteredDepartments.length);
+                if (filters.isActive !== undefined || filters.activeOnly) {
+                    const targetStatus = filters.activeOnly || filters.isActive;
+                    filteredDepartments = filteredDepartments.filter(dept => dept.isActive === targetStatus);
                 }
 
                 if (filters.parentDeptId !== undefined) {
-                    filteredDepartments = filteredDepartments.filter(dept =>
-                        dept.parentDeptId === filters.parentDeptId
-                    );
-                    console.log('按上級部門過濾後數量:', filteredDepartments.length);
+                    filteredDepartments = filteredDepartments.filter(dept => dept.parentDeptId === filters.parentDeptId);
+                }
+
+                if (filters.rootOnly) {
+                    filteredDepartments = filteredDepartments.filter(dept => dept.parentDeptId === null);
+                }
+
+                if (filters.childrenOf) {
+                    filteredDepartments = filteredDepartments.filter(dept => dept.parentDeptId === filters.childrenOf);
+                }
+
+                // Apply sorting
+                if (sortBy && sortDirection) {
+                    filteredDepartments.sort((a, b) => {
+                        let aValue: any = a[sortBy];
+                        let bValue: any = b[sortBy];
+
+                        // Handle different data types
+                        if (typeof aValue === 'string' && typeof bValue === 'string') {
+                            aValue = aValue.toLowerCase();
+                            bValue = bValue.toLowerCase();
+                        }
+
+                        if (aValue < bValue) {
+                            return sortDirection === 'ASC' ? -1 : 1;
+                        }
+                        if (aValue > bValue) {
+                            return sortDirection === 'ASC' ? 1 : -1;
+                        }
+                        return 0;
+                    });
                 }
 
                 // Calculate pagination
                 const totalItems = filteredDepartments.length;
-                const totalPages = Math.ceil(totalItems / pageSize);
                 const startIndex = (page - 1) * pageSize;
                 const endIndex = startIndex + pageSize;
                 const paginatedDepartments = filteredDepartments.slice(startIndex, endIndex);
 
-                console.log('最終返回數據數量:', paginatedDepartments.length);
-
                 return {
-                    data: paginatedDepartments,  // 改為 data 而不是 departments 以保持一致性
+                    data: paginatedDepartments,
                     total: totalItems,
                     page: page,
                     pageSize
@@ -562,32 +324,13 @@ export class DepartmentService {
             return of(this.mockDepartments).pipe(
                 delay(200),
                 map(departments => departments.find(dept => dept.deptId === id) || null),
+                catchError(this.httpErrorHandler.handleError('getDepartmentById', null))
             );
         }
 
-        return this.http.get<any>(`${this.apiUrl}/find/${id}`).pipe(
-            map(response => {
-                // 檢查後端回應格式
-                if (response.code === 1000 && response.data) {
-                    const dept = response.data;
-                    return {
-                        deptId: dept.dept_id,
-                        deptCode: dept.dept_code,
-                        deptName: dept.dept_name,
-                        deptLevel: dept.dept_level,
-                        parentDeptId: dept.parent_dept_id,
-                        managerEmpId: dept.manager_emp_id,
-                        isActive: dept.is_active,
-                        deptDesc: dept.dept_desc,
-                        createTime: dept.create_time || new Date().toISOString(),
-                        createUser: dept.create_user || 'system',
-                        updateTime: dept.update_time || undefined,
-                        updateUser: dept.update_user
-                    } as Department;
-                } else {
-                    return null;
-                }
-            })
+        return this.http.get<ApiResponse<Department>>(`${this.apiUrl}/find/${id}`).pipe(
+            map(response => this.mapApiToDepartment(this.handleApiResponse(response))),
+            catchError(this.httpErrorHandler.handleError('getDepartmentById', null))
         );
     }
 
@@ -615,14 +358,14 @@ export class DepartmentService {
                     };
 
                     this.mockDepartments.push(newDepartment);
-                    this.departmentsSubject.next([...this.mockDepartments]);
+                    this.departmentsSignal.set([...this.mockDepartments]);
 
                     return newDepartment;
-                })
+                }),
+                catchError(this.httpErrorHandler.handleError('createDepartment', null as any))
             );
         }
 
-        // 後端 API 調用
         const currentUser = this.getCurrentUser();
         const departmentData = {
             deptCode: request.deptCode,
@@ -635,33 +378,9 @@ export class DepartmentService {
             createUser: currentUser
         };
 
-        return this.http.post<any>(`${this.apiUrl}/create`, departmentData).pipe(
-            map(response => {
-                // 檢查後端回應格式
-                if (response.code === 1000 && response.data) {
-                    const dept = response.data;
-                    return {
-                        deptId: dept.dept_id,
-                        deptCode: dept.dept_code,
-                        deptName: dept.dept_name,
-                        deptLevel: dept.dept_level,
-                        parentDeptId: dept.parent_dept_id,
-                        managerEmpId: dept.manager_emp_id,
-                        isActive: dept.is_active,
-                        deptDesc: dept.dept_desc,
-                        createTime: dept.create_time || new Date().toISOString(),
-                        createUser: dept.create_user,
-                        updateTime: dept.update_time || undefined,
-                        updateUser: dept.update_user
-                    };
-                } else {
-                    throw new Error(response.message || '創建部門失敗');
-                }
-            }),
-            catchError(error => {
-                console.error('創建部門時發生錯誤:', error);
-                throw error;
-            })
+        return this.http.post<ApiResponse<Department>>(`${this.apiUrl}/create`, departmentData).pipe(
+            map(response => this.mapApiToDepartment(this.handleApiResponse(response))),
+            catchError(this.httpErrorHandler.handleError('createDepartment', null as any))
         );
     }
 
@@ -688,14 +407,14 @@ export class DepartmentService {
                     };
 
                     this.mockDepartments[departmentIndex] = updatedDepartment;
-                    this.departmentsSubject.next([...this.mockDepartments]);
+                    this.departmentsSignal.set([...this.mockDepartments]);
 
                     return updatedDepartment;
-                })
+                }),
+                catchError(this.httpErrorHandler.handleError('updateDepartment', null as any))
             );
         }
 
-        // 後端 API 調用
         const currentUser = this.getCurrentUser();
         const updateData = {
             deptId: id,
@@ -710,50 +429,9 @@ export class DepartmentService {
             updateTime: new Date().toISOString()
         };
 
-        return this.http.post<any>(`${this.apiUrl}/update`, updateData).pipe(
-            map(response => {
-                // 檢查後端回應格式
-                if (response.code === 1000 && response.data) {
-                    const dept = response.data;
-                    return {
-                        deptId: dept.dept_id,
-                        deptCode: dept.dept_code,
-                        deptName: dept.dept_name,
-                        deptLevel: dept.dept_level,
-                        parentDeptId: dept.parent_dept_id,
-                        managerEmpId: dept.manager_emp_id,
-                        isActive: dept.is_active,
-                        deptDesc: dept.dept_desc,
-                        createTime: dept.create_time || new Date().toISOString(),
-                        createUser: dept.create_user || 'system',
-                        updateTime: dept.update_time || new Date().toISOString(),
-                        updateUser: dept.update_user || 'system'
-                    } as Department;
-                } else if (response.code === 1000) {
-                    // 成功但沒有回傳資料的情況，使用請求資料建構回傳
-                    const currentUser = this.getCurrentUser();
-                    return {
-                        deptId: id,
-                        deptCode: request.deptCode,
-                        deptName: request.deptName,
-                        deptLevel: request.deptLevel,
-                        parentDeptId: request.parentDeptId,
-                        managerEmpId: request.managerEmpId,
-                        isActive: request.isActive,
-                        deptDesc: request.deptDesc,
-                        createTime: new Date().toISOString(),
-                        createUser: 'system',
-                        updateTime: new Date().toISOString(),
-                        updateUser: currentUser
-                    } as Department;
-                } else {
-                    throw new Error(response.message || '更新部門失敗');
-                }
-            }),
-            catchError(error => {
-                console.error('更新部門時發生錯誤:', error);
-                throw error;
-            })
+        return this.http.post<ApiResponse<Department>>(`${this.apiUrl}/update`, updateData).pipe(
+            map(response => this.mapApiToDepartment(this.handleApiResponse(response))),
+            catchError(this.httpErrorHandler.handleError('updateDepartment', null as any))
         );
     }
 
@@ -779,201 +457,43 @@ export class DepartmentService {
                         updateUser: currentUser
                     };
 
-                    this.departmentsSubject.next([...this.mockDepartments]);
+                    this.departmentsSignal.set([...this.mockDepartments]);
                     return true;
-                })
+                }),
+                catchError(this.httpErrorHandler.handleError('deleteDepartment', false))
             );
         }
 
-        // 後端 API 調用
         const deleteData = { dept_id: id };
 
-        return this.http.post<any>(`${this.apiUrl}/delete`, deleteData).pipe(
+        return this.http.post<ApiResponse<boolean>>(`${this.apiUrl}/delete`, deleteData).pipe(
             map(response => {
-                // 檢查後端回應格式
-                if (response.code === 1000) {
-                    return true;
-                } else {
-                    throw new Error(response.message || '刪除部門失敗');
-                }
-            })
+                this.handleApiResponse(response);
+                return true;
+            }),
+            catchError(this.httpErrorHandler.handleError('deleteDepartment', false))
         );
     }
 
     /**
-     * Toggle department active status (呼叫 update API，送出 is_active 欄位)
+     * Toggle department active status
      */
     toggleDepartmentStatus(departmentId: number): Observable<Department> {
         return this.getDepartmentById(departmentId).pipe(
-            map((dept: Department | null): Department => {
+            switchMap((dept: Department | null) => {
                 if (!dept) throw new Error(`Department with id ${departmentId} not found`);
-                // 切換狀態
-                return { ...dept, isActive: !dept.isActive };
+
+                return this.updateDepartment(dept.deptId, {
+                    deptId: dept.deptId,
+                    deptCode: dept.deptCode,
+                    deptName: dept.deptName,
+                    deptLevel: dept.deptLevel,
+                    parentDeptId: dept.parentDeptId,
+                    managerEmpId: dept.managerEmpId,
+                    isActive: !dept.isActive
+                });
             }),
-            switchMap((toggled: Department) => this.updateDepartment(toggled.deptId, {
-                deptId: toggled.deptId,
-                deptCode: toggled.deptCode,
-                deptName: toggled.deptName,
-                deptLevel: toggled.deptLevel,
-                parentDeptId: toggled.parentDeptId,
-                managerEmpId: toggled.managerEmpId,
-                isActive: toggled.isActive
-            }))
-        );
-    }
-
-    /**
-     * Get root departments (departments without parent)
-     */
-    getRootDepartments(): Observable<Department[]> {
-        if (this.useMockData) {
-            // 只回傳頂層且啟用的部門
-            return of(this.mockDepartments.filter(dept => dept.parentDeptId === null && dept.isActive === true)).pipe(delay(200));
-        }
-
-        // 從 API 取得全部部門，過濾頂層且啟用的部門
-        return this.http.get<any>(this.apiUrl).pipe(
-            map(response => {
-                // 檢查後端回應格式
-                if (response.code === 1000 && response.data) {
-                    return response.data
-                        .filter((dept: any) =>
-                            (dept.parent_dept_id === null || dept.parentDeptId === null) &&
-                            (dept.is_active === true || dept.isActive === true) //沒有上級部門（parent_dept_id 為 null）且啟用中的部門
-                        )
-                        .map((dept: any) => ({
-                            dept_id: dept.dept_id || dept.deptId,
-                            dept_code: dept.dept_code || dept.deptCode,
-                            dept_name: dept.dept_name || dept.deptName,
-                            dept_level: dept.dept_level || dept.deptLevel || 'BU',
-                            parent_dept_id: dept.parent_dept_id || dept.parentDeptId || null,
-                            manager_emp_id: dept.manager_emp_id || dept.managerEmpId || null,
-                            is_active: dept.is_active === true || dept.isActive === true,
-                            create_time: new Date(dept.create_time || dept.createTime || Date.now()),
-                            create_user: dept.create_user || dept.createUser || 'system',
-                            update_time: dept.update_time ? new Date(dept.update_time) : (dept.updateTime ? new Date(dept.updateTime) : undefined),
-                            update_user: dept.update_user || dept.updateUser
-                        }));
-                } else {
-                    return [];
-                }
-            })
-        );
-    }
-
-    /**
-     * Get child departments for a given parent
-     */
-    getChildDepartments(parentId: number): Observable<Department[]> {
-        if (this.useMockData) {
-            return of(this.mockDepartments).pipe(
-                delay(200),
-                map(departments => departments.filter(dept =>
-                    dept.parentDeptId === parentId && dept.isActive === true
-                )),
-            );
-        }
-
-        // 實際 API 調用 - 後端回應格式：ApiResponse<DepartmentDto[]>
-        return this.http.get<any>(`${this.apiUrl}/children/${parentId}`).pipe(
-            map(response => {
-                if (response.code === 1000 && response.data) {
-                    return response.data.map((dept: any) => ({
-                        dept_id: dept.dept_id || dept.deptId,
-                        dept_code: dept.dept_code || dept.deptCode,
-                        dept_name: dept.dept_name || dept.deptName,
-                        dept_level: dept.dept_level || dept.deptLevel || 'BU',
-                        parent_dept_id: dept.parent_dept_id || dept.parentDeptId || null,
-                        manager_emp_id: dept.manager_emp_id || dept.managerEmpId || null,
-                        is_active: dept.is_active === true || dept.isActive === true,
-                        create_time: new Date(dept.create_time || dept.createTime || Date.now()),
-                        create_user: dept.create_user || dept.createUser || 'system',
-                        update_time: dept.update_time ? new Date(dept.update_time) : (dept.updateTime ? new Date(dept.updateTime) : undefined),
-                        update_user: dept.update_user || dept.updateUser
-                    }));
-                } else {
-                    return [];
-                }
-            }),
-            catchError(() => of([]))
-        );
-    }
-
-    /**
-     * Get department hierarchy tree
-     */
-    getDepartmentHierarchy(): Observable<Department[]> {
-        if (this.useMockData) {
-            return of(this.mockDepartments).pipe(
-                delay(300),
-                map(departments => {
-                    return departments.filter(dept => dept.isActive === true)
-                        .sort((a, b) => {
-                            if (a.deptLevel !== b.deptLevel) {
-                                const levelOrder = { 'BI': 1, 'BU': 2, 'DEPT': 3 };
-                                return (levelOrder[a.deptLevel as keyof typeof levelOrder] || 4) -
-                                    (levelOrder[b.deptLevel as keyof typeof levelOrder] || 4);
-                            }
-                            return a.deptName.localeCompare(b.deptName);
-                        });
-                })
-            );
-        }
-
-        // 實際 API 調用 - 後端回應格式：ApiResponse<DepartmentDto[]>
-        return this.http.get<any>(`${this.apiUrl}/hierarchy`).pipe(
-            map(response => {
-                if (response.code === 1000 && response.data) {
-                    return response.data.map((dept: any) => ({
-                        dept_id: dept.dept_id || dept.deptId,
-                        dept_code: dept.dept_code || dept.deptCode,
-                        dept_name: dept.dept_name || dept.deptName,
-                        dept_level: dept.dept_level || dept.deptLevel || 'BU',
-                        parent_dept_id: dept.parent_dept_id || dept.parentDeptId || null,
-                        manager_emp_id: dept.manager_emp_id || dept.managerEmpId || null,
-                        is_active: dept.is_active === true || dept.isActive === true,
-                        create_time: new Date(dept.create_time || dept.createTime || Date.now()),
-                        create_user: dept.create_user || dept.createUser || 'system',
-                        update_time: dept.update_time ? new Date(dept.update_time) : (dept.updateTime ? new Date(dept.updateTime) : undefined),
-                        update_user: dept.update_user || dept.updateUser
-                    }));
-                } else {
-                    return [];
-                }
-            }),
-            catchError(() => of([]))
-        );
-    }
-
-    /**
-     * Get departments as observable for reactive updates
-     */
-    getDepartmentsAsObservable(): Observable<Department[]> {
-        if (this.useMockData) {
-            return this.departmentsSubject.asObservable();
-        }
-
-        // 從 API 取得全部部門，轉成 Department[] - 後端回應格式：ApiResponse<DepartmentDto[]>
-        return this.http.get<any>(this.apiUrl).pipe(
-            map(response => {
-                if (response.code === 1000 && response.data) {
-                    return response.data.map((dept: any) => ({
-                        dept_id: dept.dept_id || dept.deptId,
-                        dept_code: dept.dept_code || dept.deptCode,
-                        dept_name: dept.dept_name || dept.deptName,
-                        dept_level: dept.dept_level || dept.deptLevel || 'BU',
-                        parent_dept_id: dept.parent_dept_id || dept.parentDeptId || null,
-                        manager_emp_id: dept.manager_emp_id || dept.managerEmpId || null,
-                        is_active: dept.is_active === true || dept.isActive === true,
-                        create_time: new Date(dept.create_time || dept.createTime || Date.now()),
-                        create_user: dept.create_user || dept.createUser || 'system',
-                        update_time: dept.update_time ? new Date(dept.update_time) : (dept.updateTime ? new Date(dept.updateTime) : undefined),
-                        update_user: dept.update_user || dept.updateUser
-                    }));
-                } else {
-                    return [];
-                }
-            })
+            catchError(this.httpErrorHandler.handleError('toggleDepartmentStatus', null as any))
         );
     }
 
@@ -990,22 +510,16 @@ export class DepartmentService {
                         dept.deptId !== excludeId
                     );
                     return !existingDept;
-                })
+                }),
+                catchError(this.httpErrorHandler.handleError('isDepartmentCodeUnique', true))
             );
         }
 
-        // 實際 API 調用 - 後端回應格式：ApiResponse<{ isUnique: boolean }>
         const params = excludeId ? `?code=${code}&excludeId=${excludeId}` : `?code=${code}`;
 
-        return this.http.get<any>(`${this.apiUrl}/check-code${params}`).pipe(
-            map(response => {
-                if (response.code === 1000) {
-                    return response.data.isUnique;
-                } else {
-                    throw new Error(response.message || '檢查部門代碼失敗');
-                }
-            }),
-            catchError(() => of(true))
+        return this.http.get<ApiResponse<{ isUnique: boolean }>>(`${this.apiUrl}/check-code${params}`).pipe(
+            map(response => this.handleApiResponse(response).isUnique),
+            catchError(this.httpErrorHandler.handleError('isDepartmentCodeUnique', true))
         );
     }
 }

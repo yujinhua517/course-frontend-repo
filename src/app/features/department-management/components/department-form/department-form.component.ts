@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectionStrategy, signal, computed, input, output, inject } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, signal, computed, input, output, inject, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { DepartmentService } from '../../services/department.service';
@@ -11,6 +11,7 @@ import {
     DEPARTMENT_LEVEL_OPTIONS,
     DEPARTMENT_HIERARCHY_RULES
 } from '../../models/department.model';
+import { DEPARTMENT_LEVEL_ORDER, DEPARTMENT_HIERARCHY_MAP } from '../../models/department.constants';
 
 @Component({
     selector: 'app-department-form',
@@ -23,14 +24,6 @@ export class DepartmentFormComponent implements OnInit {
     private readonly formBuilder = inject(FormBuilder);
     private readonly departmentService: DepartmentService = inject(DepartmentService);
     private readonly employeeService = inject(EmployeeService);
-    private readonly LEVEL_ORDER: Record<string, number> = { 
-        'BI': 0,    // 最高層
-        'BU': 1,    // 事業群
-        'TU': 2,    // 技術單位
-        'SU': 2,    // 服務單位（與TU同級）
-        'LOB-T': 3, // 技術導向事業線
-        'LOB-S': 3  // 服務導向事業線
-    };
     // Inputs
     mode = input.required<'create' | 'edit'>();
     department = input<Department | null>(null);
@@ -54,6 +47,19 @@ export class DepartmentFormComponent implements OnInit {
     // Constants
     readonly levelOptions = DEPARTMENT_LEVEL_OPTIONS;
 
+    // 欄位初始化階段使用 effect() - 符合注入上下文要求
+    private readonly formLevelEffect = effect(() => {
+        const form = this.departmentForm();
+        const level = form.get('deptLevel')?.value;
+        // 檢查是否為有效的層級值（不是空字串和 null/undefined）
+        if (level && level.trim() !== '') {
+            this.selectedDeptLevel.set(level);
+        } else {
+            // 清空選擇的層級
+            this.selectedDeptLevel.set(null);
+        }
+    });
+
     // Modal configuration
     readonly modalConfig = computed<ModalConfig>(() => ({
         title: this.isEditMode() ? '編輯部門' : '新增部門',
@@ -61,30 +67,14 @@ export class DepartmentFormComponent implements OnInit {
         size: 'lg'
     }));
 
-    // ngOnInit(): void {
-    //     this.loadParentDepartments();
-    //     // this.loadEmployees();
-    //     this.setupForm();
-    // }
-
-    // ngOnInit(): void {
-    //     Promise.all([
-    //         this.loadParentDepartments(),
-    //         this.loadEmployees()
-    //     ]).then(() => {
-    //         this.setupForm();
-    //     });
-    // }
     ngOnInit(): void {
         Promise.all([
             this.loadParentDepartments(),
             this.loadEmployees()
         ]).then(() => {
             this.setupForm();
-            // 監聽部門層級變化，更新 signal
-            this.departmentForm().get('deptLevel')?.valueChanges.subscribe((level: string) => {
-                this.selectedDeptLevel.set(level);
-            });
+        }).catch(error => {
+            console.error('❌ 初始化過程中發生錯誤:', error);
         });
     }
 
@@ -92,11 +82,13 @@ export class DepartmentFormComponent implements OnInit {
     readonly filteredParentDepartments = computed(() => {
         const selectedLevel = this.selectedDeptLevel();
         const allDepartments = this.parentDepartments();
-        if (!selectedLevel) return [];
 
-        // 根據階層關係定義允許的上層部門層級
+
+        if (!selectedLevel) {
+            return [];
+        }
+
         let allowedParentLevels: string[] = [];
-        
         switch (selectedLevel) {
             case 'BU':
                 allowedParentLevels = ['BI'];
@@ -117,30 +109,35 @@ export class DepartmentFormComponent implements OnInit {
                 return [];
         }
 
-        // 篩選符合階層規則的部門
-        return allDepartments
+        // 根據 instructions，前端 interface 使用 camelCase
+        const filtered = allDepartments
             .filter(d => allowedParentLevels.includes(d.deptLevel))
             .filter(d => d.isActive) // 只顯示啟用的部門
             .sort((a, b) => {
-                // 先按層級排序，再按名稱排序
-                const levelOrder = (this.LEVEL_ORDER[a.deptLevel] || 99) - (this.LEVEL_ORDER[b.deptLevel] || 99);
+                const aLevel = a.deptLevel as keyof typeof DEPARTMENT_LEVEL_ORDER;
+                const bLevel = b.deptLevel as keyof typeof DEPARTMENT_LEVEL_ORDER;
+                const levelOrder = (DEPARTMENT_LEVEL_ORDER[aLevel] || 99) - (DEPARTMENT_LEVEL_ORDER[bLevel] || 99);
                 return levelOrder !== 0 ? levelOrder : a.deptName.localeCompare(b.deptName);
             });
+
+        return filtered;
     });
 
     private createForm(): FormGroup {
-        return this.formBuilder.group({
+        const form = this.formBuilder.group({
             deptCode: ['', [Validators.required, Validators.maxLength(20)]],
             deptName: ['', [Validators.required, Validators.maxLength(100)]],
-            deptLevel: ['', [Validators.required]],
+            deptLevel: ['', [Validators.required]], // 確保初始值是空字串
             parentDeptId: [null],
             managerEmpId: [null],
             isActive: [true, [Validators.required]]
         });
+        return form;
     }
 
     private setupForm(): void {
         const dept = this.department();
+
         if (dept) {
             const form = this.departmentForm();
             form.patchValue({
@@ -171,23 +168,22 @@ export class DepartmentFormComponent implements OnInit {
     //         },
     //         error: (error: any) => {
     //             console.error('Failed to load parent departments:', error);
-    //         }
-    //     });
-    // }
-
     private loadParentDepartments(): Promise<void> {
         return new Promise(resolve => {
             this.departmentService.getDepartmentsAsObservable().subscribe({
                 next: (departments: Department[]) => {
+
                     const currentDeptId = this.department()?.deptId;
                     const filteredDepts = currentDeptId
                         ? departments.filter((d: Department) => d.deptId !== currentDeptId)
                         : departments;
+
                     this.parentDepartments.set(filteredDepts);
                     resolve();
                 },
                 error: (error: any) => {
-                    console.error('Failed to load parent departments:', error);
+                    console.error('❌ Failed to load parent departments:', error);
+                    this.parentDepartments.set([]); // 設置空陣列而不是不設置
                     resolve();
                 }
             });
@@ -198,7 +194,8 @@ export class DepartmentFormComponent implements OnInit {
         return new Promise(resolve => {
             this.employeeService.getEmployees().subscribe({
                 next: (res) => {
-                    this.employees.set(res.dataList ?? res);
+                    const employees = res.dataList ?? res;
+                    this.employees.set(employees);
                     resolve();
                 },
                 error: (err) => {
@@ -271,6 +268,25 @@ export class DepartmentFormComponent implements OnInit {
         this.cancelled.emit();
     }
 
+    /**
+     * 處理部門層級變更事件
+     */
+    onDeptLevelChange(event: Event): void {
+        const select = event.target as HTMLSelectElement;
+        const selectedLevel = select.value;
+
+        // 手動觸發 selectedDeptLevel 更新，確保 computed 重新計算
+        if (selectedLevel && selectedLevel.trim() !== '') {
+            this.selectedDeptLevel.set(selectedLevel);
+        } else {
+            this.selectedDeptLevel.set(null);
+        }
+
+        // 同時清空上級部門選擇，因為階層規則可能改變
+        const form = this.departmentForm();
+        form.get('parentDeptId')?.setValue(null);
+    }
+
     private reset(): void {
         this.departmentForm.set(this.createForm());
         this.loading.set(false);
@@ -305,8 +321,6 @@ export class DepartmentFormComponent implements OnInit {
             'manager_id': '部門主管',
             'status': '狀態',
             'is_active': '啟用狀態',
-            'location': '位置',
-            'budget': '預算'
         };
         return labels[fieldName] || fieldName;
     }

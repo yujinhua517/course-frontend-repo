@@ -6,13 +6,13 @@
             部門主檔管理
         </h2>
         <div class="header-actions d-flex gap-2">
-            @if (selectedDepartments().length > 0 && hasDeletePermission()) {
+            @if (selectedDepartments().length > 0 && permissions().delete) {
             <button type="button" class="btn btn-outline-danger" (click)="onBulkDelete()" aria-label="批量刪除">
                 <i class="bi bi-trash me-1"></i>
                 刪除選中項目 ({{ selectedDepartments().length }})
             </button>
             }
-            @if (hasCreatePermission()) {
+            @if (permissions().create) {
             <button type="button" class="btn btn-outline-secondary" (click)="exportData()" aria-label="匯出資料">
                 <i class="bi bi-download me-1"></i>
                 匯出

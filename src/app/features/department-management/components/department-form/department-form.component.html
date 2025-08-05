@@ -16,9 +16,9 @@
         <div class="row g-3">
             <!-- 部門代碼 -->
             <div class="col-md-6">
-                                <label for="deptCode" class="form-label required">
+                <label for="deptCode" class="form-label required">
                     部門代碼
-                    <span class="text-danger">*</span>
+                    <span class="text-danger"></span>
                 </label>
                 <input type="text" id="deptCode" class="form-control" [class.is-invalid]="isFieldInvalid('deptCode')"
                     formControlName="deptCode" placeholder="請輸入部門代碼（如：IT, HR）" [readonly]="isEditMode()" maxlength="20"
@@ -34,9 +34,9 @@
 
             <!-- 部門名稱 -->
             <div class="col-md-6">
-                                <label for="deptName" class="form-label required">
+                <label for="deptName" class="form-label required">
                     部門名稱
-                    <span class="text-danger">*</span>
+                    <span class="text-danger"></span>
                 </label>
                 <input type="text" id="deptName" class="form-control" [class.is-invalid]="isFieldInvalid('deptName')"
                     formControlName="deptName" placeholder="請輸入部門名稱" maxlength="100"
@@ -48,12 +48,13 @@
 
             <!-- 部門層級 -->
             <div class="col-md-6">
-                                <label for="deptLevel" class="form-label required">
+                <label for="deptLevel" class="form-label required">
                     部門層級
-                    <span class="text-danger">*</span>
+                    <span class="text-danger"></span>
                 </label>
                 <select id="deptLevel" class="form-select" [class.is-invalid]="isFieldInvalid('deptLevel')"
-                    formControlName="deptLevel" aria-describedby="deptLevel_help deptLevel_error">
+                    formControlName="deptLevel" aria-describedby="deptLevel_help deptLevel_error"
+                    (change)="onDeptLevelChange($event)">
                     <option value="">請選擇部門層級</option>
                     @for (option of levelOptions; track option.value) {
                     <option [value]="option.value" [title]="option.description">
@@ -95,12 +96,12 @@
                     @if (selectedDeptLevel()) {
                     <small class="text-info">
                         @switch (selectedDeptLevel()) {
-                            @case ('BU') { <i class="bi bi-info-circle me-1"></i>BU 的上層部門只能是 BI }
-                            @case ('TU') { <i class="bi bi-info-circle me-1"></i>TU 的上層部門只能是 BU }
-                            @case ('SU') { <i class="bi bi-info-circle me-1"></i>SU 的上層部門只能是 BU }
-                            @case ('LOB-T') { <i class="bi bi-info-circle me-1"></i>LOB-T 的上層部門只能是 TU }
-                            @case ('LOB-S') { <i class="bi bi-info-circle me-1"></i>LOB-S 的上層部門只能是 SU }
-                            @case ('BI') { <i class="bi bi-info-circle me-1"></i>BI 是最高層級，無上級部門 }
+                        @case ('BU') { <i class="bi bi-info-circle me-1"></i>BU 的上層部門只能是 BI }
+                        @case ('TU') { <i class="bi bi-info-circle me-1"></i>TU 的上層部門只能是 BU }
+                        @case ('SU') { <i class="bi bi-info-circle me-1"></i>SU 的上層部門只能是 BU }
+                        @case ('LOB-T') { <i class="bi bi-info-circle me-1"></i>LOB-T 的上層部門只能是 TU }
+                        @case ('LOB-S') { <i class="bi bi-info-circle me-1"></i>LOB-S 的上層部門只能是 SU }
+                        @case ('BI') { <i class="bi bi-info-circle me-1"></i>BI 是最高層級，無上級部門 }
                         }
                     </small>
                     }
