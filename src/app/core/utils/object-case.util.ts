@@ -20,13 +20,19 @@ export function camelToSnake(str: string): string {
 /**
  * 將物件的所有 key 從 snake_case 轉換為 camelCase
  */
-export function keysToCamelCase<T = any>(obj: any): T {
+export function keysToCamelCase<T = any>(obj: any, depth = 0): T {
+  // 防止過深遞歸
+  if (depth > 10) {
+    console.warn('keysToCamelCase: 遞歸層級過深，停止轉換');
+    return obj;
+  }
+
   if (obj === null || obj === undefined) {
     return obj;
   }
 
   if (Array.isArray(obj)) {
-    return obj.map(item => keysToCamelCase(item)) as T;
+    return obj.map(item => keysToCamelCase(item, depth + 1)) as T;
   }
 
   if (typeof obj === 'object' && obj.constructor === Object) {
@@ -34,7 +40,7 @@ export function keysToCamelCase<T = any>(obj: any): T {
     for (const key in obj) {
       if (obj.hasOwnProperty(key)) {
         const camelKey = snakeToCamel(key);
-        camelObj[camelKey] = keysToCamelCase(obj[key]);
+        camelObj[camelKey] = keysToCamelCase(obj[key], depth + 1);
       }
     }
     return camelObj as T;
@@ -46,13 +52,19 @@ export function keysToCamelCase<T = any>(obj: any): T {
 /**
  * 將物件的所有 key 從 camelCase 轉換為 snake_case
  */
-export function keysToSnakeCase<T = any>(obj: any): T {
+export function keysToSnakeCase<T = any>(obj: any, depth = 0): T {
+  // 防止過深遞歸
+  if (depth > 10) {
+    console.warn('keysToSnakeCase: 遞歸層級過深，停止轉換');
+    return obj;
+  }
+
   if (obj === null || obj === undefined) {
     return obj;
   }
 
   if (Array.isArray(obj)) {
-    return obj.map(item => keysToSnakeCase(item)) as T;
+    return obj.map(item => keysToSnakeCase(item, depth + 1)) as T;
   }
 
   if (typeof obj === 'object' && obj.constructor === Object) {
@@ -60,7 +72,7 @@ export function keysToSnakeCase<T = any>(obj: any): T {
     for (const key in obj) {
       if (obj.hasOwnProperty(key)) {
         const snakeKey = camelToSnake(key);
-        snakeObj[snakeKey] = keysToSnakeCase(obj[key]);
+        snakeObj[snakeKey] = keysToSnakeCase(obj[key], depth + 1);
       }
     }
     return snakeObj as T;

@@ -31,7 +31,7 @@
                             <input id="password" [type]="showPassword() ? 'text' : 'password'" class="form-control"
                                 formControlName="password" aria-label="密碼" aria-describedby="pwd-addon pwd-toggle"
                                 [class.is-invalid]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
-                                autocomplete="current-password" placeholder="請輸入密碼:1234">
+                                autocomplete="current-password" placeholder="請輸入密碼:password123">
                             <button type="button" class="btn btn-outline-secondary" id="pwd-toggle"
                                 (click)="togglePassword()" [attr.aria-label]="showPassword() ? '隱藏密碼' : '顯示密碼'">
                                 <i class="bi" [ngClass]="showPassword() ? 'bi-eye-slash' : 'bi-eye'"></i>

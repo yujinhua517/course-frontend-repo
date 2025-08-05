@@ -148,6 +148,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { User, RoleName, PermissionName } from '../../../models/user.model';
+import { environment } from '../../../../environments/environment';
 
 export interface LoginRequest {
   username: string;
@@ -160,25 +161,25 @@ export interface LoginResponse {
   refreshToken?: string;
 }
 
-// 後端 API 回應格式
+// 後端 API 回應格式（攔截器轉換後的 camelCase 格式）
 interface BackendAuthResponse {
   code: number;
   message: string;
   data: {
-    access_token: string;
-    token_type: string;
-    expires_in: number;
-    user_id: number;
+    accessToken: string;
+    tokenType: string;
+    expiresIn: number;
+    userId: number;
     username: string;
     role: string;
-    last_login_time: string; // ISO 8601 date string
+    lastLoginTime: string;
   };
 }
 
 @Injectable({ providedIn: 'root' })
 export class LoginService {
   private readonly http = inject(HttpClient);
-  private readonly useMockData = false; // 設定為 false 時使用真實 API
+  private readonly useMockData = environment.useMockData; // 從環境設定讀取
 
   login(username: string, password: string): Observable<LoginResponse> {
     if (this.useMockData) {
@@ -205,6 +206,11 @@ export class LoginService {
         // 將後端回應轉換為前端格式
         const { data } = response;
 
+        // 檢查必要欄位是否存在
+        if (!data || !data.userId || !data.username) {
+          throw new Error('Invalid response format: missing required user data');
+        }
+
         // 根據角色設定權限（這裡需要根據實際業務邏輯調整）
         const permissions = this.mapRoleToPermissions(data.role);
         const roles = [{
@@ -215,7 +221,7 @@ export class LoginService {
         }];
 
         const user: User = {
-          id: data.user_id.toString(),
+          id: data.userId.toString(),
           username: data.username,
           email: `${data.username}@example.com`, // 如果後端沒有提供 email，使用預設格式
           firstName: 'User', // 如果後端沒有提供姓名，使用預設值
@@ -223,13 +229,13 @@ export class LoginService {
           roles,
           permissions,
           isActive: true,
-          lastLoginAt: new Date(data.last_login_time),
+          lastLoginAt: data.lastLoginTime ? new Date(data.lastLoginTime) : new Date(),
           createdAt: new Date() // 建立時間使用當前時間，如果後端有提供可以替換
         };
 
         return {
           user,
-          token: data.access_token,
+          token: data.accessToken,
           refreshToken: undefined // 如果後端有提供 refresh token 可以加入
         };
       })
@@ -371,9 +377,9 @@ export class LoginService {
       return Object.values(PermissionName).map((name, idx) => {
         // 標準處理：將權限名稱分割為 resource 和 action
         const parts = name.split('_');
-        const resource = parts[0].toLowerCase();
+        const resource = parts[0]?.toLowerCase() || 'unknown';
         const action = parts[1]?.toLowerCase() || 'all';
-        
+
         return {
           id: (idx + 1).toString(),
           name,
@@ -428,7 +434,7 @@ export class LoginService {
           description: 'job role read'
         },
       ];
-    }else if (role === 'MANAGER') {
+    } else if (role === 'MANAGER') {
       // 一般員工只有讀取權限
       return [
         {

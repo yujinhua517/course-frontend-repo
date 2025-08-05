@@ -33,7 +33,7 @@ export class MainPageComponent {
 
     constructor() {
         // 檢查儲存的認證狀態
-        this.authService.checkStoredAuth();
+        // this.authService.checkStoredAuth();
 
         this.router.events.subscribe((event: Event) => {
             if (event instanceof NavigationStart) {

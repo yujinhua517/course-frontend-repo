@@ -32,6 +32,12 @@ export class AuthService {
         if (token && userStr) {
             try {
                 const user = JSON.parse(userStr);
+
+                // 檢查用戶對象是否有效
+                if (!user || !user.id || !user.username) {
+                    throw new Error('Invalid user data structure');
+                }
+
                 // roles/permissions 欄位強制為陣列
                 user.roles = Array.isArray(user.roles) ? user.roles : [];
                 user.permissions = Array.isArray(user.permissions) ? user.permissions : [];
@@ -72,6 +78,11 @@ export class AuthService {
                     }
                     // 儲存完整 user 物件，roles/permissions 欄位強制為陣列
                     if (response.user) {
+                        // 確保用戶對象有效且有必要的欄位
+                        if (!response.user.id || !response.user.username) {
+                            throw new Error('Invalid user data: missing required fields');
+                        }
+
                         const user = {
                             ...response.user,
                             roles: Array.isArray(response.user.roles) ? response.user.roles : [],
@@ -120,16 +131,16 @@ export class AuthService {
     }
 
     // 檢查 token 是否存在（用於應用啟動時檢查）
-    checkStoredAuth(): void {
-        const token = sessionStorage.getItem('auth-token');
-        const username = sessionStorage.getItem('current-username');
+    // checkStoredAuth(): void {
+    //     const token = sessionStorage.getItem('auth-token');
+    //     const username = sessionStorage.getItem('current-username');
 
-        if (token && username) {
-            // 由於我們沒有 /api/auth/me endpoint，暫時跳過自動登入
-            // 用戶需要重新登入以取得完整資料
-            console.log('找到存儲的認證令牌，但需要重新登入以取得用戶資料');
-        }
-    }
+    //     if (token && username) {
+    //         // 由於我們沒有 /api/auth/me endpoint，暫時跳過自動登入
+    //         // 用戶需要重新登入以取得完整資料
+    //         console.log('找到存儲的認證令牌，但需要重新登入以取得用戶資料');
+    //     }
+    // }
 
     // 獲取當前 token
     getToken(): string | null {
@@ -151,6 +162,12 @@ export class AuthService {
         if (token && userStr) {
             try {
                 const user = JSON.parse(userStr);
+
+                // 檢查用戶對象是否有效
+                if (!user || !user.id || !user.username) {
+                    throw new Error('Invalid user data structure');
+                }
+
                 // 確保 roles/permissions 是陣列
                 user.roles = Array.isArray(user.roles) ? user.roles : [];
                 user.permissions = Array.isArray(user.permissions) ? user.permissions : [];
@@ -158,6 +175,7 @@ export class AuthService {
                 return true;
             } catch (error) {
                 // 解析失敗，清除無效資料
+                console.error('用戶狀態驗證失敗:', error);
                 this.logout(false);
                 return false;
             }
