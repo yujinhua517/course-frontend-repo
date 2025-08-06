@@ -1,9 +1,9 @@
-import { 
-  BaseSearchParams, 
-  QueryOptions, 
-  ApiResponse, 
-  PagerDto, 
-  ServiceListResponse 
+import {
+    BaseSearchParams,
+    QueryOptions,
+    ApiResponse,
+    PagerDto,
+    ServiceListResponse
 } from '../../../core/models/common.model';
 
 // 核心員工介面
@@ -72,12 +72,12 @@ export interface EmployeeSearchParams extends BaseSearchParams {
 /**
  * 員工列表回應介面
  */
-export interface EmployeeListResponse extends ServiceListResponse<Employee> {}
+export interface EmployeeListResponse extends ServiceListResponse<Employee> { }
 
 /**
  * 員工查詢選項介面
  */
-export interface EmployeeQueryOptions extends QueryOptions<Employee, EmployeeFilters> {}
+export interface EmployeeQueryOptions extends QueryOptions<Employee, EmployeeFilters> { }
 
 /**
  * 員工篩選條件介面
@@ -92,8 +92,8 @@ export interface EmployeeFilters {
 }
 
 // 重新匯出統一介面供其他模組使用
-export type { 
-    ApiResponse, 
-    PagerDto, 
-    ServiceListResponse 
+export type {
+    ApiResponse,
+    PagerDto,
+    ServiceListResponse
 } from '../../../core/models/common.model';

@@ -21,22 +21,29 @@ export class EmployeeService extends BaseQueryService<Employee, EmployeeSearchPa
     protected override readonly http = inject(HttpClient);
     protected override readonly httpErrorHandler = inject(HttpErrorHandlerService);
     protected override readonly apiUrl = `${environment.apiBaseUrl}/employees`;
-    protected override readonly defaultSortColumn = 'empCode';
+    protected override readonly defaultSortColumn = 'empId';
     protected override readonly mockData: Employee[] = MOCK_EMPLOYEES;
     protected override readonly useMockData = false;
 
-    protected override mapSortColumn(column: string): string {
-        // Employee 表格的排序欄位映射
-        const columnMap: Record<string, string> = {
-            'empCode': 'emp_code',
-            'empName': 'emp_name',
-            'empEmail': 'emp_email',
-            'deptId': 'dept_id',
-            'isActive': 'is_active',
-            'createTime': 'create_time',
-            'updateTime': 'update_time'
+    protected override mapSortColumn(frontendColumn: string): string {
+        // 如果已經是 snake_case，直接返回
+        if (frontendColumn.includes('_')) {
+            return frontendColumn;
+        }
+
+        // 定義欄位映射
+        const sortFieldMap: { [key: string]: string } = {
+            empId: 'emp_id',
+            empCode: 'emp_code',
+            chineseName: 'chinese_name',
+            englishName: 'english_name',
+            email: 'email',
+            hireDate: 'hire_date',
+            deptId: 'dept_id'
         };
-        return columnMap[column] || column;
+
+        // 如果找到映射則使用，否則使用預設排序欄位
+        return sortFieldMap[frontendColumn] || this.defaultSortColumn;
     }
 
     protected override applyMockFilters(data: Employee[], params?: EmployeeSearchParams): Employee[] {

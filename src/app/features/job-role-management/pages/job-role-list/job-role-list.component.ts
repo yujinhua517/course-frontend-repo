@@ -115,7 +115,7 @@ export class JobRoleListComponent implements OnInit {
     showView = signal(false);
     selectedJobRole = signal<JobRole | null>(null);
     formMode = signal<'create' | 'edit'>('create');
-    sortBy = signal<keyof JobRole>('jobRoleId');
+    sortColumn = signal<keyof JobRole>('jobRoleId');
     sortDirection = signal<'asc' | 'desc'>('asc');
 
     // Bulk selection signals
@@ -227,7 +227,7 @@ export class JobRoleListComponent implements OnInit {
         showSelectColumn: this.hasDeletePermission(),
         isAllSelected: this.isAllSelected(),
         isPartiallySelected: this.isPartiallySelected(),
-        sortBy: this.sortBy(),
+        sortColumn: this.sortColumn(),
         sortDirection: this.sortDirection(),
         columns: [
             {
@@ -362,7 +362,7 @@ export class JobRoleListComponent implements OnInit {
         this.jobRoleStore.loadJobRoles({
             keyword: this.searchKeyword() || undefined,
             isActive: this.statusFilter(),
-            sortColumn: this.sortBy(),
+            sortColumn: this.sortColumn(),
             sortDirection: this.sortDirection()
         });
     }
@@ -394,7 +394,7 @@ export class JobRoleListComponent implements OnInit {
 
     // 排序處理
     onSort(column: keyof JobRole): void {
-        const currentSort = this.sortBy();
+        const currentSort = this.sortColumn();
         const currentDirection = this.sortDirection();
 
         let newDirection: 'asc' | 'desc' = 'asc';
@@ -402,14 +402,14 @@ export class JobRoleListComponent implements OnInit {
             newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
         }
 
-        this.sortBy.set(column);
+        this.sortColumn.set(column);
         this.sortDirection.set(newDirection);
         this.jobRoleStore.sortJobRoles(column, newDirection);
         this.clearSelection();
     }
 
     getSortIcon(column: keyof JobRole): string {
-        if (this.sortBy() !== column) return 'bi-chevron-expand';
+        if (this.sortColumn() !== column) return 'bi-chevron-expand';
         return this.sortDirection() === 'asc' ? 'bi-chevron-up' : 'bi-chevron-down';
     }
 
@@ -422,14 +422,19 @@ export class JobRoleListComponent implements OnInit {
     onTableSort(event: { column: string; direction: 'asc' | 'desc' | null }): void {
         if (event.direction === null) {
             // 重設排序到預設值
-            this.sortBy.set('jobRoleId');
+            this.sortColumn.set('jobRoleId');
             this.sortDirection.set('asc');
-            // 直接調用 loadJobRoles 以確保使用最新的 sortBy 和 sortDirection
-            this.loadJobRoles();
+            // 直接傳遞重置後的值，而不是依賴本地 signals
+            this.jobRoleStore.loadJobRoles({
+                keyword: this.searchKeyword() || undefined,
+                isActive: this.statusFilter(),
+                sortColumn: 'jobRoleId',
+                sortDirection: 'asc'
+            });
         } else {
-            this.sortBy.set(event.column as keyof JobRole);
+            this.sortColumn.set(event.column as keyof JobRole);
             this.sortDirection.set(event.direction);
-            this.jobRoleStore.sortJobRoles(this.sortBy(), this.sortDirection());
+            this.jobRoleStore.sortJobRoles(this.sortColumn(), this.sortDirection());
         }
     }
 

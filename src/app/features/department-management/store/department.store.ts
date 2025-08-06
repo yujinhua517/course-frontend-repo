@@ -85,7 +85,7 @@ export class DepartmentStore {
             } : undefined
         }).subscribe({
             next: (response) => {
-                console.log('Department Service response:', response);
+                //console.log('Department Service response:', response);
 
                 // response.data 是 PagerDto<Department> 類型
                 const pagerData = response.data;
@@ -95,10 +95,10 @@ export class DepartmentStore {
                 this._currentPage.set(searchParams.page || 1);
                 this._pageSize.set(searchParams.pageSize || 10);
                 this._loading.set(false);
-                console.log('載入部門資料:', {
-                    count: departments.length,
-                    total: pagerData?.totalRecords || 0
-                });
+                //console.log('載入部門資料:', {
+                //    count: departments.length,
+                //    total: pagerData?.totalRecords || 0
+                //});
             },
             error: (error) => {
                 this._error.set('載入部門資料失敗');

@@ -11,7 +11,7 @@ export interface JobRoleState {
     currentPage: number;
     pageSize: number;
     searchParams: JobRoleSearchParams;
-    sortBy: string;
+    sortColumn: string;
     sortDirection: 'asc' | 'desc';
 }
 
@@ -23,7 +23,7 @@ const initialState: JobRoleState = {
     currentPage: 1,
     pageSize: 10,
     searchParams: {},
-    sortBy: '',
+    sortColumn: 'jobRoleId',
     sortDirection: 'asc'
 };
 
@@ -44,7 +44,7 @@ export class JobRoleStore {
     currentPage = computed(() => this.state().currentPage);
     pageSize = computed(() => this.state().pageSize);
     searchParams = computed(() => this.state().searchParams);
-    sortBy = computed(() => this.state().sortBy);
+    sortColumn = computed(() => this.state().sortColumn);
     sortDirection = computed(() => this.state().sortDirection);
 
     // 計算派生狀態
@@ -58,23 +58,38 @@ export class JobRoleStore {
     loadJobRoles(params?: JobRoleSearchParams): void {
         const searchParams = params || this.state().searchParams;
 
-        this.state.update(state => ({
-            ...state,
-            loading: true,
-            error: null,
-            searchParams
-        }));
+        // 如果傳入的參數包含排序資訊，需要先更新 state
+        if (params && (params.sortColumn !== undefined || params.sortDirection !== undefined)) {
+            this.state.update(state => ({
+                ...state,
+                loading: true,
+                error: null,
+                searchParams,
+                sortColumn: params.sortColumn || state.sortColumn,
+                sortDirection: (params.sortDirection as 'asc' | 'desc') || state.sortDirection
+            }));
+        } else {
+            this.state.update(state => ({
+                ...state,
+                loading: true,
+                error: null,
+                searchParams
+            }));
+        }
 
         const queryParams = {
             ...searchParams,
             page: this.state().currentPage,
-            size: this.state().pageSize,
-            sortBy: this.state().sortBy,
+            pageSize: this.state().pageSize,
+            sortColumn: this.state().sortColumn,
             sortDirection: this.state().sortDirection
         };
 
+        console.log('Job-Role Store loadJobRoles called with params:', queryParams);
+
         this.jobRoleService.getPagedData(queryParams).subscribe({
             next: (response) => {
+                console.log('Job-Role Service response:', response);
                 this.state.update(state => ({
                     ...state,
                     jobRoles: response.data.dataList,
@@ -151,7 +166,7 @@ export class JobRoleStore {
     sortJobRoles(column: string, direction: 'asc' | 'desc'): void {
         this.state.update(state => ({
             ...state,
-            sortBy: column,
+            sortColumn: column,
             sortDirection: direction,
             currentPage: 1
         }));

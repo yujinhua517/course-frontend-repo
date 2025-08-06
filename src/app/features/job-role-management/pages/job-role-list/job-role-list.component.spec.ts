@@ -9,7 +9,7 @@ describe('JobRoleListComponent', () => {
     await TestBed.configureTestingModule({
       imports: [JobRoleListComponent]
     })
-    .compileComponents();
+      .compileComponents();
 
     fixture = TestBed.createComponent(JobRoleListComponent);
     component = fixture.componentInstance;

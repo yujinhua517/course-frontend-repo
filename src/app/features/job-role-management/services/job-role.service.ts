@@ -20,7 +20,7 @@ export class JobRoleService extends BaseQueryService<JobRole, JobRoleSearchParam
     protected override readonly http = inject(HttpClient);
     protected override readonly httpErrorHandler = inject(HttpErrorHandlerService);
     protected override readonly apiUrl = `${environment.apiBaseUrl}/job-roles`;
-    protected override readonly defaultSortColumn = 'jobRoleCode';
+    protected override readonly defaultSortColumn = 'jobRoleId';
     protected override readonly useMockData = false;
 
     // Mock 資料 (使用 camelCase)
@@ -138,6 +138,10 @@ export class JobRoleService extends BaseQueryService<JobRole, JobRoleSearchParam
     ];
 
     protected override mapSortColumn(column: string): string {
+        if (!column) {
+            return 'job_role_id'; // 直接返回預設的後端欄位名
+        }
+
         // JobRole 表格的排序欄位映射
         const columnMap: Record<string, string> = {
             'jobRoleId': 'job_role_id',
@@ -148,7 +152,85 @@ export class JobRoleService extends BaseQueryService<JobRole, JobRoleSearchParam
             'createTime': 'create_time',
             'updateTime': 'update_time'
         };
-        return columnMap[column] || column;
+
+        // 如果輸入已經是 snake_case (後端格式)，直接返回
+        if (column.includes('_')) {
+            return column;
+        }
+
+        // 如果找到前端欄位的映射，返回對應的後端欄位
+        if (columnMap[column]) {
+            return columnMap[column];
+        }
+
+        // 找不到映射，返回預設值
+        return 'job_role_id';
+    }
+
+    /**
+     * 自訂 API 參數建構 - 將 keyword 轉換為具體欄位搜尋
+     */
+    protected override buildCustomApiParams(params?: JobRoleSearchParams): Record<string, any> {
+        const customParams: Record<string, any> = {};
+
+        // 如果有 keyword，將其轉換為多欄位搜尋，但不傳遞 keyword 本身
+        if (params?.keyword) {
+            const keyword = params.keyword.trim();
+            if (keyword) {
+                // 根據關鍵字的特性決定搜尋策略
+                if (/^[A-Z]{2,}\d+$/i.test(keyword)) {
+                    // 如果看起來像職務代碼 (如 DEV001, SA001)，優先搜尋 jobRoleCode
+                    customParams['jobRoleCode'] = keyword;
+                } else if (/^\d+$/.test(keyword)) {
+                    // 如果是純數字，搜尋 jobRoleId
+                    customParams['jobRoleId'] = parseInt(keyword, 10);
+                } else {
+                    // 否則搜尋職務名稱
+                    customParams['jobRoleName'] = keyword;
+                }
+            }
+        }
+
+        // 處理其他具體的搜尋欄位
+        if (params?.jobRoleId !== undefined) {
+            customParams['jobRoleId'] = params.jobRoleId;
+        }
+
+        if (params?.jobRoleCode) {
+            customParams['jobRoleCode'] = params.jobRoleCode;
+        }
+
+        if (params?.jobRoleName) {
+            customParams['jobRoleName'] = params.jobRoleName;
+        }
+
+        if (params?.description) {
+            customParams['description'] = params.description;
+        }
+
+        return customParams;
+    }
+
+    /**
+     * 覆寫基礎 API 參數建構，排除 keyword 參數
+     */
+    protected override buildApiParams(params?: JobRoleSearchParams): Record<string, any> {
+        const page = params?.page || 1;
+        const pageSize = params?.pageSize || 10;
+        const mappedSortColumn = this.mapSortColumn(params?.sortColumn || '');
+
+        const apiParams = {
+            firstIndexInPage: page === 1 ? 1 : (page - 1) * pageSize + 1,
+            lastIndexInPage: page * pageSize,
+            pageable: true,
+            pageSize,
+            sortColumn: mappedSortColumn || this.defaultSortColumn,
+            sortDirection: params?.sortDirection || 'asc',
+            ...(params?.isActive !== undefined && { isActive: params.isActive }),
+            ...this.buildCustomApiParams(params)
+        };
+
+        return apiParams;
     }
 
     protected override applyMockFilters(data: JobRole[], params?: JobRoleSearchParams): JobRole[] {

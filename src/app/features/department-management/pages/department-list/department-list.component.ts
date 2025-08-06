@@ -357,7 +357,7 @@ export class DepartmentListComponent implements OnInit {
     constructor() {
         // 監聽 loading 狀態變化（如employee實作）
         effect(() => {
-            console.log('Department List Component: Loading state changed to:', this.loading());
+            //console.log('Department List Component: Loading state changed to:', this.loading());
         });
     }
 
@@ -544,7 +544,7 @@ export class DepartmentListComponent implements OnInit {
                 this.sortDirection.set('desc');
             } else {
                 // 重設為預設排序（部門代碼升冪）
-                this.sortColumn.set('deptCode');
+                this.sortColumn.set('deptId');
                 this.sortDirection.set('asc');
             }
         } else {

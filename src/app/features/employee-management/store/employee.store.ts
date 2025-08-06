@@ -92,10 +92,10 @@ export class EmployeeStore {
         });
     }
 
-    sortEmployees(sortBy: keyof Employee, sortDirection: 'asc' | 'desc'): void {
+    sortEmployees(sortColumn: keyof Employee, sortDirection: 'asc' | 'desc'): void {
         this.loadEmployees({
             ...this._searchParams(),
-            sortColumn: sortBy as string,
+            sortColumn: sortColumn as string,
             sortDirection: sortDirection.toUpperCase()
         });
     }

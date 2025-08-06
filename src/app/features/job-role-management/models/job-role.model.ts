@@ -1,7 +1,7 @@
-import { 
-  BaseSearchParams, 
-  QueryOptions, 
-  ServiceListResponse 
+import {
+    BaseSearchParams,
+    QueryOptions,
+    ServiceListResponse
 } from '../../../core/models/common.model';
 
 export interface JobRole {
@@ -47,12 +47,12 @@ export interface JobRoleSearchParams extends BaseSearchParams {
 /**
  * 職務角色列表回應介面
  */
-export interface JobRoleListResponse extends ServiceListResponse<JobRole> {}
+export interface JobRoleListResponse extends ServiceListResponse<JobRole> { }
 
 /**
  * 職務角色查詢選項介面
  */
-export interface JobRoleQueryOptions extends QueryOptions<JobRole, JobRoleFilters> {}
+export interface JobRoleQueryOptions extends QueryOptions<JobRole, JobRoleFilters> { }
 
 /**
  * 職務角色篩選條件介面
@@ -62,8 +62,8 @@ export interface JobRoleFilters {
 }
 
 // 重新匯出統一介面供其他模組使用
-export type { 
-    ApiResponse, 
-    PagerDto, 
-    ServiceListResponse 
+export type {
+    ApiResponse,
+    PagerDto,
+    ServiceListResponse
 } from '../../../core/models/common.model';

@@ -1,11 +1,11 @@
 import { SortDirection } from './department.constants';
-import { 
-  BaseSearchParams, 
-  QueryOptions, 
-  ApiResponse, 
-  PagerDto, 
-  ServiceListResponse,
-  SortConfig 
+import {
+    BaseSearchParams,
+    QueryOptions,
+    ApiResponse,
+    PagerDto,
+    ServiceListResponse,
+    SortConfig
 } from '../../../core/models/common.model';
 
 export interface Department {
@@ -42,7 +42,7 @@ export interface UpdateDepartmentRequest extends Partial<CreateDepartmentRequest
     deptId: number;
 }
 
-export interface DepartmentListResponse extends ServiceListResponse<Department> {}
+export interface DepartmentListResponse extends ServiceListResponse<Department> { }
 
 /**
  * 部門查詢參數 - 繼承統一的基礎查詢參數
@@ -59,7 +59,7 @@ export interface DepartmentSearchParams extends BaseSearchParams {
 /**
  * 統一的部門查詢選項介面 - 使用通用 QueryOptions
  */
-export interface DepartmentQueryOptions extends QueryOptions<Department, DepartmentFilters> {}
+export interface DepartmentQueryOptions extends QueryOptions<Department, DepartmentFilters> { }
 
 /**
  * 部門篩選條件介面

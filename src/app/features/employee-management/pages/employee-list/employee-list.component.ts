@@ -83,7 +83,7 @@ export class EmployeeListComponent implements OnInit {
     showView = signal(false);
     selectedEmployee = signal<Employee | null>(null);
     formMode = signal<'create' | 'edit'>('create');
-    sortBy = signal<keyof Employee>('empId');
+    sortColumn = signal<keyof Employee>('empId');
     sortDirection = signal<'asc' | 'desc'>('asc');
 
     // Bulk selection signals
@@ -139,7 +139,7 @@ export class EmployeeListComponent implements OnInit {
         showSelectColumn: this.permissions().delete,
         isAllSelected: this.isAllSelected(),
         isPartiallySelected: this.isPartiallySelected(),
-        sortBy: this.sortBy(),
+        sortColumn: this.sortColumn(),
         sortDirection: this.sortDirection(),
         columns: [
             {
@@ -369,7 +369,7 @@ export class EmployeeListComponent implements OnInit {
     constructor() {
         // 監聽 loading 狀態變化
         effect(() => {
-            console.log('Employee List Component: Loading state changed to:', this.loading());
+            //console.log('Employee List Component: Loading state changed to:', this.loading());
         });
     }
 
@@ -386,16 +386,16 @@ export class EmployeeListComponent implements OnInit {
     });
 
     ngOnInit(): void {
-        console.log('Employee List Component: ngOnInit called');
+        //console.log('Employee List Component: ngOnInit called');
         this.loadEmployees();
     }
 
     loadEmployees(): void {
-        console.log('Employee List Component: loadEmployees called');
+        //console.log('Employee List Component: loadEmployees called');
         this.employeeStore.loadEmployees({
             keyword: this.searchKeyword() || undefined,
             isActive: this.statusFilter() ?? undefined,
-            sortColumn: this.sortBy(),
+            sortColumn: this.sortColumn(),
             sortDirection: this.sortDirection().toUpperCase()
         });
     }
@@ -451,14 +451,14 @@ export class EmployeeListComponent implements OnInit {
     onTableSort(event: { column: string; direction: 'asc' | 'desc' | null }): void {
         if (event.direction === null) {
             // 重設排序到預設值
-            this.sortBy.set('empId');
+            this.sortColumn.set('empId');
             this.sortDirection.set('asc');
-            // 直接調用 loadEmployees 以確保使用最新的 sortBy 和 sortDirection
+            // 直接調用 loadEmployees 以確保使用最新的 sortColumn 和 sortDirection
             this.loadEmployees();
         } else {
-            this.sortBy.set(event.column as keyof Employee);
+            this.sortColumn.set(event.column as keyof Employee);
             this.sortDirection.set(event.direction);
-            this.employeeStore.sortEmployees(this.sortBy(), this.sortDirection());
+            this.employeeStore.sortEmployees(this.sortColumn(), this.sortDirection());
         }
     }
 
@@ -532,9 +532,9 @@ export class EmployeeListComponent implements OnInit {
 
     private performBulkDelete(): void {
         const selected = this.selectedEmployees();
-        
+
         // 逐一刪除選中的員工（因為後端沒有批量刪除API）
-        const deletePromises = selected.map(emp => 
+        const deletePromises = selected.map(emp =>
             firstValueFrom(this.employeeService.deleteEmployee(emp.empId))
         );
 

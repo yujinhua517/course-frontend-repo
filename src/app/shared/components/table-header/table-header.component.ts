@@ -25,7 +25,7 @@ export interface TableHeaderConfig {
     // showSelectColumn?: boolean; // 新的屬性名
     isAllSelected?: boolean;
     isPartiallySelected?: boolean;
-    sortBy?: string;
+    sortColumn?: string;
     sortDirection?: 'asc' | 'desc';
     columns: TableColumn[];
 }
@@ -55,7 +55,7 @@ export class TableHeaderComponent {
         let newDirection: 'asc' | 'desc' | null = 'asc';
         let newColumn = column.key;
 
-        if (currentSort.sortBy === column.key) {
+        if (currentSort.sortColumn === column.key) {
             // 同一欄位：asc -> desc -> null（無排序）
             if (currentSort.sortDirection === 'asc') {
                 newDirection = 'desc';
@@ -89,7 +89,7 @@ export class TableHeaderComponent {
         if (!column.sortable) return '';
 
         const config = this.config();
-        if (config.sortBy !== column.key) return 'bi-chevron-expand';
+        if (config.sortColumn !== column.key) return 'bi-chevron-expand';
 
         if (config.sortDirection === 'asc') return 'bi-chevron-up';
         if (config.sortDirection === 'desc') return 'bi-chevron-down';

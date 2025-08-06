@@ -118,12 +118,14 @@ export abstract class BaseQueryService<T, TSearchParams extends BaseSearchParams
         const page = params?.page || 1;
         const pageSize = params?.pageSize || PAGINATION_DEFAULTS.PAGE_SIZE;
 
+        const mappedSortColumn = this.mapSortColumn(params?.sortColumn);
+
         const apiParams = {
             firstIndexInPage: PaginationUtil.calculateFirstIndex(page, pageSize),
             lastIndexInPage: PaginationUtil.calculateLastIndex(page, pageSize),
             pageable: true,
             pageSize,
-            sortColumn: this.mapSortColumn(params?.sortColumn) || this.defaultSortColumn,
+            sortColumn: mappedSortColumn || this.defaultSortColumn,
             sortDirection: params?.sortDirection || 'asc',
             ...(params?.keyword && { keyword: params.keyword }),
             ...(params?.isActive !== undefined && { isActive: params.isActive }),

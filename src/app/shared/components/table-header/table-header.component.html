@@ -13,7 +13,7 @@
     <!-- 資料欄位 -->
     @for (column of config().columns; track column.key) {
     <th scope="col" [class]="getAlignClass(column)" [class.sortable-header]="column.sortable"
-        [class]="column.cssClass || ''" [style]="getColumnStyle(column)" [attr.aria-sort]="column.sortable && config().sortBy === column.key ? 
+        [class]="column.cssClass || ''" [style]="getColumnStyle(column)" [attr.aria-sort]="column.sortable && config().sortColumn === column.key ? 
     (config().sortDirection === 'asc' ? 'ascending' : 'descending') : null" (click)="onSort(column)">
         {{ column.label }}
         @if (column.sortable) {
