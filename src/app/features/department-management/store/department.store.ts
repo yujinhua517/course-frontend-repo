@@ -45,7 +45,7 @@ export class DepartmentStore {
             pageSize: 1000
         }).subscribe({
             next: (response) => {
-                const total = response.total || 0;
+                const total = response.data?.totalRecords || 0;
                 this._allTotal.set(total);
             },
             error: (error: any) => {
@@ -79,24 +79,25 @@ export class DepartmentStore {
                 isActive: searchParams.isActive,
                 parentId: searchParams.parentDeptId
             },
-            sort: searchParams.sortBy && searchParams.sortDirection ? {
-                field: searchParams.sortBy,
-                direction: searchParams.sortDirection
+            sort: searchParams.sortColumn && searchParams.sortDirection ? {
+                field: searchParams.sortColumn as keyof Department,
+                direction: searchParams.sortDirection as 'asc' | 'desc'
             } : undefined
         }).subscribe({
             next: (response) => {
                 console.log('Department Service response:', response);
 
-                // service 已經標準化回應格式，直接使用
-                const departments = response.data || [];
+                // response.data 是 PagerDto<Department> 類型
+                const pagerData = response.data;
+                const departments = pagerData?.dataList || [];
                 this._departments.set(departments);
-                this._total.set(response.total || departments.length);
-                this._currentPage.set(response.page || searchParams.page || 1);
-                this._pageSize.set(response.pageSize || searchParams.pageSize || 10);
+                this._total.set(pagerData?.totalRecords || 0);
+                this._currentPage.set(searchParams.page || 1);
+                this._pageSize.set(searchParams.pageSize || 10);
                 this._loading.set(false);
                 console.log('載入部門資料:', {
                     count: departments.length,
-                    total: response.total || departments.length
+                    total: pagerData?.totalRecords || 0
                 });
             },
             error: (error) => {
@@ -123,11 +124,6 @@ export class DepartmentStore {
         }
     }
 
-    // 搜尋快捷方法（與component中的調用保持一致）
-    search(keyword: string): void {
-        this.searchDepartments(keyword);
-    }
-
     filterByStatus(isActive?: boolean): void {
         if (!environment.production) {
             console.log('Department Store filterByStatus called with:', isActive, 'Type:', typeof isActive);
@@ -152,10 +148,10 @@ export class DepartmentStore {
         });
     }
 
-    sortDepartments(sortBy: keyof Department, sortDirection: 'asc' | 'desc'): void {
+    sortDepartments(sortColumn: keyof Department, sortDirection: 'asc' | 'desc'): void {
         this.loadDepartments({
             ...this._searchParams(),
-            sortBy,
+            sortColumn: sortColumn,
             sortDirection
         });
     }

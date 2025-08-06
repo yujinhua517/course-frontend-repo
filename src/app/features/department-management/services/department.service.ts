@@ -1,6 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of, map, delay, catchError, switchMap } from 'rxjs';
+import { BaseQueryService } from '../../../core/services/base-query.service';
 import {
     Department,
     CreateDepartmentRequest,
@@ -15,11 +16,12 @@ import {
 import {
     DEPARTMENT_LEVEL_ORDER,
     API_STATUS_CODES,
-    PAGINATION_DEFAULTS,
     DepartmentStatusType,
     SortDirection,
     SORT_DIRECTIONS
 } from '../models/department.constants';
+import { PAGINATION_DEFAULTS } from '../../../core/models/common.model';
+import { QueryParamsBuilder } from '../../../core/utils/query.util';
 import { environment } from '../../../../environments/environment';
 import { UserStore } from '../../../core/auth/user.store';
 import { HttpErrorHandlerService } from '../../../core/services/http-error-handler.service';
@@ -28,21 +30,102 @@ import { MOCK_DEPARTMENTS } from '../services/mock-departments.data';
 @Injectable({
     providedIn: 'root'
 })
-export class DepartmentService {
-    private http = inject(HttpClient);
+export class DepartmentService extends BaseQueryService<Department, DepartmentSearchParams> {
     private userStore = inject(UserStore);
-    private httpErrorHandler = inject(HttpErrorHandlerService);
 
-    // Toggle between mock data and real API
-    private readonly useMockData = false;
-    private readonly apiUrl = `${environment.apiBaseUrl}/departments`;
+    // BaseQueryService 必需的屬性
+    protected readonly apiUrl = `${environment.apiBaseUrl}/departments`;
+    protected readonly useMockData = false;
+    protected readonly defaultSortColumn = 'deptCode';
+    protected readonly mockData: Department[] = MOCK_DEPARTMENTS;
 
-    private mockDepartments: Department[] = MOCK_DEPARTMENTS;
     // 使用 signals 替代 BehaviorSubject - 符合 Angular 19+ 規範
-    private readonly departmentsSignal = signal<Department[]>(this.mockDepartments);
+    private readonly departmentsSignal = signal<Department[]>(this.mockData);
     public readonly departments = this.departmentsSignal.asReadonly();
 
-    constructor() { }
+    constructor() {
+        super();
+    }
+
+    /**
+     * 覆寫排序欄位映射：前端 camelCase -> 後端 snake_case
+     */
+    protected override mapSortColumn(frontendColumn?: string): string {
+        const mapping: Record<string, string> = {
+            'deptId': 'dept_id',
+            'deptCode': 'dept_code',
+            'deptName': 'dept_name',
+            'deptLevel': 'dept_level',
+            'parentDeptId': 'parent_dept_id',
+            'managerEmpId': 'manager_emp_id',
+            'isActive': 'is_active',
+            'createTime': 'create_time',
+            'createUser': 'create_user',
+            'updateTime': 'update_time',
+            'updateUser': 'update_user'
+        };
+        return mapping[frontendColumn || ''] || 'dept_code';
+    }
+
+    /**
+     * 實作Mock資料篩選邏輯
+     */
+    protected override applyMockFilters(data: Department[], params?: DepartmentSearchParams): Department[] {
+        let filtered = [...data];
+
+        // 關鍵字搜尋
+        if (params?.keyword) {
+            const keyword = params.keyword.toLowerCase();
+            filtered = filtered.filter(dept =>
+                dept.deptCode.toLowerCase().includes(keyword) ||
+                dept.deptName.toLowerCase().includes(keyword)
+            );
+        }
+
+        // 啟用狀態篩選
+        if (params?.isActive !== undefined) {
+            filtered = filtered.filter(dept => dept.isActive === params.isActive);
+        }
+
+        // 部門層級篩選
+        if (params?.deptLevel) {
+            filtered = filtered.filter(dept => dept.deptLevel === params.deptLevel);
+        }
+
+        // 上級部門篩選
+        if (params?.parentDeptId !== undefined) {
+            filtered = filtered.filter(dept => dept.parentDeptId === params.parentDeptId);
+        }
+
+        // 部門代碼篩選
+        if (params?.deptCode) {
+            filtered = filtered.filter(dept =>
+                dept.deptCode.toLowerCase().includes(params.deptCode!.toLowerCase())
+            );
+        }
+
+        // 部門名稱篩選
+        if (params?.deptName) {
+            filtered = filtered.filter(dept =>
+                dept.deptName.toLowerCase().includes(params.deptName!.toLowerCase())
+            );
+        }
+
+        return filtered;
+    }
+
+    /**
+     * 建構自訂API參數
+     */
+    protected override buildCustomApiParams(params?: DepartmentSearchParams): Record<string, any> {
+        return {
+            ...(params?.deptLevel && { deptLevel: params.deptLevel }),
+            ...(params?.parentDeptId !== undefined && { parentDeptId: params.parentDeptId }),
+            ...(params?.deptCode && { deptCode: params.deptCode }),
+            ...(params?.deptName && { deptName: params.deptName }),
+            ...(params?.managerEmpId && { managerEmpId: params.managerEmpId })
+        };
+    }
 
     /**
      * Get current logged-in user's username
@@ -64,126 +147,19 @@ export class DepartmentService {
     }
 
     /**
-     * 統一的資料映射器 - HTTP 攔截器已處理 camelCase 轉換
-     * 這裡主要用於 mock 資料或特殊情況的相容性處理
-     */
-    private mapApiToDepartment(apiDept: any): Department {
-        // HTTP 攔截器已經處理 snake_case 到 camelCase 的轉換
-        // 這裡主要確保資料格式的一致性
-        return {
-            deptId: apiDept.deptId ?? apiDept.dept_id,
-            parentDeptId: apiDept.parentDeptId ?? apiDept.parent_dept_id ?? null,
-            deptCode: apiDept.deptCode ?? apiDept.dept_code,
-            deptName: apiDept.deptName ?? apiDept.dept_name,
-            deptLevel: apiDept.deptLevel ?? apiDept.dept_level,
-            managerEmpId: apiDept.managerEmpId ?? apiDept.manager_emp_id ?? null,
-            isActive: apiDept.isActive ?? apiDept.is_active ?? false,
-            deptDesc: apiDept.deptDesc ?? apiDept.dept_desc,
-            createTime: apiDept.createTime ?? apiDept.create_time ?? new Date().toISOString(),
-            createUser: apiDept.createUser ?? apiDept.create_user ?? 'system',
-            updateTime: apiDept.updateTime ?? apiDept.update_time,
-            updateUser: apiDept.updateUser ?? apiDept.update_user
-        };
-    }
-
-    /**
-     * 統一的 API 回應列表處理器
-     */
-    private mapApiResponseToList(response: ApiResponse<any[]>): Department[] {
-        const data = this.handleApiResponse(response);
-        return data.map(item => this.mapApiToDepartment(item));
-    }
-
-    /**
-     * 統一的部門查詢方法 - 支援所有查詢需求
-     * 使用統一的查詢選項介面，取代多個重複的方法
+     * 統一的部門查詢方法 - 使用 BaseQueryService 統一模式
      */
     getDepartments(options: DepartmentQueryOptions = {}): Observable<DepartmentListResponse> {
-        const {
-            page = PAGINATION_DEFAULTS.PAGE,
-            pageSize = PAGINATION_DEFAULTS.PAGE_SIZE,
-            searchTerm = '',
-            filters = {},
-            sort
-        } = options;
-
-        const sortBy = sort?.field;
-        const sortDirection = sort?.direction ?
-            (sort.direction === 'asc' ? 'ASC' : 'DESC') as 'ASC' | 'DESC' :
-            undefined;
-
-        if (this.useMockData) {
-            return this.getMockDepartments(page, pageSize, searchTerm, filters, sortBy, sortDirection);
-        }
-
-        return this.getRealDepartmentsPaged(page, pageSize, searchTerm, filters, sortBy, sortDirection);
-    }
-
-    private getRealDepartmentsPaged(
-        page: number,
-        pageSize: number,
-        searchTerm: string,
-        filters: {
-            activeOnly?: boolean,
-            rootOnly?: boolean,
-            parentId?: number,
-            level?: string,
-            isActive?: boolean
-        },
-        sortBy?: keyof Department,
-        sortDirection?: 'ASC' | 'DESC'
-    ): Observable<DepartmentListResponse> {
-        const firstIndex = (page - 1) * pageSize + 1;
-        const lastIndex = page * pageSize;
-
-        const requestParams = {
-            page,
-            pageSize,
-            firstIndexInPage: firstIndex,
-            lastIndexInPage: lastIndex,
-            pageable: true,
-            sortColumn: sortBy || 'deptCode',
-            sortDirection: sortDirection?.toUpperCase() || 'ASC',
-            ...(searchTerm && { keyword: searchTerm }),
-            ...(filters.level && { deptLevel: filters.level }),
-            ...(filters.isActive !== undefined && { isActive: filters.isActive }),
-            ...(filters.parentId !== undefined && { parentDeptId: filters.parentId }),
-            ...(filters.activeOnly && { isActive: true }),
-            ...(filters.rootOnly && { parentDeptId: null })
+        const searchParams: DepartmentSearchParams = {
+            ...options.filters,
+            keyword: options.searchTerm,
+            page: options.page || PAGINATION_DEFAULTS.PAGE,
+            pageSize: options.pageSize || PAGINATION_DEFAULTS.PAGE_SIZE,
+            sortColumn: this.mapSortColumn(options.sort?.field),
+            sortDirection: options.sort?.direction?.toUpperCase() as 'ASC' | 'DESC' || 'ASC'
         };
 
-        return this.http.post<ApiResponse<PagerDto<Department>>>(`${this.apiUrl}/query`, requestParams)
-            .pipe(
-                map(response => this.adaptBackendResponse(response, page, pageSize)),
-                catchError(this.httpErrorHandler.handleError('getDepartments', this.getEmptyDepartmentListResponse(page, pageSize)))
-            );
-    }
-
-    private adaptBackendResponse(
-        response: ApiResponse<PagerDto<Department>>,
-        page: number,
-        pageSize: number
-    ): DepartmentListResponse {
-        if (response.code !== 1000) {
-            throw new Error(response.message || '查詢失敗');
-        }
-
-        const backendData = response.data;
-        return {
-            data: backendData.dataList || [],
-            total: backendData.totalRecords || 0,
-            page: page,
-            pageSize: pageSize
-        };
-    }
-
-    private getEmptyDepartmentListResponse(page: number, pageSize: number): DepartmentListResponse {
-        return {
-            data: [],
-            total: 0,
-            page: page,
-            pageSize: pageSize
-        };
+        return this.getPagedData(searchParams) as Observable<DepartmentListResponse>;
     }
 
     /**
@@ -195,7 +171,7 @@ export class DepartmentService {
             pageSize: PAGINATION_DEFAULTS.MAX_PAGE_SIZE,
             filters: { activeOnly: true }
         }).pipe(
-            map(response => response.data),
+            map(response => response.data.dataList),
             catchError(this.httpErrorHandler.handleError('getActiveDepartments', []))
         );
     }
@@ -209,7 +185,7 @@ export class DepartmentService {
             pageSize: PAGINATION_DEFAULTS.MAX_PAGE_SIZE,
             filters: { rootOnly: true, activeOnly: true }
         }).pipe(
-            map(response => response.data),
+            map(response => response.data.dataList),
             catchError(this.httpErrorHandler.handleError('getRootDepartments', []))
         );
     }
@@ -229,106 +205,11 @@ export class DepartmentService {
     }
 
     /**
-     * 取得部門作為 Observable - 使用統一方法
-     * @deprecated 建議直接使用 getActiveDepartments()
-     */
-    getDepartmentsAsObservable(): Observable<Department[]> {
-        return this.getActiveDepartments();
-    }
-
-    /**
-     * 優化的 Mock 資料處理方法 - 支援排序功能
-     */
-    private getMockDepartments(
-        page: number,
-        pageSize: number,
-        searchTerm: string,
-        filters: {
-            activeOnly?: boolean,
-            rootOnly?: boolean,
-            parentId?: number,
-            level?: string,
-            isActive?: boolean
-        },
-        sortBy?: keyof Department,
-        sortDirection?: 'ASC' | 'DESC'
-    ): Observable<DepartmentListResponse> {
-        return of(null).pipe(
-            delay(300),
-            map(() => {
-                let filteredDepartments = [...this.mockDepartments];
-
-                // Apply search filter
-                if (searchTerm.trim()) {
-                    const term = searchTerm.toLowerCase();
-                    filteredDepartments = filteredDepartments.filter(dept =>
-                        dept.deptName.toLowerCase().includes(term) ||
-                        dept.deptCode.toLowerCase().includes(term)
-                    );
-                }
-
-                // Apply filters
-                if (filters.level) {
-                    filteredDepartments = filteredDepartments.filter(dept => dept.deptLevel === filters.level);
-                }
-
-                if (filters.isActive !== undefined || filters.activeOnly) {
-                    const targetStatus = filters.activeOnly || filters.isActive;
-                    filteredDepartments = filteredDepartments.filter(dept => dept.isActive === targetStatus);
-                }
-
-                if (filters.parentId !== undefined) {
-                    filteredDepartments = filteredDepartments.filter(dept => dept.parentDeptId === filters.parentId);
-                }
-
-                if (filters.rootOnly) {
-                    filteredDepartments = filteredDepartments.filter(dept => dept.parentDeptId === null);
-                }
-
-                // Apply sorting
-                if (sortBy && sortDirection) {
-                    filteredDepartments.sort((a, b) => {
-                        let aValue: any = a[sortBy];
-                        let bValue: any = b[sortBy];
-
-                        // Handle different data types
-                        if (typeof aValue === 'string' && typeof bValue === 'string') {
-                            aValue = aValue.toLowerCase();
-                            bValue = bValue.toLowerCase();
-                        }
-
-                        if (aValue < bValue) {
-                            return sortDirection === 'ASC' ? -1 : 1;
-                        }
-                        if (aValue > bValue) {
-                            return sortDirection === 'ASC' ? 1 : -1;
-                        }
-                        return 0;
-                    });
-                }
-
-                // Calculate pagination
-                const totalItems = filteredDepartments.length;
-                const startIndex = (page - 1) * pageSize;
-                const endIndex = startIndex + pageSize;
-                const paginatedDepartments = filteredDepartments.slice(startIndex, endIndex);
-
-                return {
-                    data: paginatedDepartments,
-                    total: totalItems,
-                    page: page,
-                    pageSize
-                };
-            })
-        );
-    }
-
-    /**
      * Get a single department by ID
      */
     getDepartmentById(id: number): Observable<Department | null> {
         if (this.useMockData) {
-            return of(this.mockDepartments).pipe(
+            return of(this.mockData).pipe(
                 delay(200),
                 map(departments => departments.find(dept => dept.deptId === id) || null),
                 catchError(this.httpErrorHandler.handleError('getDepartmentById', null))
@@ -336,7 +217,7 @@ export class DepartmentService {
         }
 
         return this.http.get<ApiResponse<Department>>(`${this.apiUrl}/find/${id}`).pipe(
-            map(response => this.mapApiToDepartment(this.handleApiResponse(response))),
+            map(response => this.handleApiResponse(response)),
             catchError(this.httpErrorHandler.handleError('getDepartmentById', null))
         );
     }
@@ -351,7 +232,7 @@ export class DepartmentService {
                 map(() => {
                     const currentUser = this.getCurrentUser();
                     const newDepartment: Department = {
-                        deptId: Math.max(...this.mockDepartments.map(d => d.deptId)) + 1,
+                        deptId: Math.max(...this.mockData.map(d => d.deptId)) + 1,
                         deptCode: request.deptCode,
                         deptName: request.deptName,
                         deptLevel: request.deptLevel,
@@ -364,8 +245,8 @@ export class DepartmentService {
                         updateUser: currentUser
                     };
 
-                    this.mockDepartments.push(newDepartment);
-                    this.departmentsSignal.set([...this.mockDepartments]);
+                    this.mockData.push(newDepartment);
+                    this.departmentsSignal.set([...this.mockData]);
 
                     return newDepartment;
                 }),
@@ -386,7 +267,7 @@ export class DepartmentService {
         };
 
         return this.http.post<ApiResponse<Department>>(`${this.apiUrl}/create`, departmentData).pipe(
-            map(response => this.mapApiToDepartment(this.handleApiResponse(response))),
+            map(response => this.handleApiResponse(response)),
             catchError(this.httpErrorHandler.handleError('createDepartment', null as any))
         );
     }
@@ -399,13 +280,13 @@ export class DepartmentService {
             return of(null).pipe(
                 delay(500),
                 map(() => {
-                    const departmentIndex = this.mockDepartments.findIndex(dept => dept.deptId === id);
+                    const departmentIndex = this.mockData.findIndex(dept => dept.deptId === id);
                     if (departmentIndex === -1) {
                         throw new Error(`Department with id ${id} not found`);
                     }
 
                     const currentUser = this.getCurrentUser();
-                    const existingDepartment = this.mockDepartments[departmentIndex];
+                    const existingDepartment = this.mockData[departmentIndex];
                     const updatedDepartment: Department = {
                         ...existingDepartment,
                         ...request,
@@ -413,8 +294,8 @@ export class DepartmentService {
                         updateUser: currentUser
                     };
 
-                    this.mockDepartments[departmentIndex] = updatedDepartment;
-                    this.departmentsSignal.set([...this.mockDepartments]);
+                    this.mockData[departmentIndex] = updatedDepartment;
+                    this.departmentsSignal.set([...this.mockData]);
 
                     return updatedDepartment;
                 }),
@@ -437,7 +318,7 @@ export class DepartmentService {
         };
 
         return this.http.post<ApiResponse<Department>>(`${this.apiUrl}/update`, updateData).pipe(
-            map(response => this.mapApiToDepartment(this.handleApiResponse(response))),
+            map(response => this.handleApiResponse(response)),
             catchError(this.httpErrorHandler.handleError('updateDepartment', null as any))
         );
     }
@@ -450,28 +331,28 @@ export class DepartmentService {
             return of(null).pipe(
                 delay(300),
                 map(() => {
-                    const departmentIndex = this.mockDepartments.findIndex(dept => dept.deptId === id);
+                    const departmentIndex = this.mockData.findIndex(dept => dept.deptId === id);
                     if (departmentIndex === -1) {
                         throw new Error(`Department with id ${id} not found`);
                     }
 
                     const currentUser = this.getCurrentUser();
                     // Soft delete by setting is_active to false
-                    this.mockDepartments[departmentIndex] = {
-                        ...this.mockDepartments[departmentIndex],
+                    this.mockData[departmentIndex] = {
+                        ...this.mockData[departmentIndex],
                         isActive: false,
                         updateTime: new Date().toISOString(),
                         updateUser: currentUser
                     };
 
-                    this.departmentsSignal.set([...this.mockDepartments]);
+                    this.departmentsSignal.set([...this.mockData]);
                     return true;
                 }),
                 catchError(this.httpErrorHandler.handleError('deleteDepartment', false))
             );
         }
 
-        const deleteData = { dept_id: id };
+        const deleteData = { deptId: id };
 
         return this.http.post<ApiResponse<boolean>>(`${this.apiUrl}/delete`, deleteData).pipe(
             map(response => {
@@ -505,27 +386,18 @@ export class DepartmentService {
     }
 
     /**
-     * Check if department code is unique
+     * Check if department code is unique (使用前端邏輯檢查)
      */
     isDepartmentCodeUnique(code: string, excludeId?: number): Observable<boolean> {
-        if (this.useMockData) {
-            return of(this.mockDepartments).pipe(
-                delay(200),
-                map(departments => {
-                    const existingDept = departments.find(dept =>
-                        dept.deptCode.toLowerCase() === code.toLowerCase() &&
-                        dept.deptId !== excludeId
-                    );
-                    return !existingDept;
-                }),
-                catchError(this.httpErrorHandler.handleError('isDepartmentCodeUnique', true))
-            );
-        }
-
-        const params = excludeId ? `?code=${code}&excludeId=${excludeId}` : `?code=${code}`;
-
-        return this.http.get<ApiResponse<{ isUnique: boolean }>>(`${this.apiUrl}/check-code${params}`).pipe(
-            map(response => this.handleApiResponse(response).isUnique),
+        // 使用現有的部門查詢來檢查唯一性
+        return this.getActiveDepartments().pipe(
+            map((departments: Department[]) => {
+                const existingDept = departments.find((dept: Department) =>
+                    dept.deptCode.toLowerCase() === code.toLowerCase() &&
+                    dept.deptId !== excludeId
+                );
+                return !existingDept;
+            }),
             catchError(this.httpErrorHandler.handleError('isDepartmentCodeUnique', true))
         );
     }

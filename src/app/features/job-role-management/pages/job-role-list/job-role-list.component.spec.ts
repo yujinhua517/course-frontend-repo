@@ -34,14 +34,14 @@ describe('JobRoleListComponent', () => {
 
   it('should handle selection', () => {
     const jobRole = {
-      job_role_code: 'TEST001',
-      job_role_name: 'Test Role',
+      jobRoleCode: 'TEST001',
+      jobRoleName: 'Test Role',
       description: 'Test Description',
-      is_active: true,
-      create_time: '2024-01-01T00:00:00',
-      create_user: 'test',
-      update_time: '2024-01-01T00:00:00',
-      update_user: 'test'
+      isActive: true,
+      createTime: '2024-01-01T00:00:00',
+      createUser: 'test',
+      updateTime: '2024-01-01T00:00:00',
+      updateUser: 'test'
     };
 
     component.onSelectItem(jobRole, true);

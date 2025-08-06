@@ -95,7 +95,7 @@ src/
   ```typescript
   export interface PagerDto<T> { dataList: T[]; totalRecords: number; [key: string]: any; }
   ```
-* 前端 interface、組件/服務/狀態皆用 camelCase，API/DB 用 snake\_case，**轉換由 core/utils/object-case.util.ts 統一管理**，不得於 service/component 內手動轉換。
+* 前端 interface、組件/服務/狀態皆用 `camelCase`，API/DB 用 `snake_case`，**轉換由 `core/utils/object-case.util.ts` 統一管理** 進行自動轉換，不得於 `service/component` 內手動轉換。
 * service 回傳一律型別化，方便 signals/resource/AI 流。
 
 ---

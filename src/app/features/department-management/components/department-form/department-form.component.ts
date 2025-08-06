@@ -192,15 +192,14 @@ export class DepartmentFormComponent implements OnInit {
 
     private loadEmployees(): Promise<void> {
         return new Promise(resolve => {
-            this.employeeService.getEmployees().subscribe({
-                next: (res) => {
-                    const employees = res.dataList ?? res;
+            this.employeeService.getPagedData({ pageSize: 1000 }).subscribe({
+                next: (res: any) => {
+                    const employees = res.data?.dataList ?? res.dataList ?? res;
                     this.employees.set(employees);
                     resolve();
                 },
-                error: (err) => {
+                error: (err: any) => {
                     console.error('Failed to load employees:', err);
-                    this.employees.set([]);
                     resolve();
                 }
             });

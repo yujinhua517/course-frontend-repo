@@ -1,4 +1,12 @@
 import { SortDirection } from './department.constants';
+import { 
+  BaseSearchParams, 
+  QueryOptions, 
+  ApiResponse, 
+  PagerDto, 
+  ServiceListResponse,
+  SortConfig 
+} from '../../../core/models/common.model';
 
 export interface Department {
     deptId: number;
@@ -34,85 +42,38 @@ export interface UpdateDepartmentRequest extends Partial<CreateDepartmentRequest
     deptId: number;
 }
 
-export interface DepartmentListResponse {
-    data: Department[];
-    total: number;
-    page: number;
-    pageSize: number;
-}
+export interface DepartmentListResponse extends ServiceListResponse<Department> {}
 
-export interface DepartmentSearchParams {
-    // 篩選條件
-    keyword?: string;
+/**
+ * 部門查詢參數 - 繼承統一的基礎查詢參數
+ */
+export interface DepartmentSearchParams extends BaseSearchParams {
+    // 部門特有的篩選條件
     deptLevel?: string;
-    isActive?: boolean;
     parentDeptId?: number;
-    // 分頁參數
-    page?: number;
-    pageSize?: number;
-    // 排序參數
-    // sortBy?: keyof Department;
-    // sortDirection?: SortDirection;
-    sortBy?: keyof Department;
-    sortColumn?: string;
-    sortDirection?: SortDirection;
+    managerEmpId?: number;
+    deptCode?: string;
+    deptName?: string;
 }
 
 /**
- * 統一的部門查詢選項介面
- * 整合所有查詢需求，避免重複的方法
+ * 統一的部門查詢選項介面 - 使用通用 QueryOptions
  */
-export interface DepartmentQueryOptions {
-    // 分頁參數
-    page?: number;
-    pageSize?: number;
+export interface DepartmentQueryOptions extends QueryOptions<Department, DepartmentFilters> {}
 
-    // 搜尋關鍵字
-    searchTerm?: string;
-
-    // 篩選選項
-    filters?: {
-        activeOnly?: boolean;
-        rootOnly?: boolean;
-        parentId?: number;
-        level?: string;
-        isActive?: boolean;
-    };
-
-    // 排序選項
-    sort?: {
-        field: keyof Department;
-        direction: SortDirection;
-    };
+/**
+ * 部門篩選條件介面
+ */
+export interface DepartmentFilters {
+    activeOnly?: boolean;
+    rootOnly?: boolean;
+    parentId?: number;
+    level?: string;
+    isActive?: boolean;
 }
 
-// API 回應包裝器 - 對齊後端 ApiResponse<T>
-export interface ApiResponse<T> {
-    code: number; // 對應後端 Integer code (1000=成功)
-    message: string; // 對應後端 String message
-    data: T; // 對應後端 T data
-}
-
-// 分頁回應 DTO - 對齊後端 PagerDto<T> + PageBean
-export interface PagerDto<T> {
-    // 後端 PagerDto 的 dataList 欄位 (使用 @JsonProperty("data_list"))
-    dataList: T[]; // 對應後端 @JsonProperty("data_list") List<T> dataList
-
-    // 後端 PageBean 的分頁欄位 (使用 snake_case JsonProperty)
-    totalRecords: number; // 對應 @JsonProperty("total_records") int totalRecords
-    firstIndexInPage: number; // 對應 @JsonProperty("first_index_in_page") int firstIndexInPage
-    lastIndexInPage: number; // 對應 @JsonProperty("last_index_in_page") int lastIndexInPage
-    pageable: boolean; // 對應 @JsonProperty("pageable") boolean pageable
-    sortColumn?: string; // 對應 @JsonProperty("sort_column") String sortColumn
-    sortDirection?: string; // 對應 @JsonProperty("sort_direction") String sortDirection
-
-    // Spring Data Page 額外資訊（前端計算用）
-    totalPages?: number;
-    page?: number;
-    size?: number;
-    hasNext?: boolean;
-    hasPrevious?: boolean;
-}
+// 重新匯出統一介面供其他模組使用
+export type { ApiResponse, PagerDto } from '../../../core/models/common.model';
 
 /**
  * 部門階層關係定義

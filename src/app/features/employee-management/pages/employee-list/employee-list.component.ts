@@ -1,5 +1,6 @@
-import { Component, OnInit, signal, computed, inject, ViewChild, TemplateRef, effect } from '@angular/core';
+import { Component, OnInit, signal, computed, inject, ViewChild, TemplateRef, effect, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { firstValueFrom } from 'rxjs';
 // import { FormsModule } from '@angular/forms';
 // import { RouterModule } from '@angular/router';
 import { EmployeeStore } from '../../store/employee.store';
@@ -27,6 +28,7 @@ import { HighlightPipe } from '../../../../shared/pipes/highlight.pipe';
     selector: 'app-employee-list',
     templateUrl: './employee-list.component.html',
     styleUrls: ['./employee-list.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [
         CommonModule,
         // FormsModule,
@@ -142,39 +144,39 @@ export class EmployeeListComponent implements OnInit {
         columns: [
             {
                 key: 'empId',
-                label: '編號',
+                label: 'No.',
                 sortable: true,
-                width: '10%'
+                width: '8%'
             },
             {
                 key: 'empCode',
                 label: '員工工號',
                 sortable: true,
-                width: '12%'
+                width: '11%'
             },
             {
                 key: 'empName',
                 label: '員工姓名',
                 sortable: true,
-                width: '12%'
+                width: '11%'
             },
             {
                 key: 'empEmail',
                 label: '電子郵件',
                 sortable: false,
-                width: '15%'
+                width: '11%'
             },
             {
                 key: 'deptName',
                 label: '所屬部門',
                 sortable: false,
-                width: '12%'
+                width: '11%'
             },
             {
                 key: 'jobTitle',
                 label: '職稱',
                 sortable: false,
-                width: '14%'
+                width: '11%'
             },
             {
                 key: 'isActive',
@@ -228,38 +230,38 @@ export class EmployeeListComponent implements OnInit {
                 {
                     key: 'empId',
                     template: this.idTemplate,
-                    cssClass: 'fw-medium text-primary',
-                    width: '10%'
+                    cssClass: 'fw-normal',
+                    width: '8%'
                 },
                 {
                     key: 'empCode',
                     template: this.codeTemplate,
                     cssClass: 'fw-medium text-primary',
-                    width: '12%'
+                    width: '11%'
                 },
                 {
                     key: 'empName',
                     template: this.nameTemplate,
                     cssClass: 'fw-medium',
-                    width: '12%'
+                    width: '11%'
                 },
                 {
                     key: 'empEmail',
                     template: this.emailTemplate,
                     cssClass: 'text-muted',
-                    width: '15%'
+                    width: '11%'
                 },
                 {
                     key: 'deptName',
                     template: this.deptTemplate,
                     cssClass: 'text-muted',
-                    width: '12%'
+                    width: '11%'
                 },
                 {
                     key: 'jobTitle',
                     template: this.jobTemplate,
                     cssClass: 'text-muted',
-                    width: '14%'
+                    width: '11%'
                 },
                 {
                     key: 'isActive',
@@ -530,23 +532,25 @@ export class EmployeeListComponent implements OnInit {
 
     private performBulkDelete(): void {
         const selected = this.selectedEmployees();
-        const ids = selected.map(emp => emp.empId);
+        
+        // 逐一刪除選中的員工（因為後端沒有批量刪除API）
+        const deletePromises = selected.map(emp => 
+            firstValueFrom(this.employeeService.deleteEmployee(emp.empId))
+        );
 
-        this.employeeService.bulkDeleteEmployees?.(ids).subscribe({
-            next: (success) => {
-                if (success) {
-                    // 從本地狀態移除已刪除的員工
-                    selected.forEach(emp => {
-                        this.employeeStore.removeEmployee(emp.empId);
-                    });
-                    this.selectedEmployees.set([]);
-                }
-                this.bulkDeleteLoading.set(false);
-            },
-            error: (error) => {
-                console.error('批量刪除失敗:', error);
-                this.bulkDeleteLoading.set(false);
+        Promise.all(deletePromises).then((results) => {
+            const successCount = results.filter(result => result === true).length;
+            if (successCount > 0) {
+                // 從本地狀態移除已刪除的員工
+                selected.forEach(emp => {
+                    this.employeeStore.removeEmployee(emp.empId);
+                });
+                this.selectedEmployees.set([]);
             }
+            this.bulkDeleteLoading.set(false);
+        }).catch((error) => {
+            console.error('批量刪除失敗:', error);
+            this.bulkDeleteLoading.set(false);
         });
     }
 

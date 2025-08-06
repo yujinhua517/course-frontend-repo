@@ -1,3 +1,11 @@
+import { 
+  BaseSearchParams, 
+  QueryOptions, 
+  ApiResponse, 
+  PagerDto, 
+  ServiceListResponse 
+} from '../../../core/models/common.model';
+
 // 核心員工介面
 export interface Employee {
     empId: number;
@@ -43,9 +51,9 @@ export interface EmployeeUpdateDto {
     isActive: boolean;
 }
 
-// 搜尋參數介面
-export interface EmployeeSearchParams {
-    // 基本搜尋欄位
+// 搜尋參數介面 - 繼承統一的基礎查詢參數
+export interface EmployeeSearchParams extends BaseSearchParams {
+    // 員工特有的搜尋欄位
     empId?: number;
     empCode?: string;
     empName?: string;
@@ -59,37 +67,33 @@ export interface EmployeeSearchParams {
     resignDate?: string;
     resignDateFrom?: string;
     resignDateTo?: string;
+}
+
+/**
+ * 員工列表回應介面
+ */
+export interface EmployeeListResponse extends ServiceListResponse<Employee> {}
+
+/**
+ * 員工查詢選項介面
+ */
+export interface EmployeeQueryOptions extends QueryOptions<Employee, EmployeeFilters> {}
+
+/**
+ * 員工篩選條件介面
+ */
+export interface EmployeeFilters {
+    deptId?: number;
     isActive?: boolean;
-    keyword?: string;
-
-    // 排序參數
-    sortBy?: string;
-    sortColumn?: string;
-    sortDirection?: string;
-
-    // 分頁參數
-    page?: number;
-    pageSize?: number;
-    totalRecords?: number;
-    firstIndexInPage?: number;
-    lastIndexInPage?: number;
-    pageable?: boolean;
+    hireDateFrom?: string;
+    hireDateTo?: string;
+    resignDateFrom?: string;
+    resignDateTo?: string;
 }
 
-// API 標準回應格式
-export interface ApiResponse<T> {
-    code: number;
-    message: string;
-    data: T;
-}
-
-// 分頁回應格式
-export interface PagerDto<T> {
-    dataList: T[];
-    totalRecords: number;
-    firstIndexInPage: number;
-    lastIndexInPage: number;
-    pageable: boolean;
-    sortColumn?: string;
-    sortDirection?: string;
-}
+// 重新匯出統一介面供其他模組使用
+export type { 
+    ApiResponse, 
+    PagerDto, 
+    ServiceListResponse 
+} from '../../../core/models/common.model';

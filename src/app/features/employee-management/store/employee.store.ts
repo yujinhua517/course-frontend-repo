@@ -38,7 +38,8 @@ export class EmployeeStore {
         const searchParams = {
             ...this._searchParams(),
             ...params,
-            firstIndexInPage: ((params?.firstIndexInPage || this._currentPage()) - 1) * this._pageSize() + 1,
+            page: params?.page || this._currentPage(),
+            pageSize: this._pageSize(),
             pageable: true
         };
 
@@ -52,15 +53,12 @@ export class EmployeeStore {
 
         this._searchParams.set(searchParams);
 
-        this.employeeService.getEmployees(searchParams).subscribe({
+        // 使用 BaseQueryService 的統一查詢方法，依賴 interceptor 自動轉換
+        this.employeeService.getPagedData(searchParams).subscribe({
             next: (response) => {
-
-                const totalRecords = response.totalRecords || response.dataList.length;
-
-                this._employees.set(response.dataList);
-                this._total.set(totalRecords);
-                const currentPage = Math.floor((response.firstIndexInPage - 1) / this._pageSize()) + 1;
-                this._currentPage.set(currentPage);
+                this._employees.set(response.data.dataList);
+                this._total.set(response.data.totalRecords);
+                this._currentPage.set(params?.page || this._currentPage());
                 this._loading.set(false);
             },
             error: (error) => {
@@ -73,8 +71,8 @@ export class EmployeeStore {
     searchEmployees(keyword: string): void {
         this.loadEmployees({
             ...this._searchParams(),
-            empName: keyword,
-            firstIndexInPage: 1
+            keyword,
+            page: 1
         });
     }
 
@@ -82,16 +80,15 @@ export class EmployeeStore {
         this.loadEmployees({
             ...this._searchParams(),
             deptId: deptId,
-            firstIndexInPage: 1
+            page: 1
         });
     }
 
     filterByStatus(isActive?: boolean): void {
-
         this.loadEmployees({
             ...this._searchParams(),
             isActive,
-            firstIndexInPage: 1
+            page: 1
         });
     }
 
@@ -107,9 +104,7 @@ export class EmployeeStore {
         if (page >= 1 && page <= this.totalPages()) {
             this.loadEmployees({
                 ...this._searchParams(),
-                page,
-                pageSize: this._pageSize(),
-                firstIndexInPage: (page - 1) * this._pageSize() + 1
+                page
             });
         }
     }
@@ -119,8 +114,7 @@ export class EmployeeStore {
         this.loadEmployees({
             ...this._searchParams(),
             page: 1,
-            pageSize,
-            firstIndexInPage: 1
+            pageSize
         });
     }
 

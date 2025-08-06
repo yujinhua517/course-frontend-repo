@@ -1,164 +1,223 @@
-import { Injectable, signal, computed } from '@angular/core';
-import { JobRoleService } from '../services/job-role.service';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { JobRole, JobRoleSearchParams } from '../models/job-role.model';
+import { JobRoleService } from '../services/job-role.service';
+import { PagerDto } from '../../../core/models/common.model';
+
+export interface JobRoleState {
+    jobRoles: JobRole[];
+    loading: boolean;
+    error: string | null;
+    total: number;
+    currentPage: number;
+    pageSize: number;
+    searchParams: JobRoleSearchParams;
+    sortBy: string;
+    sortDirection: 'asc' | 'desc';
+}
+
+const initialState: JobRoleState = {
+    jobRoles: [],
+    loading: false,
+    error: null,
+    total: 0,
+    currentPage: 1,
+    pageSize: 10,
+    searchParams: {},
+    sortBy: '',
+    sortDirection: 'asc'
+};
 
 @Injectable({
     providedIn: 'root'
 })
 export class JobRoleStore {
-    // State signals
-    private _jobRoles = signal<JobRole[]>([]);
-    private _loading = signal<boolean>(false);
-    private _error = signal<string | null>(null);
-    private _total = signal<number>(0);
-    private _currentPage = signal<number>(1);
-    private _pageSize = signal<number>(10);
-    private _searchParams = signal<JobRoleSearchParams>({});
+    private readonly jobRoleService = inject(JobRoleService);
 
-    // Public readonly signals
-    jobRoles = this._jobRoles.asReadonly();
-    loading = this._loading.asReadonly();
-    error = this._error.asReadonly();
-    total = this._total.asReadonly();
-    currentPage = this._currentPage.asReadonly();
-    pageSize = this._pageSize.asReadonly();
-    searchParams = this._searchParams.asReadonly();
+    // 狀態信號
+    private state = signal<JobRoleState>(initialState);
 
-    // Computed signals
-    totalPages = computed(() => Math.ceil(this._total() / this._pageSize()));
-    hasNextPage = computed(() => this._currentPage() < this.totalPages());
-    hasPreviousPage = computed(() => this._currentPage() > 1);
+    // 計算屬性
+    jobRoles = computed(() => this.state().jobRoles);
+    loading = computed(() => this.state().loading);
+    error = computed(() => this.state().error);
+    total = computed(() => this.state().total);
+    currentPage = computed(() => this.state().currentPage);
+    pageSize = computed(() => this.state().pageSize);
+    searchParams = computed(() => this.state().searchParams);
+    sortBy = computed(() => this.state().sortBy);
+    sortDirection = computed(() => this.state().sortDirection);
 
-    constructor(private jobRoleService: JobRoleService) { }
+    // 計算派生狀態
+    totalPages = computed(() => Math.ceil(this.state().total / this.state().pageSize));
+    hasNextPage = computed(() => this.state().currentPage < this.totalPages());
+    hasPreviousPage = computed(() => this.state().currentPage > 1);
 
+    /**
+     * 載入職務角色列表
+     */
     loadJobRoles(params?: JobRoleSearchParams): void {
-        this._loading.set(true);
-        this._error.set(null);
+        const searchParams = params || this.state().searchParams;
 
-        const searchParams: JobRoleSearchParams = {
-            ...this._searchParams(),
-            ...params,
-            pageIndex: params?.pageIndex ?? (this._currentPage() - 1), // 轉換為 0-based
-            pageSize: params?.pageSize ?? this._pageSize(),
-            pageable: true
+        this.state.update(state => ({
+            ...state,
+            loading: true,
+            error: null,
+            searchParams
+        }));
+
+        const queryParams = {
+            ...searchParams,
+            page: this.state().currentPage,
+            size: this.state().pageSize,
+            sortBy: this.state().sortBy,
+            sortDirection: this.state().sortDirection
         };
 
-        this._searchParams.set(searchParams);
-
-        this.jobRoleService.getJobRoles(searchParams).subscribe({
+        this.jobRoleService.getPagedData(queryParams).subscribe({
             next: (response) => {
-                if (response.code === 200) {
-                    this._jobRoles.set(response.data.dataList);
-                    this._total.set(response.data.totalRecords);
-                    // 將 0-based 轉換為 1-based 顯示
-                    this._currentPage.set((response.data.page || 0) + 1);
-                    this._pageSize.set(response.data.size || 10);
-                }
-                this._loading.set(false);
+                this.state.update(state => ({
+                    ...state,
+                    jobRoles: response.data.dataList,
+                    total: response.data.totalRecords,
+                    loading: false,
+                    error: null
+                }));
             },
             error: (error) => {
-                this._error.set('載入職務資料失敗');
-                this._loading.set(false);
-                console.error('Error loading job roles:', error);
+                this.state.update(state => ({
+                    ...state,
+                    loading: false,
+                    error: error.message || '載入職務角色失敗'
+                }));
             }
         });
     }
 
+    /**
+     * 搜尋職務角色
+     */
     searchJobRoles(keyword: string): void {
-        this._currentPage.set(1); // 重設為第一頁
-        this.loadJobRoles({
-            ...this._searchParams(),
-            keyword,
-            pageIndex: 0
-        });
+        this.state.update(state => ({
+            ...state,
+            currentPage: 1,
+            searchParams: { ...state.searchParams, keyword }
+        }));
+        this.loadJobRoles();
     }
 
-    filterByStatus(isActive?: boolean): void {
-        this._currentPage.set(1); // 重設為第一頁
-        this.loadJobRoles({
-            ...this._searchParams(),
-            isActive,
-            pageIndex: 0
-        });
+    /**
+     * 按狀態篩選
+     */
+    filterByStatus(isActive: boolean | null): void {
+        this.state.update(state => ({
+            ...state,
+            currentPage: 1,
+            searchParams: {
+                ...state.searchParams,
+                isActive: isActive !== null ? isActive : undefined
+            }
+        }));
+        this.loadJobRoles();
     }
 
-    sortJobRoles(sortBy: keyof JobRole, sortDirection: 'asc' | 'desc'): void {
-        this.loadJobRoles({
-            ...this._searchParams(),
-            sortColumn: sortBy as string,
-            sortDirection: sortDirection
-        });
-    }
-
+    /**
+     * 前往指定頁面
+     */
     goToPage(page: number): void {
         if (page >= 1 && page <= this.totalPages()) {
-            this._currentPage.set(page);
-            this.loadJobRoles({
-                ...this._searchParams(),
-                pageIndex: page - 1 // 轉換為 0-based
-            });
+            this.state.update(state => ({
+                ...state,
+                currentPage: page
+            }));
+            this.loadJobRoles();
         }
     }
 
+    /**
+     * 設定每頁筆數
+     */
     setPageSize(pageSize: number): void {
-        this._currentPage.set(1); // 重設為第一頁
-        this._pageSize.set(pageSize);
-        this.loadJobRoles({
-            ...this._searchParams(),
-            pageSize: pageSize,
-            pageIndex: 0
-        });
+        this.state.update(state => ({
+            ...state,
+            pageSize,
+            currentPage: 1
+        }));
+        this.loadJobRoles();
     }
 
+    /**
+     * 排序職務角色
+     */
+    sortJobRoles(column: string, direction: 'asc' | 'desc'): void {
+        this.state.update(state => ({
+            ...state,
+            sortBy: column,
+            sortDirection: direction,
+            currentPage: 1
+        }));
+        this.loadJobRoles();
+    }
+
+    /**
+     * 新增職務角色
+     */
     addJobRole(jobRole: JobRole): void {
-        const current = this._jobRoles();
-        this._jobRoles.set([jobRole, ...current]);
-        this._total.set(this._total() + 1);
+        this.state.update(state => ({
+            ...state,
+            jobRoles: [...state.jobRoles, jobRole],
+            total: state.total + 1
+        }));
     }
 
+    /**
+     * 更新職務角色
+     */
     updateJobRole(updatedJobRole: JobRole): void {
-        const jobRoles = this._jobRoles();
-        const index = jobRoles.findIndex(c => c.jobRoleCode === updatedJobRole.jobRoleCode);
-
-        if (index !== -1) {
-            const updated = [...jobRoles];
-            updated[index] = updatedJobRole;
-            this._jobRoles.set(updated);
-        }
+        this.state.update(state => ({
+            ...state,
+            jobRoles: state.jobRoles.map(jr =>
+                jr.jobRoleId === updatedJobRole.jobRoleId ? updatedJobRole : jr
+            )
+        }));
     }
 
-    removeJobRole(code: string): void {
-        const filtered = this._jobRoles().filter(c => c.jobRoleCode !== code);
-        this._jobRoles.set(filtered);
-        this._total.set(this._total() - 1);
+    /**
+     * 刪除職務角色
+     */
+    removeJobRole(jobRoleId: number): void {
+        this.state.update(state => ({
+            ...state,
+            jobRoles: state.jobRoles.filter(jr => jr.jobRoleId !== jobRoleId),
+            total: state.total - 1
+        }));
     }
 
-    toggleJobRoleStatus(code: string): void {
-        const jobRoles = this._jobRoles();
-        const index = jobRoles.findIndex(c => c.jobRoleCode === code);
-
-        if (index !== -1) {
-            const updated = [...jobRoles];
-            updated[index] = {
-                ...updated[index],
-                isActive: !updated[index].isActive,
-                updateTime: new Date().toISOString(),
-                updateUser: 'current_user'
-            };
-            this._jobRoles.set(updated);
-        }
+    /**
+     * 切換職務角色狀態
+     */
+    toggleJobRoleStatus(jobRoleId: number): void {
+        this.state.update(state => ({
+            ...state,
+            jobRoles: state.jobRoles.map(jr =>
+                jr.jobRoleId === jobRoleId ? { ...jr, isActive: !jr.isActive } : jr
+            )
+        }));
     }
 
+    /**
+     * 清除錯誤
+     */
     clearError(): void {
-        this._error.set(null);
+        this.state.update(state => ({
+            ...state,
+            error: null
+        }));
     }
 
+    /**
+     * 重置狀態
+     */
     reset(): void {
-        this._jobRoles.set([]);
-        this._total.set(0);
-        this._currentPage.set(1);
-        this._searchParams.set({});
-        this._error.set(null);
-        this._loading.set(false);
+        this.state.set(initialState);
     }
 }

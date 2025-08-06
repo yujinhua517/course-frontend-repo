@@ -1,3 +1,9 @@
+import { 
+  BaseSearchParams, 
+  QueryOptions, 
+  ServiceListResponse 
+} from '../../../core/models/common.model';
+
 export interface JobRole {
     jobRoleId?: number; // 新增主鍵欄位
     jobRoleCode: string;
@@ -27,50 +33,37 @@ export interface JobRoleUpdateDto {
     updateUser?: string; // 新增更新者欄位
 }
 
-export interface JobRoleSearchParams {
+/**
+ * 職務角色查詢參數 - 繼承統一的基礎查詢參數
+ */
+export interface JobRoleSearchParams extends BaseSearchParams {
+    // 職務角色特有的搜尋欄位
     jobRoleId?: number;
     jobRoleCode?: string;
     jobRoleName?: string;
     description?: string;
+}
+
+/**
+ * 職務角色列表回應介面
+ */
+export interface JobRoleListResponse extends ServiceListResponse<JobRole> {}
+
+/**
+ * 職務角色查詢選項介面
+ */
+export interface JobRoleQueryOptions extends QueryOptions<JobRole, JobRoleFilters> {}
+
+/**
+ * 職務角色篩選條件介面
+ */
+export interface JobRoleFilters {
     isActive?: boolean;
-    // 搜尋參數
-    keyword?: string;
-    // 排序參數
-    sortColumn?: string;
-    sortDirection?: string;
-    // 分頁參數 (前端使用，會轉換為後端 PageBean 格式)
-    pageIndex?: number;  // 0-based 頁碼
-    pageSize?: number;   // 每頁筆數
-    // 後端 PageBean 分頁參數 (轉換後傳送給後端)
-    firstIndexInPage?: number;  // 1-based 第一筆索引
-    lastIndexInPage?: number;   // 1-based 最後一筆索引
-    pageable?: boolean;
-    totalRecords?: number;
 }
 
-// API 回應包裝器
-export interface ApiResponse<T> {
-    code: number;
-    message: string;
-    data: T;
-}
-
-// 分頁回應 DTO (前端使用 camelCase)
-export interface PagerDto<T> {
-    dataList: T[];
-    totalRecords: number;
-    firstIndexInPage: number;
-    lastIndexInPage: number;
-    pageable: boolean;
-    sortColumn?: string;
-    sortDirection?: string;
-    // 額外的分頁資訊（匹配後端 Spring Data Page）
-    totalPages?: number;
-    page?: number;
-    size?: number;
-    hasNext?: boolean;
-    hasPrevious?: boolean;
-}
-
-// 回應類型
-export type JobRoleListResponse = ApiResponse<PagerDto<JobRole>>;
+// 重新匯出統一介面供其他模組使用
+export type { 
+    ApiResponse, 
+    PagerDto, 
+    ServiceListResponse 
+} from '../../../core/models/common.model';

@@ -15,59 +15,71 @@ describe('JobRoleService', () => {
     });
 
     it('should return job roles list', (done) => {
-        service.getJobRoles().subscribe(response => {
-            expect(response.data).toBeDefined();
-            expect(response.data.data_list.length).toBeGreaterThan(0);
-            expect(response.data.total_records).toBeGreaterThan(0);
+        service.getPagedData().subscribe(response => {
+            expect(response).toBeTruthy();
+            expect(response.data.dataList).toBeInstanceOf(Array);
+            expect(response.data.dataList.length).toBeGreaterThan(0);
+            expect(response.data.totalRecords).toBeGreaterThan(0);
             done();
         });
     });
 
     it('should filter job roles by keyword', (done) => {
         const params: JobRoleSearchParams = { keyword: '前端' };
-        service.getJobRoles(params).subscribe(response => {
-            expect(response.data.data_list.length).toBeGreaterThan(0);
-            expect(response.data.data_list[0].job_role_name).toContain('前端');
+        service.getPagedData(params).subscribe(response => {
+            expect(response.data.dataList.length).toBeGreaterThan(0);
+            const foundJobRole = response.data.dataList.find(jr => jr.jobRoleName.includes('前端'));
+            expect(foundJobRole).toBeTruthy();
             done();
         });
     });
 
     it('should filter job roles by active status', (done) => {
-        const params: JobRoleSearchParams = { is_active: true };
-        service.getJobRoles(params).subscribe(response => {
-            expect(response.data.data_list.every(item => item.is_active === true)).toBeTruthy();
+        const params: JobRoleSearchParams = { isActive: true };
+        service.getPagedData(params).subscribe(response => {
+            const allActive = response.data.dataList.every(jr => jr.isActive === true);
+            expect(allActive).toBeTruthy();
             done();
         });
     });
 
     it('should create new job role', (done) => {
         const newJobRole = {
-            job_role_code: 'TEST001',
-            job_role_name: '測試工程師',
+            jobRoleCode: 'TEST001',
+            jobRoleName: '測試工程師',
             description: '負責軟體測試工作',
-            is_active: true
+            isActive: true
         };
 
         service.createJobRole(newJobRole).subscribe(result => {
-            expect(result.data.job_role_code).toBe(newJobRole.job_role_code);
-            expect(result.data.job_role_name).toBe(newJobRole.job_role_name);
-            expect(result.data.create_user).toBeDefined();
-            expect(result.data.create_time).toBeDefined();
+            expect(result).toBeTruthy();
+            expect(result!.jobRoleCode).toBe(newJobRole.jobRoleCode);
+            expect(result!.jobRoleName).toBe(newJobRole.jobRoleName);
+            expect(result!.createUser).toBeDefined();
+            expect(result!.createTime).toBeDefined();
             done();
         });
     });
 
-    it('should update job role status', (done) => {
-        service.batchUpdateJobRoleStatus(['DEV001'], false).subscribe(result => {
-            expect(result.code).toBe(200);
-            expect(result.data).toBeGreaterThan(0);
+    it('should update job role', (done) => {
+        const updateData = {
+            jobRoleId: 1,
+            jobRoleCode: 'DEV001',
+            jobRoleName: '資深開發工程師',
+            description: '負責軟體開發工作',
+            isActive: true
+        };
+
+        service.updateJobRole(1, updateData).subscribe(result => {
+            expect(result).toBeTruthy();
+            expect(result!.jobRoleCode).toBe(updateData.jobRoleCode);
             done();
         });
     });
 
     it('should delete job role', (done) => {
         service.deleteJobRole(1).subscribe(result => {
-            expect(result.code).toBe(200);
+            expect(result).toBe(true);
             done();
         });
     });

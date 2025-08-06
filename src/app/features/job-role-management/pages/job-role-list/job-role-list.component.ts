@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed, inject, ViewChild, TemplateRef } from '@angular/core';
+import { Component, OnInit, signal, computed, inject, ViewChild, TemplateRef, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 // import { FormsModule } from '@angular/forms';
 // import { RouterModule } from '@angular/router';
@@ -27,6 +27,7 @@ import { HighlightPipe } from '../../../../shared/pipes/highlight.pipe';
     selector: 'app-job-role-list',
     templateUrl: './job-role-list.component.html',
     styleUrls: ['./job-role-list.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [
         CommonModule,
         // FormsModule,
@@ -231,15 +232,15 @@ export class JobRoleListComponent implements OnInit {
         columns: [
             {
                 key: 'jobRoleId',
-                label: '編號',
+                label: 'No.',
                 sortable: true,
-                width: '10%'
+                width: '8%'
             },
             {
                 key: 'jobRoleCode',
                 label: '職務代碼',
                 sortable: true,
-                width: '12%'
+                width: '11%'
             },
             {
                 key: 'jobRoleName',
@@ -251,7 +252,7 @@ export class JobRoleListComponent implements OnInit {
                 key: 'description',
                 label: '職務描述',
                 sortable: false,
-                width: '25%'
+                width: '21%'
             },
             {
                 key: 'isActive',
@@ -304,14 +305,14 @@ export class JobRoleListComponent implements OnInit {
                 {
                     key: 'jobRoleId',
                     template: this.idTemplate,
-                    cssClass: 'fw-medium text-primary',
-                    width: '10%'
+                    cssClass: 'fw-normal',
+                    width: '8%'
                 },
                 {
                     key: 'jobRoleCode',
                     template: this.codeTemplate,
                     cssClass: 'fw-medium text-primary',
-                    width: '12%'
+                    width: '11%'
                 },
                 {
                     key: 'jobRoleName',
@@ -323,7 +324,7 @@ export class JobRoleListComponent implements OnInit {
                     key: 'description',
                     template: this.descriptionTemplate,
                     cssClass: 'text-muted',
-                    width: '25%'
+                    width: '21%'
                 },
                 {
                     key: 'isActive',
@@ -414,7 +415,7 @@ export class JobRoleListComponent implements OnInit {
 
     onFilterByStatus(status: boolean | undefined): void {
         this.statusFilter.set(status);
-        this.jobRoleStore.filterByStatus(status);
+        this.jobRoleStore.filterByStatus(status !== undefined ? status : null);
     }
 
     // 表頭排序處理
@@ -506,12 +507,12 @@ export class JobRoleListComponent implements OnInit {
     onDelete(jobRole: JobRole): void {
         if (confirm(`確定要刪除職務「${jobRole.jobRoleCode}」嗎？`)) {
             this.jobRoleService.deleteJobRole(jobRole.jobRoleId!).subscribe({
-                next: (response) => {
-                    if (response.code === 200) {
-                        this.jobRoleStore.removeJobRole(jobRole.jobRoleCode);
+                next: (success) => {
+                    if (success) {
+                        this.jobRoleStore.removeJobRole(jobRole.jobRoleId!);
                         alert('職務已成功刪除');
                     } else {
-                        alert(response.message || '刪除失敗');
+                        alert('刪除失敗');
                     }
                 },
                 error: (error) => {
@@ -530,13 +531,13 @@ export class JobRoleListComponent implements OnInit {
             jobRoleCode: jobRole.jobRoleCode,
             jobRoleName: jobRole.jobRoleName,
             description: jobRole.description,
-            is_active: newStatus
+            isActive: newStatus
         };
 
-        this.jobRoleService.updateJobRole(updateDto).subscribe({
+        this.jobRoleService.updateJobRole(jobRole.jobRoleId!, updateDto).subscribe({
             next: (response) => {
-                if (response.code === 200) {
-                    this.jobRoleStore.updateJobRole(response.data);
+                if (response) {
+                    this.jobRoleStore.updateJobRole(response);
                 }
             },
             error: (error) => {
@@ -569,21 +570,38 @@ export class JobRoleListComponent implements OnInit {
     }
 
     private performBulkDelete(): void {
-        const selectedCodes = this.selectedJobRoles().map(item => item.jobRoleCode);
+        const selectedJobRoles = this.selectedJobRoles();
+        let completedCount = 0;
+        let hasError = false;
 
-        this.jobRoleService.bulkDeleteJobRoles(selectedCodes).subscribe({
-            next: (response) => {
-                if (response.code === 200) {
-                    selectedCodes.forEach(code => {
-                        this.jobRoleStore.removeJobRole(code);
-                    });
-                    this.clearSelection();
-                }
-                this.bulkDeleteLoading.set(false);
-            },
-            error: (error) => {
-                console.error('Bulk delete error:', error);
-                this.bulkDeleteLoading.set(false);
+        selectedJobRoles.forEach(jobRole => {
+            if (jobRole.jobRoleId) {
+                this.jobRoleService.deleteJobRole(jobRole.jobRoleId).subscribe({
+                    next: (success) => {
+                        completedCount++;
+                        if (success) {
+                            this.jobRoleStore.removeJobRole(jobRole.jobRoleId!);
+                        } else {
+                            hasError = true;
+                        }
+
+                        if (completedCount === selectedJobRoles.length) {
+                            this.bulkDeleteLoading.set(false);
+                            if (!hasError) {
+                                this.clearSelection();
+                            }
+                        }
+                    },
+                    error: (error) => {
+                        completedCount++;
+                        hasError = true;
+                        console.error('Delete error:', error);
+
+                        if (completedCount === selectedJobRoles.length) {
+                            this.bulkDeleteLoading.set(false);
+                        }
+                    }
+                });
             }
         });
     }
@@ -675,18 +693,28 @@ export class JobRoleListComponent implements OnInit {
         this.selectedJobRole.set(null);
     }
 
-    // 狀態切換處理 (簡化版本)
+    // 狀態切換處理 (通過編輯方式更新)
     onStatusToggled(jobRole: JobRole, newStatus: boolean): void {
-        this.jobRoleService.batchUpdateJobRoleStatus([jobRole.jobRoleCode], newStatus).subscribe({
-            next: (response) => {
-                if (response.code === 200) {
-                    this.jobRoleStore.toggleJobRoleStatus(jobRole.jobRoleCode);
+        if (jobRole.jobRoleId) {
+            const updateDto = {
+                jobRoleId: jobRole.jobRoleId,
+                jobRoleCode: jobRole.jobRoleCode,
+                jobRoleName: jobRole.jobRoleName,
+                description: jobRole.description,
+                isActive: newStatus
+            };
+
+            this.jobRoleService.updateJobRole(jobRole.jobRoleId, updateDto).subscribe({
+                next: (response) => {
+                    if (response) {
+                        this.jobRoleStore.toggleJobRoleStatus(jobRole.jobRoleId!);
+                    }
+                },
+                error: (error) => {
+                    console.error('Toggle job role status error:', error);
                 }
-            },
-            error: (error) => {
-                console.error('Toggle job role status error:', error);
-            }
-        });
+            });
+        }
     }
 
     // 獲取行動按鈕配置
@@ -735,7 +763,7 @@ export class JobRoleListComponent implements OnInit {
         switch (event.key) {
             case 'isActive':
                 this.statusFilter.set(event.value as boolean | undefined);
-                this.jobRoleStore.filterByStatus(event.value as boolean | undefined);
+                this.jobRoleStore.filterByStatus(event.value !== undefined ? event.value as boolean : null);
                 break;
             case 'category':
                 // 這裡暫時只設定過濾器值，如果需要可以添加類別過濾

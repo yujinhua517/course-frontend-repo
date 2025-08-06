@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed, inject, ViewChild, TemplateRef, effect } from '@angular/core';
+import { Component, OnInit, signal, computed, inject, ViewChild, TemplateRef, effect, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DepartmentStore } from '../../store/department.store';
 import { DepartmentService } from '../../services/department.service';
@@ -24,6 +24,7 @@ import { HighlightPipe } from '../../../../shared/pipes/highlight.pipe';
     selector: 'app-department-list',
     templateUrl: './department-list.component.html',
     styleUrls: ['./department-list.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [
         CommonModule,
         DepartmentFormComponent,
@@ -76,7 +77,7 @@ export class DepartmentListComponent implements OnInit {
     showView = signal(false);
     selectedDepartment = signal<Department | null>(null);
     formMode = signal<'create' | 'edit'>('create');
-    sortBy = signal<keyof Department>('deptId');
+    sortColumn = signal<keyof Department>('deptId');
     sortDirection = signal<'asc' | 'desc'>('asc');
 
     // Bulk selection signals
@@ -139,32 +140,32 @@ export class DepartmentListComponent implements OnInit {
         showSelectColumn: this.permissions().delete,
         isAllSelected: this.isAllSelected(),
         isPartiallySelected: this.isPartiallySelected(),
-        sortBy: this.sortBy(),
+        sortColumn: this.sortColumn(),
         sortDirection: this.sortDirection(),
         columns: [
             {
                 key: 'deptId',
-                label: '編號',
+                label: 'No.',
                 sortable: true,
-                width: '10%'
+                width: '8%'
             },
             {
                 key: 'deptCode',
                 label: '部門代碼',
                 sortable: true,
-                width: '12%'
+                width: '11%'
             },
             {
                 key: 'deptName',
                 label: '部門名稱',
                 sortable: true,
-                width: '20%'
+                width: '15%'
             },
             {
                 key: 'deptLevel',
                 label: '部門層級',
                 sortable: false,
-                width: '10%'
+                width: '11%'
             },
             {
                 key: 'parentDeptName',
@@ -177,13 +178,13 @@ export class DepartmentListComponent implements OnInit {
                 label: '狀態',
                 sortable: false,
                 align: 'center',
-                width: '10%'
+                width: '11%'
             },
             {
                 key: 'createTime',
                 label: '建立時間',
                 sortable: true,
-                width: '15%'
+                width: '14%'
             },
             {
                 key: 'actions',
@@ -223,26 +224,26 @@ export class DepartmentListComponent implements OnInit {
                 {
                     key: 'deptId',
                     template: this.idTemplate,
-                    cssClass: 'fw-medium text-primary',
-                    width: '10%'
+                    cssClass: 'fw-normal',
+                    width: '8%'
                 },
                 {
                     key: 'deptCode',
                     template: this.codeTemplate,
                     cssClass: 'fw-medium text-primary',
-                    width: '12%'
+                    width: '11%'
                 },
                 {
                     key: 'deptName',
                     template: this.nameTemplate,
                     cssClass: 'fw-medium',
-                    width: '20%'
+                    width: '15%'
                 },
                 {
                     key: 'deptLevel',
                     template: this.levelTemplate,
                     align: 'center',
-                    width: '10%'
+                    width: '11%'
                 },
                 {
                     key: 'parentDeptName',
@@ -254,13 +255,13 @@ export class DepartmentListComponent implements OnInit {
                     key: 'isActive',
                     template: this.statusTemplate,
                     align: 'center',
-                    width: '10%'
+                    width: '11%'
                 },
                 {
                     key: 'createTime',
                     template: this.timeTemplate,
                     cssClass: 'text-muted small',
-                    width: '15%'
+                    width: '14%'
                 },
                 {
                     key: 'actions',
@@ -381,19 +382,19 @@ export class DepartmentListComponent implements OnInit {
             keyword: this.searchKeyword() || undefined,
             isActive: this.statusFilter() ?? undefined,
             deptLevel: this.levelFilter() ?? undefined,
-            sortBy: this.sortBy(),
+            sortColumn: this.sortColumn(),
             sortDirection: this.sortDirection()
         });
     }
 
     onSearch(): void {
-        this.departmentStore.search(this.searchKeyword());
+        this.departmentStore.searchDepartments(this.searchKeyword());
     }
 
     // 共享組件事件處理方法
     onSearchChange(keyword: string): void {
         this.searchKeyword.set(keyword);
-        this.departmentStore.search(keyword);
+        this.departmentStore.searchDepartments(keyword);
     }
 
     clearSearch(): void {
@@ -427,14 +428,14 @@ export class DepartmentListComponent implements OnInit {
     onTableSort(event: { column: string; direction: 'asc' | 'desc' | null }): void {
         if (event.direction === null) {
             // 重設排序到預設值
-            this.sortBy.set('deptId');
+            this.sortColumn.set('deptId');
             this.sortDirection.set('asc');
-            // 直接調用 loadDepartments 以確保使用最新的 sortBy 和 sortDirection
+            // 直接調用 loadDepartments 以確保使用最新的 sortColumn 和 sortDirection
             this.loadDepartments();
         } else {
-            this.sortBy.set(event.column as keyof Department);
+            this.sortColumn.set(event.column as keyof Department);
             this.sortDirection.set(event.direction);
-            this.departmentStore.sortDepartments(this.sortBy(), this.sortDirection());
+            this.departmentStore.sortDepartments(this.sortColumn(), this.sortDirection());
         }
     }
 
@@ -537,17 +538,17 @@ export class DepartmentListComponent implements OnInit {
 
     // 排序 - 支援三階段排序（升冪/降冪/無排序）
     onSort(column: keyof Department): void {
-        if (this.sortBy() === column) {
+        if (this.sortColumn() === column) {
             // 同一欄位：asc -> desc -> 重設為預設排序
             if (this.sortDirection() === 'asc') {
                 this.sortDirection.set('desc');
             } else {
                 // 重設為預設排序（部門代碼升冪）
-                this.sortBy.set('deptCode');
+                this.sortColumn.set('deptCode');
                 this.sortDirection.set('asc');
             }
         } else {
-            this.sortBy.set(column);
+            this.sortColumn.set(column);
             this.sortDirection.set('asc');
         }
         this.loadDepartments();

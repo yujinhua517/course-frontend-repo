@@ -122,10 +122,10 @@ export class JobRoleFormComponent implements OnInit {
         this.jobRoleService.createJobRole(formValue).subscribe({
             next: (response) => {
                 this.loading.set(false);
-                if (response.code === 200) {
-                    this.saved.emit(response.data);
+                if (response) {
+                    this.saved.emit(response);
                 } else {
-                    this.error.set(response.message || '建立職務失敗');
+                    this.error.set('建立職務失敗');
                 }
             },
             error: (error) => {
@@ -146,13 +146,13 @@ export class JobRoleFormComponent implements OnInit {
             isActive: formValue.isActive
         };
 
-        this.jobRoleService.updateJobRole(updateDto).subscribe({
+        this.jobRoleService.updateJobRole(jobRoleData.jobRoleId!, updateDto).subscribe({
             next: (response) => {
                 this.loading.set(false);
-                if (response.code === 200) {
-                    this.saved.emit(response.data);
+                if (response) {
+                    this.saved.emit(response);
                 } else {
-                    this.error.set(response.message || '更新職務失敗');
+                    this.error.set('更新職務失敗');
                 }
             },
             error: (error) => {
