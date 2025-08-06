@@ -436,10 +436,21 @@ export class CompetencyListComponent implements OnInit {
     }
 
     // 表頭事件處理方法
-    onTableSort(event: { column: string; direction: 'asc' | 'desc' }): void {
-        this.sortBy.set(event.column as keyof Competency);
-        this.sortDirection.set(event.direction);
-        this.competencyStore.sortCompetencies(this.sortBy(), this.sortDirection());
+    onTableSort(event: { column: string; direction: 'asc' | 'desc' | null }): void {
+        if (event.direction === null) {
+            // 重設排序
+            this.sortBy.set('job_role_code');
+            this.sortDirection.set('asc');
+            this.competencyStore.loadCompetencies({
+                ...this.competencyStore.searchParams(),
+                sort_column: undefined,
+                sort_direction: undefined
+            });
+        } else {
+            this.sortBy.set(event.column as keyof Competency);
+            this.sortDirection.set(event.direction);
+            this.competencyStore.sortCompetencies(this.sortBy(), this.sortDirection());
+        }
     }
 
     onTableSelectAll(checked: boolean): void {
@@ -506,7 +517,7 @@ export class CompetencyListComponent implements OnInit {
     onToggleStatus(competency: Competency): void {
         const targetStatus = !competency.is_active;
         const statusText = targetStatus ? '啟用' : '停用';
-        
+
         if (!confirm(`確定要將「${competency.job_role_name}」的狀態切換至「${statusText}」嗎？`)) {
             return;
         }

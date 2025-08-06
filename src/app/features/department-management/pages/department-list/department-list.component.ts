@@ -76,7 +76,7 @@ export class DepartmentListComponent implements OnInit {
     showView = signal(false);
     selectedDepartment = signal<Department | null>(null);
     formMode = signal<'create' | 'edit'>('create');
-    sortBy = signal<keyof Department>('deptCode');
+    sortBy = signal<keyof Department>('deptId');
     sortDirection = signal<'asc' | 'desc'>('asc');
 
     // Bulk selection signals
@@ -89,7 +89,7 @@ export class DepartmentListComponent implements OnInit {
         searchLabel: '關鍵字搜尋',
         filters: [
             {
-                key: 'is_active',
+                key: 'isActive',
                 label: '啟用狀態',
                 options: [
                     { value: true, text: '啟用' },
@@ -97,7 +97,7 @@ export class DepartmentListComponent implements OnInit {
                 ]
             },
             {
-                key: 'dept_level',
+                key: 'deptLevel',
                 label: '部門層級',
                 options: DEPARTMENT_LEVEL_OPTIONS.map(option => ({
                     value: option.value,
@@ -143,38 +143,44 @@ export class DepartmentListComponent implements OnInit {
         sortDirection: this.sortDirection(),
         columns: [
             {
-                key: 'dept_code',
+                key: 'deptId',
+                label: '編號',
+                sortable: true,
+                width: '10%'
+            },
+            {
+                key: 'deptCode',
                 label: '部門代碼',
                 sortable: true,
                 width: '12%'
             },
             {
-                key: 'dept_name',
+                key: 'deptName',
                 label: '部門名稱',
                 sortable: true,
-                width: '18%'
+                width: '20%'
             },
             {
-                key: 'dept_level',
+                key: 'deptLevel',
                 label: '部門層級',
                 sortable: false,
                 width: '10%'
             },
             {
-                key: 'parent_dept_name',
+                key: 'parentDeptName',
                 label: '上級部門',
                 sortable: false,
                 width: '15%'
             },
             {
-                key: 'status',
+                key: 'isActive',
                 label: '狀態',
                 sortable: false,
                 align: 'center',
                 width: '10%'
             },
             {
-                key: 'create_time',
+                key: 'createTime',
                 label: '建立時間',
                 sortable: true,
                 width: '15%'
@@ -190,6 +196,7 @@ export class DepartmentListComponent implements OnInit {
     }));
 
     // Table Body 配置
+    @ViewChild('idTemplate', { static: true }) idTemplate!: TemplateRef<any>;
     @ViewChild('codeTemplate', { static: true }) codeTemplate!: TemplateRef<any>;
     @ViewChild('nameTemplate', { static: true }) nameTemplate!: TemplateRef<any>;
     @ViewChild('levelTemplate', { static: true }) levelTemplate!: TemplateRef<any>;
@@ -214,37 +221,43 @@ export class DepartmentListComponent implements OnInit {
             rowCssClass: (item: Department) => this.isSelected(item) ? 'table-active' : '',
             columns: [
                 {
-                    key: 'dept_code',
+                    key: 'deptId',
+                    template: this.idTemplate,
+                    cssClass: 'fw-medium text-primary',
+                    width: '10%'
+                },
+                {
+                    key: 'deptCode',
                     template: this.codeTemplate,
                     cssClass: 'fw-medium text-primary',
                     width: '12%'
                 },
                 {
-                    key: 'dept_name',
+                    key: 'deptName',
                     template: this.nameTemplate,
                     cssClass: 'fw-medium',
-                    width: '18%'
+                    width: '20%'
                 },
                 {
-                    key: 'dept_level',
+                    key: 'deptLevel',
                     template: this.levelTemplate,
                     align: 'center',
                     width: '10%'
                 },
                 {
-                    key: 'parent_dept_name',
+                    key: 'parentDeptName',
                     template: this.parentTemplate,
                     cssClass: 'text-muted',
                     width: '15%'
                 },
                 {
-                    key: 'status',
+                    key: 'isActive',
                     template: this.statusTemplate,
                     align: 'center',
                     width: '10%'
                 },
                 {
-                    key: 'create_time',
+                    key: 'createTime',
                     template: this.timeTemplate,
                     cssClass: 'text-muted small',
                     width: '15%'
@@ -397,17 +410,32 @@ export class DepartmentListComponent implements OnInit {
         this.departmentStore.clearError();
     }
 
+    // onTableSort(event: { column: string; direction: 'asc' | 'desc' | null }): void {
+    //     // 支援三階段排序：如果 column 為空字串或 direction 為 null，表示重設為無排序
+    //     if (!event.column || event.direction === null) {
+    //         this.sortBy.set('deptCode'); // 重設為預設排序欄位
+    //         this.sortDirection.set('asc');
+    //     } else {
+    //         this.sortBy.set(event.column as keyof Department);
+    //         this.sortDirection.set(event.direction);
+    //     }
+
+    //     this.loadDepartments();
+    // }
+
+    // 表頭事件處理方法
     onTableSort(event: { column: string; direction: 'asc' | 'desc' | null }): void {
-        // 支援三階段排序：如果 column 為空字串或 direction 為 null，表示重設為無排序
-        if (!event.column || event.direction === null) {
-            this.sortBy.set('deptCode'); // 重設為預設排序欄位
+        if (event.direction === null) {
+            // 重設排序到預設值
+            this.sortBy.set('deptId');
             this.sortDirection.set('asc');
+            // 直接調用 loadDepartments 以確保使用最新的 sortBy 和 sortDirection
+            this.loadDepartments();
         } else {
             this.sortBy.set(event.column as keyof Department);
             this.sortDirection.set(event.direction);
+            this.departmentStore.sortDepartments(this.sortBy(), this.sortDirection());
         }
-
-        this.loadDepartments();
     }
 
     onTableSelectAll(selected: boolean): void {
@@ -473,11 +501,11 @@ export class DepartmentListComponent implements OnInit {
 
     onFilterChange(event: { key: string; value: any }): void {
         const actions = {
-            'is_active': () => {
+            'isActive': () => {
                 this.statusFilter.set(event.value as boolean | undefined);
                 this.departmentStore.filterByStatus(event.value as boolean | undefined);
             },
-            'dept_level': () => {
+            'deptLevel': () => {
                 this.levelFilter.set(event.value);
                 this.departmentStore.filterByLevel(event.value);
             }

@@ -81,7 +81,7 @@ export class EmployeeListComponent implements OnInit {
     showView = signal(false);
     selectedEmployee = signal<Employee | null>(null);
     formMode = signal<'create' | 'edit'>('create');
-    sortBy = signal<keyof Employee>('empCode');
+    sortBy = signal<keyof Employee>('empId');
     sortDirection = signal<'asc' | 'desc'>('asc');
 
     // Bulk selection signals
@@ -141,44 +141,50 @@ export class EmployeeListComponent implements OnInit {
         sortDirection: this.sortDirection(),
         columns: [
             {
-                key: 'emp_code',
+                key: 'empId',
+                label: '編號',
+                sortable: true,
+                width: '10%'
+            },
+            {
+                key: 'empCode',
                 label: '員工工號',
                 sortable: true,
                 width: '12%'
             },
             {
-                key: 'emp_name',
+                key: 'empName',
                 label: '員工姓名',
                 sortable: true,
                 width: '12%'
             },
             {
-                key: 'emp_email',
+                key: 'empEmail',
                 label: '電子郵件',
                 sortable: false,
                 width: '15%'
             },
             {
-                key: 'dept_name',
+                key: 'deptName',
                 label: '所屬部門',
                 sortable: false,
                 width: '12%'
             },
             {
-                key: 'job_title',
+                key: 'jobTitle',
                 label: '職稱',
                 sortable: false,
-                width: '12%'
+                width: '14%'
             },
             {
-                key: 'status',
+                key: 'isActive',
                 label: '狀態',
                 sortable: false,
                 align: 'center',
                 width: '10%'
             },
             {
-                key: 'hire_date',
+                key: 'hireDate',
                 label: '入職日期',
                 sortable: true,
                 width: '12%'
@@ -194,6 +200,7 @@ export class EmployeeListComponent implements OnInit {
     }));
 
     // Table Body 配置
+    @ViewChild('idTemplate', { static: true }) idTemplate!: TemplateRef<any>;
     @ViewChild('codeTemplate', { static: true }) codeTemplate!: TemplateRef<any>;
     @ViewChild('nameTemplate', { static: true }) nameTemplate!: TemplateRef<any>;
     @ViewChild('emailTemplate', { static: true }) emailTemplate!: TemplateRef<any>;
@@ -219,43 +226,49 @@ export class EmployeeListComponent implements OnInit {
             rowCssClass: (item: Employee) => this.isSelected(item) ? 'table-active' : '',
             columns: [
                 {
-                    key: 'emp_code',
+                    key: 'empId',
+                    template: this.idTemplate,
+                    cssClass: 'fw-medium text-primary',
+                    width: '10%'
+                },
+                {
+                    key: 'empCode',
                     template: this.codeTemplate,
                     cssClass: 'fw-medium text-primary',
                     width: '12%'
                 },
                 {
-                    key: 'emp_name',
+                    key: 'empName',
                     template: this.nameTemplate,
                     cssClass: 'fw-medium',
                     width: '12%'
                 },
                 {
-                    key: 'emp_email',
+                    key: 'empEmail',
                     template: this.emailTemplate,
                     cssClass: 'text-muted',
                     width: '15%'
                 },
                 {
-                    key: 'dept_name',
+                    key: 'deptName',
                     template: this.deptTemplate,
                     cssClass: 'text-muted',
                     width: '12%'
                 },
                 {
-                    key: 'job_title',
+                    key: 'jobTitle',
                     template: this.jobTemplate,
                     cssClass: 'text-muted',
-                    width: '12%'
+                    width: '14%'
                 },
                 {
-                    key: 'status',
+                    key: 'isActive',
                     template: this.statusTemplate,
                     align: 'center',
                     width: '10%'
                 },
                 {
-                    key: 'hire_date',
+                    key: 'hireDate',
                     template: this.dateTemplate,
                     cssClass: 'text-muted small',
                     width: '12%'
@@ -266,7 +279,6 @@ export class EmployeeListComponent implements OnInit {
                     align: 'center',
                     width: '15%'
                 }
-
             ]
         };
     });
@@ -434,10 +446,18 @@ export class EmployeeListComponent implements OnInit {
     }
 
     // 表頭事件處理方法
-    onTableSort(event: { column: string; direction: 'asc' | 'desc' }): void {
-        this.sortBy.set(event.column as keyof Employee);
-        this.sortDirection.set(event.direction);
-        this.employeeStore.sortEmployees(this.sortBy(), this.sortDirection());
+    onTableSort(event: { column: string; direction: 'asc' | 'desc' | null }): void {
+        if (event.direction === null) {
+            // 重設排序到預設值
+            this.sortBy.set('empId');
+            this.sortDirection.set('asc');
+            // 直接調用 loadEmployees 以確保使用最新的 sortBy 和 sortDirection
+            this.loadEmployees();
+        } else {
+            this.sortBy.set(event.column as keyof Employee);
+            this.sortDirection.set(event.direction);
+            this.employeeStore.sortEmployees(this.sortBy(), this.sortDirection());
+        }
     }
 
     // 選擇操作

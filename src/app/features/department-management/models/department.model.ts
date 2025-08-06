@@ -51,7 +51,10 @@ export interface DepartmentSearchParams {
     page?: number;
     pageSize?: number;
     // 排序參數
+    // sortBy?: keyof Department;
+    // sortDirection?: SortDirection;
     sortBy?: keyof Department;
+    sortColumn?: string;
     sortDirection?: SortDirection;
 }
 

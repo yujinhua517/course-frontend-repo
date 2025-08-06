@@ -114,7 +114,7 @@ export class JobRoleListComponent implements OnInit {
     showView = signal(false);
     selectedJobRole = signal<JobRole | null>(null);
     formMode = signal<'create' | 'edit'>('create');
-    sortBy = signal<keyof JobRole>('jobRoleCode');
+    sortBy = signal<keyof JobRole>('jobRoleId');
     sortDirection = signal<'asc' | 'desc'>('asc');
 
     // Bulk selection signals
@@ -146,8 +146,8 @@ export class JobRoleListComponent implements OnInit {
     readonly emptyStateConfig = computed<EmptyStateConfig>(() => ({
         icon: 'person-workspace',
         title: this.searchKeyword() || this.statusFilter() !== undefined ? '無符合條件的職務' : '尚無職務資料',
-        message: this.searchKeyword() || this.statusFilter() !== undefined 
-            ? '請嘗試調整搜尋條件或篩選器' 
+        message: this.searchKeyword() || this.statusFilter() !== undefined
+            ? '請嘗試調整搜尋條件或篩選器'
             : '開始建立您的第一個職務',
         primaryAction: this.hasCreatePermission() ? {
             label: '新增職務',
@@ -184,7 +184,7 @@ export class JobRoleListComponent implements OnInit {
         searchLabel: '關鍵字搜尋',
         filters: [
             {
-                key: 'is_active',
+                key: 'isActive',
                 label: '啟用狀態',
                 options: [
                     { value: true, text: '啟用' },
@@ -201,7 +201,7 @@ export class JobRoleListComponent implements OnInit {
 
     // 計算當前篩選器值
     readonly currentFilterValues = computed(() => ({
-        is_active: this.statusFilter(),
+        isActive: this.statusFilter(),
         category: this.categoryFilter()
     }));
 
@@ -230,16 +230,22 @@ export class JobRoleListComponent implements OnInit {
         sortDirection: this.sortDirection(),
         columns: [
             {
-                key: 'job_role_code',
+                key: 'jobRoleId',
+                label: '編號',
+                sortable: true,
+                width: '10%'
+            },
+            {
+                key: 'jobRoleCode',
                 label: '職務代碼',
                 sortable: true,
                 width: '12%'
             },
             {
-                key: 'job_role_name',
+                key: 'jobRoleName',
                 label: '職務名稱',
                 sortable: true,
-                width: '18%'
+                width: '20%'
             },
             {
                 key: 'description',
@@ -248,14 +254,14 @@ export class JobRoleListComponent implements OnInit {
                 width: '25%'
             },
             {
-                key: 'status',
+                key: 'isActive',
                 label: '狀態',
                 sortable: false,
                 align: 'center',
                 width: '10%'
             },
             {
-                key: 'create_time',
+                key: 'createTime',
                 label: '建立時間',
                 sortable: true,
                 width: '15%'
@@ -271,6 +277,7 @@ export class JobRoleListComponent implements OnInit {
     }));
 
     // Table Body 配置
+    @ViewChild('idTemplate', { static: true }) idTemplate!: TemplateRef<any>;
     @ViewChild('codeTemplate', { static: true }) codeTemplate!: TemplateRef<any>;
     @ViewChild('nameTemplate', { static: true }) nameTemplate!: TemplateRef<any>;
     @ViewChild('descriptionTemplate', { static: true }) descriptionTemplate!: TemplateRef<any>;
@@ -295,16 +302,22 @@ export class JobRoleListComponent implements OnInit {
             rowCssClass: (item: JobRole) => this.isSelected(item) ? 'table-active' : '',
             columns: [
                 {
-                    key: 'job_role_code',
+                    key: 'jobRoleId',
+                    template: this.idTemplate,
+                    cssClass: 'fw-medium text-primary',
+                    width: '10%'
+                },
+                {
+                    key: 'jobRoleCode',
                     template: this.codeTemplate,
                     cssClass: 'fw-medium text-primary',
                     width: '12%'
                 },
                 {
-                    key: 'job_role_name',
+                    key: 'jobRoleName',
                     template: this.nameTemplate,
                     cssClass: 'fw-medium',
-                    width: '18%'
+                    width: '20%'
                 },
                 {
                     key: 'description',
@@ -313,13 +326,13 @@ export class JobRoleListComponent implements OnInit {
                     width: '25%'
                 },
                 {
-                    key: 'status',
+                    key: 'isActive',
                     template: this.statusTemplate,
                     align: 'center',
                     width: '10%'
                 },
                 {
-                    key: 'create_time',
+                    key: 'createTime',
                     template: this.timeTemplate,
                     cssClass: 'text-muted small',
                     width: '15%'
@@ -336,7 +349,7 @@ export class JobRoleListComponent implements OnInit {
 
     // Computed for shared components
     selectedFilters = computed(() => ({
-        is_active: this.statusFilter(),
+        isActive: this.statusFilter(),
         category: this.categoryFilter()
     }));
 
@@ -362,8 +375,8 @@ export class JobRoleListComponent implements OnInit {
 
     // 篩選處理
     onFilter(filters: Record<string, any>): void {
-        this.statusFilter.set(filters['is_active']);
-        this.jobRoleStore.filterByStatus(filters['is_active']);
+        this.statusFilter.set(filters['isActive']);
+        this.jobRoleStore.filterByStatus(filters['isActive']);
         this.clearSelection();
     }
 
@@ -382,12 +395,12 @@ export class JobRoleListComponent implements OnInit {
     onSort(column: keyof JobRole): void {
         const currentSort = this.sortBy();
         const currentDirection = this.sortDirection();
-        
+
         let newDirection: 'asc' | 'desc' = 'asc';
         if (column === currentSort) {
             newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
         }
-        
+
         this.sortBy.set(column);
         this.sortDirection.set(newDirection);
         this.jobRoleStore.sortJobRoles(column, newDirection);
@@ -405,8 +418,18 @@ export class JobRoleListComponent implements OnInit {
     }
 
     // 表頭排序處理
-    onTableSort(event: { column: string; direction: 'asc' | 'desc' }): void {
-        this.onSort(event.column as keyof JobRole);
+    onTableSort(event: { column: string; direction: 'asc' | 'desc' | null }): void {
+        if (event.direction === null) {
+            // 重設排序到預設值
+            this.sortBy.set('jobRoleId');
+            this.sortDirection.set('asc');
+            // 直接調用 loadJobRoles 以確保使用最新的 sortBy 和 sortDirection
+            this.loadJobRoles();
+        } else {
+            this.sortBy.set(event.column as keyof JobRole);
+            this.sortDirection.set(event.direction);
+            this.jobRoleStore.sortJobRoles(this.sortBy(), this.sortDirection());
+        }
     }
 
     // 全選/取消全選
@@ -575,7 +598,7 @@ export class JobRoleListComponent implements OnInit {
     onSelectAll(event: Event): void {
         const target = event.target as HTMLInputElement;
         const checked = target.checked;
-        
+
         if (checked) {
             this.selectedJobRoles.set([...this.jobRoles()]);
         } else {
@@ -710,7 +733,7 @@ export class JobRoleListComponent implements OnInit {
 
     onFilterChange(event: { key: string; value: any }): void {
         switch (event.key) {
-            case 'is_active':
+            case 'isActive':
                 this.statusFilter.set(event.value as boolean | undefined);
                 this.jobRoleStore.filterByStatus(event.value as boolean | undefined);
                 break;

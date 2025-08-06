@@ -63,6 +63,10 @@
     }
 
     <!-- 模板定義 -->
+    <ng-template #idTemplate let-employee>
+        <span [innerHTML]="employee.empId | highlight:searchKeyword()"></span>
+    </ng-template>
+
     <ng-template #codeTemplate let-employee>
         <span [innerHTML]="employee.empCode | highlight:searchKeyword()"></span>
     </ng-template>

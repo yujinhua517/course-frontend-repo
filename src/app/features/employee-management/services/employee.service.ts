@@ -13,6 +13,7 @@ import {
 } from '../models/employee.model';
 import { HttpErrorHandlerService } from '../../../core/services/http-error-handler.service';
 import { MOCK_EMPLOYEES } from '../services/mock-employees.data';
+import { DepartmentService } from '../../department-management/services/department.service';
 
 @Injectable({
     providedIn: 'root'
@@ -25,6 +26,7 @@ export class EmployeeService {
 
     // 一鍵切換 mock data 和真實 API
     private readonly useMockData = false;
+    private readonly departmentService = inject(DepartmentService);
 
     /**
      * 查詢員工列表 - 支援分頁、排序、篩選
@@ -320,14 +322,29 @@ export class EmployeeService {
         };
     }
 
+    // private getDeptNameById(deptId: number): string {
+    //     const deptMap: { [key: number]: string } = {
+    //         1: '人力資源部',
+    //         2: '財務部',
+    //         3: '資訊部',
+    //         4: '行銷部',
+    //         5: '業務部'
+    //     };
+    //     return deptMap[deptId] || '未知部門';
+    // }
+
     private getDeptNameById(deptId: number): string {
-        const deptMap: { [key: number]: string } = {
-            1: '人力資源部',
-            2: '財務部',
-            3: '資訊部',
-            4: '行銷部',
-            5: '業務部'
-        };
-        return deptMap[deptId] || '未知部門';
+        if (this.useMockData) {
+            const deptMap: { [key: number]: string } = {
+                1: '人力資源部',
+                2: '財務部',
+                3: '資訊部',
+                4: '行銷部',
+                5: '業務部'
+            };
+            return deptMap[deptId] || '未知部門';
+        }
+        // API 模式下無法同步取得部門名稱，請於呼叫端處理 Observable
+        return '';
     }
 }
