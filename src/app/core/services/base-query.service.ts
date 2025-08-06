@@ -127,7 +127,6 @@ export abstract class BaseQueryService<T, TSearchParams extends BaseSearchParams
             pageSize,
             sortColumn: mappedSortColumn || this.defaultSortColumn,
             sortDirection: params?.sortDirection || 'asc',
-            ...(params?.keyword && { keyword: params.keyword }),
             ...(params?.isActive !== undefined && { isActive: params.isActive }),
             ...this.buildCustomApiParams(params)
         };

@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, of, delay } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
+import { camelToSnake } from '../../../core/utils/object-case.util';
 import {
     Employee,
     EmployeeCreateDto,
@@ -23,27 +24,68 @@ export class EmployeeService extends BaseQueryService<Employee, EmployeeSearchPa
     protected override readonly apiUrl = `${environment.apiBaseUrl}/employees`;
     protected override readonly defaultSortColumn = 'empId';
     protected override readonly mockData: Employee[] = MOCK_EMPLOYEES;
-    protected override readonly useMockData = false;
+    protected override readonly useMockData = false; // 切換到真實 API
 
+    /**
+     * 覆寫排序欄位映射：前端 camelCase -> 後端 snake_case
+     * 使用自動轉換方式
+     */
     protected override mapSortColumn(frontendColumn: string): string {
-        // 如果已經是 snake_case，直接返回
-        if (frontendColumn.includes('_')) {
-            return frontendColumn;
+        if (!frontendColumn) {
+            return this.defaultSortColumn;
+        }
+        return camelToSnake(frontendColumn);
+    }
+
+    /**
+     * 建構自訂 API 參數 - 將 keyword 轉換為具體欄位搜尋
+     */
+    protected override buildCustomApiParams(params?: EmployeeSearchParams): Record<string, any> {
+        const customParams: Record<string, any> = {};
+
+        // 處理 keyword 搜尋 - 轉換為具體欄位，不傳送 keyword 本身
+        if (params?.keyword) {
+            const keyword = params.keyword.trim();
+            if (keyword) {
+                // 根據關鍵字特性決定搜尋策略
+                if (/^[A-Z]{1,}\d+$/i.test(keyword)) {
+                    // 如果看起來像員工代碼 (如 EMP001, DEV001)，搜尋 empCode
+                    customParams['empCode'] = keyword;
+                } else if (/^\d+$/.test(keyword)) {
+                    // 如果是純數字，搜尋 empId
+                    customParams['empId'] = parseInt(keyword, 10);
+                } else if (keyword.includes('@')) {
+                    // 如果包含 @，搜尋 empEmail
+                    customParams['empEmail'] = keyword;
+                } else {
+                    // 否則搜尋員工姓名
+                    customParams['empName'] = keyword;
+                }
+            }
         }
 
-        // 定義欄位映射
-        const sortFieldMap: { [key: string]: string } = {
-            empId: 'emp_id',
-            empCode: 'emp_code',
-            chineseName: 'chinese_name',
-            englishName: 'english_name',
-            email: 'email',
-            hireDate: 'hire_date',
-            deptId: 'dept_id'
-        };
+        // 處理其他具體搜尋欄位
+        if (params?.empId !== undefined) {
+            customParams['empId'] = params.empId;
+        }
 
-        // 如果找到映射則使用，否則使用預設排序欄位
-        return sortFieldMap[frontendColumn] || this.defaultSortColumn;
+        if (params?.empCode) {
+            customParams['empCode'] = params.empCode;
+        }
+
+        if (params?.empName) {
+            customParams['empName'] = params.empName;
+        }
+
+        if (params?.empEmail) {
+            customParams['empEmail'] = params.empEmail;
+        }
+
+        if (params?.deptId !== undefined) {
+            customParams['deptId'] = params.deptId;
+        }
+
+        return customParams;
     }
 
     protected override applyMockFilters(data: Employee[], params?: EmployeeSearchParams): Employee[] {

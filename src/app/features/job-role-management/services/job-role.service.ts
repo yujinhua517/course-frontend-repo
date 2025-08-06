@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, of, delay } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
+import { camelToSnake } from '../../../core/utils/object-case.util';
 import {
     JobRole,
     JobRoleCreateDto,
@@ -137,34 +138,15 @@ export class JobRoleService extends BaseQueryService<JobRole, JobRoleSearchParam
         }
     ];
 
+    /**
+     * 覆寫排序欄位映射：前端 camelCase -> 後端 snake_case
+     * 使用自動轉換方式
+     */
     protected override mapSortColumn(column: string): string {
         if (!column) {
-            return 'job_role_id'; // 直接返回預設的後端欄位名
+            return this.defaultSortColumn;
         }
-
-        // JobRole 表格的排序欄位映射
-        const columnMap: Record<string, string> = {
-            'jobRoleId': 'job_role_id',
-            'jobRoleCode': 'job_role_code',
-            'jobRoleName': 'job_role_name',
-            'description': 'description',
-            'isActive': 'is_active',
-            'createTime': 'create_time',
-            'updateTime': 'update_time'
-        };
-
-        // 如果輸入已經是 snake_case (後端格式)，直接返回
-        if (column.includes('_')) {
-            return column;
-        }
-
-        // 如果找到前端欄位的映射，返回對應的後端欄位
-        if (columnMap[column]) {
-            return columnMap[column];
-        }
-
-        // 找不到映射，返回預設值
-        return 'job_role_id';
+        return camelToSnake(column);
     }
 
     /**
@@ -209,28 +191,6 @@ export class JobRoleService extends BaseQueryService<JobRole, JobRoleSearchParam
         }
 
         return customParams;
-    }
-
-    /**
-     * 覆寫基礎 API 參數建構，排除 keyword 參數
-     */
-    protected override buildApiParams(params?: JobRoleSearchParams): Record<string, any> {
-        const page = params?.page || 1;
-        const pageSize = params?.pageSize || 10;
-        const mappedSortColumn = this.mapSortColumn(params?.sortColumn || '');
-
-        const apiParams = {
-            firstIndexInPage: page === 1 ? 1 : (page - 1) * pageSize + 1,
-            lastIndexInPage: page * pageSize,
-            pageable: true,
-            pageSize,
-            sortColumn: mappedSortColumn || this.defaultSortColumn,
-            sortDirection: params?.sortDirection || 'asc',
-            ...(params?.isActive !== undefined && { isActive: params.isActive }),
-            ...this.buildCustomApiParams(params)
-        };
-
-        return apiParams;
     }
 
     protected override applyMockFilters(data: JobRole[], params?: JobRoleSearchParams): JobRole[] {

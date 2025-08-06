@@ -2,6 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of, map, delay, catchError, switchMap } from 'rxjs';
 import { BaseQueryService } from '../../../core/services/base-query.service';
+import { camelToSnake } from '../../../core/utils/object-case.util';
 import {
     Department,
     CreateDepartmentRequest,
@@ -36,7 +37,7 @@ export class DepartmentService extends BaseQueryService<Department, DepartmentSe
     // BaseQueryService 必需的屬性
     protected readonly apiUrl = `${environment.apiBaseUrl}/departments`;
     protected readonly useMockData = false;
-    protected readonly defaultSortColumn = 'deptCode';
+    protected readonly defaultSortColumn = 'deptId';
     protected readonly mockData: Department[] = MOCK_DEPARTMENTS;
 
     // 使用 signals 替代 BehaviorSubject - 符合 Angular 19+ 規範
@@ -49,22 +50,13 @@ export class DepartmentService extends BaseQueryService<Department, DepartmentSe
 
     /**
      * 覆寫排序欄位映射：前端 camelCase -> 後端 snake_case
+     * 使用自動轉換方式
      */
     protected override mapSortColumn(frontendColumn?: string): string {
-        const mapping: Record<string, string> = {
-            'deptId': 'dept_id',
-            'deptCode': 'dept_code',
-            'deptName': 'dept_name',
-            'deptLevel': 'dept_level',
-            'parentDeptId': 'parent_dept_id',
-            'managerEmpId': 'manager_emp_id',
-            'isActive': 'is_active',
-            'createTime': 'create_time',
-            'createUser': 'create_user',
-            'updateTime': 'update_time',
-            'updateUser': 'update_user'
-        };
-        return mapping[frontendColumn || ''] || 'dept_code';
+        if (!frontendColumn) {
+            return this.defaultSortColumn;
+        }
+        return camelToSnake(frontendColumn);
     }
 
     /**
@@ -115,16 +107,51 @@ export class DepartmentService extends BaseQueryService<Department, DepartmentSe
     }
 
     /**
-     * 建構自訂API參數
+     * 建構自訂API參數 - 將 keyword 轉換為具體欄位搜尋
      */
     protected override buildCustomApiParams(params?: DepartmentSearchParams): Record<string, any> {
-        return {
-            ...(params?.deptLevel && { deptLevel: params.deptLevel }),
-            ...(params?.parentDeptId !== undefined && { parentDeptId: params.parentDeptId }),
-            ...(params?.deptCode && { deptCode: params.deptCode }),
-            ...(params?.deptName && { deptName: params.deptName }),
-            ...(params?.managerEmpId && { managerEmpId: params.managerEmpId })
-        };
+        const customParams: Record<string, any> = {};
+
+        // 處理 keyword 搜尋 - 轉換為具體欄位，不傳送 keyword 本身
+        if (params?.keyword) {
+            const keyword = params.keyword.trim();
+            if (keyword) {
+                // 根據關鍵字特性決定搜尋策略
+                if (/^[A-Z]{2,}\d+$/i.test(keyword)) {
+                    // 如果看起來像部門代碼 (如 IT001, HR001)，搜尋 deptCode
+                    customParams['deptCode'] = keyword;
+                } else if (/^\d+$/.test(keyword)) {
+                    // 如果是純數字，搜尋 deptId
+                    customParams['deptId'] = parseInt(keyword, 10);
+                } else {
+                    // 否則搜尋部門名稱
+                    customParams['deptName'] = keyword;
+                }
+            }
+        }
+
+        // 處理其他具體搜尋欄位
+        if (params?.deptLevel) {
+            customParams['deptLevel'] = params.deptLevel;
+        }
+
+        if (params?.parentDeptId !== undefined) {
+            customParams['parentDeptId'] = params.parentDeptId;
+        }
+
+        if (params?.deptCode) {
+            customParams['deptCode'] = params.deptCode;
+        }
+
+        if (params?.deptName) {
+            customParams['deptName'] = params.deptName;
+        }
+
+        if (params?.managerEmpId) {
+            customParams['managerEmpId'] = params.managerEmpId;
+        }
+
+        return customParams;
     }
 
     /**
