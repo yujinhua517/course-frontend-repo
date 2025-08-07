@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of, delay } from 'rxjs';
-import { map, catchError } from 'rxjs/operators';
+import { Observable, of, delay, forkJoin } from 'rxjs';
+import { map, catchError, switchMap } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
 import { camelToSnake } from '../../../core/utils/object-case.util';
 import {
@@ -303,6 +303,61 @@ export class JobRoleService extends BaseQueryService<JobRole, JobRoleSearchParam
             );
     }
 
+    /**
+     * 批量刪除職務角色 (後端目前無此 API，使用逐一刪除方式)
+     */
+    bulkDeleteJobRoles(ids: number[]): Observable<boolean> {
+        if (this.useMockData) {
+            return of(true).pipe(delay(800));
+        }
+
+        // 由於後端目前沒有 bulk-delete API，使用逐一刪除方式
+        const deleteRequests = ids.map(id =>
+            this.http.post<ApiResponse<void>>(`${this.apiUrl}/delete`, { jobRoleId: id })
+                .pipe(
+                    map(response => response.code === 1000),
+                    catchError(() => of(false))
+                )
+        );
+
+        return forkJoin(deleteRequests).pipe(
+            map(results => results.every(result => result === true)),
+            catchError(this.httpErrorHandler.handleError('bulkDeleteJobRoles', false))
+        );
+    }
+
+    /**
+     * 切換職務角色狀態 (後端目前無此 API，使用更新方式)
+     */
+    toggleActiveStatus(id: number): Observable<JobRole | null> {
+        if (this.useMockData) {
+            return of(this.toggleMockActiveStatus(id)).pipe(delay(500));
+        }
+
+        // 先獲取當前資料，然後更新狀態
+        return this.getJobRoleById(id).pipe(
+            switchMap(jobRole => {
+                if (!jobRole) {
+                    throw new Error('Job role not found');
+                }
+
+                const updateDto = {
+                    jobRoleId: id,
+                    jobRoleCode: jobRole.jobRoleCode,
+                    jobRoleName: jobRole.jobRoleName,
+                    description: jobRole.description,
+                    isActive: !jobRole.isActive
+                };
+
+                return this.http.post<ApiResponse<JobRole>>(`${this.apiUrl}/update`, updateDto)
+                    .pipe(
+                        map(response => response.data || null),
+                        catchError(this.httpErrorHandler.handleError('toggleActiveStatus', null))
+                    );
+            })
+        );
+    }
+
     // Mock 資料處理方法
     private getMockJobRoleById(id: number): JobRole | null {
         return this.mockData.find((jr: JobRole) => jr.jobRoleId === id) || null;
@@ -343,6 +398,20 @@ export class JobRoleService extends BaseQueryService<JobRole, JobRoleSearchParam
             isActive: jobRoleData.isActive ?? existing.isActive,
             updateTime: new Date().toISOString(),
             updateUser: jobRoleData.updateUser || 'current_user'
+        };
+    }
+
+    private toggleMockActiveStatus(id: number): JobRole | null {
+        const existing = this.getMockJobRoleById(id);
+        if (!existing) {
+            return null;
+        }
+
+        return {
+            ...existing,
+            isActive: !existing.isActive,
+            updateTime: new Date().toISOString(),
+            updateUser: 'current_user'
         };
     }
 }

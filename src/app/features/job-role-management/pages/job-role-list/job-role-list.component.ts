@@ -22,6 +22,7 @@ import { ConfirmationModalComponent, ConfirmationModalConfig } from '../../../..
 import type { StatusConfig } from '../../../../shared/components/status-badge/status-badge.component';
 import type { ActionButtonConfig } from '../../../../shared/components/action-buttons/action-button-group.component';
 import { HighlightPipe } from '../../../../shared/pipes/highlight.pipe';
+import { GlobalMessageService } from '../../../../core/message/global-message.service';
 
 @Component({
     selector: 'app-job-role-list',
@@ -50,6 +51,7 @@ import { HighlightPipe } from '../../../../shared/pipes/highlight.pipe';
 export class JobRoleListComponent implements OnInit {
     private jobRoleStore = inject(JobRoleStore);
     private jobRoleService = inject(JobRoleService);
+    private messageService = inject(GlobalMessageService);
     // 權限判斷：基於 action 欄位的細緻權限控制
     private readonly userStore = inject(UserStore);
 
@@ -123,6 +125,12 @@ export class JobRoleListComponent implements OnInit {
     showBulkDeleteConfirm = signal(false);
     bulkDeleteLoading = signal(false);
 
+    // Individual action signals
+    showDeleteConfirm = signal(false);
+    showStatusConfirm = signal(false);
+    actionJobRole = signal<JobRole | null>(null);
+    actionLoading = signal(false);
+
     // 共用元件配置
     readonly loadingConfig = computed<LoadingStateConfig>(() => ({
         size: 'md',
@@ -178,6 +186,29 @@ export class JobRoleListComponent implements OnInit {
         maxItemsToShow: 100,
         showItemIcon: true
     }));
+
+    readonly deleteConfirmConfig = computed<ConfirmationModalConfig>(() => {
+        const jobRole = this.actionJobRole();
+        return {
+            title: '確認刪除職務',
+            message: `您確定要刪除職務「${jobRole?.jobRoleName}」嗎？此操作無法復原。`,
+            type: 'danger',
+            confirmText: '確認刪除',
+            cancelText: '取消'
+        };
+    });
+
+    readonly statusConfirmConfig = computed<ConfirmationModalConfig>(() => {
+        const jobRole = this.actionJobRole();
+        const isActive = jobRole?.isActive;
+        return {
+            title: `確認${isActive ? '停用' : '啟用'}職務`,
+            message: `您確定要${isActive ? '停用' : '啟用'}職務「${jobRole?.jobRoleName}」嗎？`,
+            type: isActive ? 'warning' : 'info',
+            confirmText: `確認${isActive ? '停用' : '啟用'}`,
+            cancelText: '取消'
+        };
+    });
 
     // 搜尋篩選配置
     readonly searchFilterConfig = computed<SearchFilterConfig>(() => ({
@@ -510,45 +541,100 @@ export class JobRoleListComponent implements OnInit {
 
     // 刪除職務
     onDelete(jobRole: JobRole): void {
-        if (confirm(`確定要刪除職務「${jobRole.jobRoleCode}」嗎？`)) {
-            this.jobRoleService.deleteJobRole(jobRole.jobRoleId!).subscribe({
-                next: (success) => {
-                    if (success) {
-                        this.jobRoleStore.removeJobRole(jobRole.jobRoleId!);
-                        alert('職務已成功刪除');
-                    } else {
-                        alert('刪除失敗');
-                    }
-                },
-                error: (error) => {
-                    console.error('Delete job role error:', error);
-                    alert('刪除失敗，請稍後再試');
-                }
-            });
-        }
+        this.actionJobRole.set(jobRole);
+        this.showDeleteConfirm.set(true);
     }
 
-    // 切換職務狀態
-    onToggleStatus(jobRole: JobRole): void {
-        const newStatus = !jobRole.isActive;
-        const updateDto = {
-            jobRoleId: jobRole.jobRoleId!,
-            jobRoleCode: jobRole.jobRoleCode,
-            jobRoleName: jobRole.jobRoleName,
-            description: jobRole.description,
-            isActive: newStatus
-        };
+    // 確認刪除職務
+    onConfirmDelete(): void {
+        const jobRole = this.actionJobRole();
+        if (!jobRole) return;
 
-        this.jobRoleService.updateJobRole(jobRole.jobRoleId!, updateDto).subscribe({
-            next: (response) => {
-                if (response) {
-                    this.jobRoleStore.updateJobRole(response);
+        this.actionLoading.set(true);
+        this.jobRoleService.deleteJobRole(jobRole.jobRoleId!).subscribe({
+            next: (success) => {
+                this.actionLoading.set(false);
+                this.showDeleteConfirm.set(false);
+                if (success) {
+                    this.jobRoleStore.removeJobRole(jobRole.jobRoleId!);
+                    this.messageService.success('職務已成功刪除');
+                } else {
+                    this.messageService.error('刪除失敗');
                 }
             },
             error: (error) => {
-                console.error('Toggle status error:', error);
+                this.actionLoading.set(false);
+                this.showDeleteConfirm.set(false);
+                console.error('Delete job role error:', error);
+                this.messageService.error('刪除失敗，請稍後再試');
             }
         });
+    }
+
+    // 切換職務狀態
+    // onToggleStatus(jobRole: JobRole): void {
+    //     const newStatus = !jobRole.isActive;
+    //     const updateDto = {
+    //         jobRoleId: jobRole.jobRoleId!,
+    //         jobRoleCode: jobRole.jobRoleCode,
+    //         jobRoleName: jobRole.jobRoleName,
+    //         description: jobRole.description,
+    //         isActive: newStatus
+    //     };
+
+    //     this.jobRoleService.updateJobRole(jobRole.jobRoleId!, updateDto).subscribe({
+    //         next: (response) => {
+    //             if (response) {
+    //                 this.jobRoleStore.updateJobRole(response);
+    //             }
+    //         },
+    //         error: (error) => {
+    //             console.error('Toggle status error:', error);
+    //         }
+    //     });
+    // }
+
+    onToggleStatus(jobRole: JobRole): void {
+        this.actionJobRole.set(jobRole);
+        this.showStatusConfirm.set(true);
+    }
+
+    // 確認切換狀態
+    onConfirmToggleStatus(): void {
+        const jobRole = this.actionJobRole();
+        if (!jobRole) return;
+
+        this.actionLoading.set(true);
+        this.jobRoleService.toggleActiveStatus(jobRole.jobRoleId!).subscribe({
+            next: (updatedJobRole) => {
+                this.actionLoading.set(false);
+                this.showStatusConfirm.set(false);
+                if (updatedJobRole) {
+                    this.jobRoleStore.updateJobRole(updatedJobRole);
+                    const targetStatus = updatedJobRole.isActive ? '啟用' : '停用';
+                    this.messageService.success(`職務狀態已切換為${targetStatus}`);
+                } else {
+                    this.messageService.error('狀態切換失敗');
+                }
+            },
+            error: (error) => {
+                this.actionLoading.set(false);
+                this.showStatusConfirm.set(false);
+                console.error('切換狀態失敗:', error);
+                this.messageService.error('狀態切換失敗，請稍後再試');
+            }
+        });
+    }
+
+    // Modal 關閉方法
+    onCancelDelete(): void {
+        this.showDeleteConfirm.set(false);
+        this.actionJobRole.set(null);
+    }
+
+    onCancelStatusToggle(): void {
+        this.showStatusConfirm.set(false);
+        this.actionJobRole.set(null);
     }
 
     // 建立舊方法的別名以保持向後相容
@@ -576,37 +662,26 @@ export class JobRoleListComponent implements OnInit {
 
     private performBulkDelete(): void {
         const selectedJobRoles = this.selectedJobRoles();
-        let completedCount = 0;
-        let hasError = false;
+        const ids = selectedJobRoles.map(jr => jr.jobRoleId).filter(id => id !== undefined) as number[];
 
-        selectedJobRoles.forEach(jobRole => {
-            if (jobRole.jobRoleId) {
-                this.jobRoleService.deleteJobRole(jobRole.jobRoleId).subscribe({
-                    next: (success) => {
-                        completedCount++;
-                        if (success) {
-                            this.jobRoleStore.removeJobRole(jobRole.jobRoleId!);
-                        } else {
-                            hasError = true;
-                        }
+        if (ids.length === 0) {
+            this.bulkDeleteLoading.set(false);
+            return;
+        }
 
-                        if (completedCount === selectedJobRoles.length) {
-                            this.bulkDeleteLoading.set(false);
-                            if (!hasError) {
-                                this.clearSelection();
-                            }
-                        }
-                    },
-                    error: (error) => {
-                        completedCount++;
-                        hasError = true;
-                        console.error('Delete error:', error);
-
-                        if (completedCount === selectedJobRoles.length) {
-                            this.bulkDeleteLoading.set(false);
-                        }
-                    }
-                });
+        // 使用新的 bulkDelete 方法
+        this.jobRoleService.bulkDeleteJobRoles(ids).subscribe({
+            next: (success) => {
+                this.bulkDeleteLoading.set(false);
+                if (success) {
+                    // 重新載入資料
+                    this.jobRoleStore.loadJobRoles();
+                    this.clearSelection();
+                }
+            },
+            error: (error) => {
+                this.bulkDeleteLoading.set(false);
+                console.error('Bulk delete error:', error);
             }
         });
     }
@@ -698,21 +773,13 @@ export class JobRoleListComponent implements OnInit {
         this.selectedJobRole.set(null);
     }
 
-    // 狀態切換處理 (通過編輯方式更新)
+    // 狀態切換處理 (使用新的 toggleActiveStatus 方法)
     onStatusToggled(jobRole: JobRole, newStatus: boolean): void {
         if (jobRole.jobRoleId) {
-            const updateDto = {
-                jobRoleId: jobRole.jobRoleId,
-                jobRoleCode: jobRole.jobRoleCode,
-                jobRoleName: jobRole.jobRoleName,
-                description: jobRole.description,
-                isActive: newStatus
-            };
-
-            this.jobRoleService.updateJobRole(jobRole.jobRoleId, updateDto).subscribe({
+            this.jobRoleService.toggleActiveStatus(jobRole.jobRoleId).subscribe({
                 next: (response) => {
                     if (response) {
-                        this.jobRoleStore.toggleJobRoleStatus(jobRole.jobRoleId!);
+                        this.jobRoleStore.updateJobRole(response);
                     }
                 },
                 error: (error) => {

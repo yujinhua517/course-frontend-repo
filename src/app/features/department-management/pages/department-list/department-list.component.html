@@ -136,4 +136,14 @@
         [loading]="bulkDeleteLoading()" (confirmed)="confirmBulkDelete()"
         (cancelled)="showBulkDeleteConfirm.set(false)">
     </app-confirmation-modal>
+
+    <!-- 個別刪除確認模態框 -->
+    <app-confirmation-modal [config]="deleteConfirmConfig()" [show]="showDeleteConfirm()"
+        [loading]="actionLoading()" (confirmed)="onConfirmDelete()" (cancelled)="onCancelDelete()">
+    </app-confirmation-modal>
+
+    <!-- 狀態切換確認模態框 -->
+    <app-confirmation-modal [config]="statusConfirmConfig()" [show]="showStatusConfirm()"
+        [loading]="actionLoading()" (confirmed)="onConfirmToggleStatus()" (cancelled)="onCancelStatusToggle()">
+    </app-confirmation-modal>
 </div>

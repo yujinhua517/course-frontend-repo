@@ -7,6 +7,7 @@ import { DepartmentViewComponent } from '../../components/department-view/depart
 import { Department, DEPARTMENT_LEVEL_OPTIONS } from '../../models/department.model';
 import { UserStore } from '../../../../core/auth/user.store';
 import type { User, Permission } from '../../../../models/user.model';
+import { GlobalMessageService } from '../../../../core/message/global-message.service';
 import { TableHeaderComponent, TableHeaderConfig, TableColumn } from '../../../../shared/components/table-header/table-header.component';
 import { TableBodyComponent, TableBodyConfig, TableBodyColumn } from '../../../../shared/components/table-body/table-body.component';
 import { StatusBadgeComponent } from '../../../../shared/components/status-badge/status-badge.component';
@@ -45,6 +46,7 @@ import { HighlightPipe } from '../../../../shared/pipes/highlight.pipe';
 export class DepartmentListComponent implements OnInit {
     private departmentStore = inject(DepartmentStore);
     private departmentService = inject(DepartmentService);
+    private messageService = inject(GlobalMessageService);
     // 權限管理
     private readonly userStore = inject(UserStore);
 
@@ -84,6 +86,12 @@ export class DepartmentListComponent implements OnInit {
     selectedDepartments = signal<Department[]>([]);
     showBulkDeleteConfirm = signal(false);
     bulkDeleteLoading = signal(false);
+
+    // Individual action signals
+    showDeleteConfirm = signal(false);
+    showStatusConfirm = signal(false);
+    actionDepartment = signal<Department | null>(null);
+    actionLoading = signal(false);
     // 搜尋篩選配置
     readonly searchFilterConfig = computed<SearchFilterConfig>(() => ({
         searchPlaceholder: '搜尋部門名稱、代碼...',
@@ -343,6 +351,29 @@ export class DepartmentListComponent implements OnInit {
         showItemIcon: true
     }));
 
+    readonly deleteConfirmConfig = computed<ConfirmationModalConfig>(() => {
+        const department = this.actionDepartment();
+        return {
+            title: '確認刪除部門',
+            message: `您確定要刪除部門「${department?.deptName}」(${department?.deptCode})嗎？此操作無法復原。`,
+            type: 'danger',
+            confirmText: '確認刪除',
+            cancelText: '取消'
+        };
+    });
+
+    readonly statusConfirmConfig = computed<ConfirmationModalConfig>(() => {
+        const department = this.actionDepartment();
+        const isActive = department?.isActive;
+        return {
+            title: `確認${isActive ? '停用' : '啟用'}部門`,
+            message: `您確定要${isActive ? '停用' : '啟用'}部門「${department?.deptName}」(${department?.deptCode})嗎？`,
+            type: isActive ? 'warning' : 'info',
+            confirmText: `確認${isActive ? '停用' : '啟用'}`,
+            cancelText: '取消'
+        };
+    });
+
     // Store signals
     departments = this.departmentStore.departments;
     loading = this.departmentStore.loading;
@@ -599,18 +630,34 @@ export class DepartmentListComponent implements OnInit {
     }
 
     onDelete(department: Department): void {
-        if (confirm(`確定要刪除部門「${department.deptName}」嗎？`)) {
-            this.departmentService.deleteDepartment(department.deptId).subscribe({
-                next: (success) => {
-                    if (success) {
-                        this.departmentStore.removeDepartment(department.deptId);
-                    }
-                },
-                error: (error) => {
-                    console.error('刪除部門失敗:', error);
+        this.actionDepartment.set(department);
+        this.showDeleteConfirm.set(true);
+    }
+
+    // 確認刪除部門
+    onConfirmDelete(): void {
+        const department = this.actionDepartment();
+        if (!department) return;
+
+        this.actionLoading.set(true);
+        this.departmentService.deleteDepartment(department.deptId).subscribe({
+            next: (success) => {
+                this.actionLoading.set(false);
+                this.showDeleteConfirm.set(false);
+                if (success) {
+                    this.departmentStore.removeDepartment(department.deptId);
+                    this.messageService.success(`部門「${department.deptName}」已成功刪除`);
+                } else {
+                    this.messageService.error('刪除失敗');
                 }
-            });
-        }
+            },
+            error: (error) => {
+                this.actionLoading.set(false);
+                this.showDeleteConfirm.set(false);
+                console.error('刪除部門失敗:', error);
+                this.messageService.error('刪除失敗，請稍後再試');
+            }
+        });
     }
 
     onBulkDelete(): void {
@@ -628,44 +675,81 @@ export class DepartmentListComponent implements OnInit {
 
     private performBulkDelete(): void {
         const selected = this.selectedDepartments();
-        const deletePromises = selected.map(dept =>
-            this.departmentService.deleteDepartment(dept.deptId).toPromise()
-        );
+        const ids = selected.map(dept => dept.deptId);
 
-        Promise.all(deletePromises).then(() => {
-            // 從本地狀態移除已刪除的部門
-            selected.forEach(dept => {
-                this.departmentStore.removeDepartment(dept.deptId);
-            });
-            this.selectedDepartments.set([]);
+        if (ids.length === 0) {
             this.bulkDeleteLoading.set(false);
-        }).catch((error: any) => {
-            console.error('批量刪除失敗:', error);
-            this.bulkDeleteLoading.set(false);
+            return;
+        }
+
+        // 使用新的 bulkDelete 方法
+        this.departmentService.bulkDeleteDepartments(ids).subscribe({
+            next: (success) => {
+                this.bulkDeleteLoading.set(false);
+                if (success) {
+                    // 重新載入資料
+                    this.departmentStore.loadDepartments();
+                    this.selectedDepartments.set([]);
+                }
+            },
+            error: (error) => {
+                this.bulkDeleteLoading.set(false);
+                console.error('Bulk delete error:', error);
+            }
         });
     }
 
     onToggleStatus(department: Department): void {
-        const targetStatus = department.isActive ? '停用' : '啟用';
-        if (!confirm(`確定要將「${department.deptName}」的狀態切換至「${targetStatus}」嗎？`)) return;
+        this.actionDepartment.set(department);
+        this.showStatusConfirm.set(true);
+    }
+
+    // 確認切換狀態
+    onConfirmToggleStatus(): void {
+        const department = this.actionDepartment();
+        if (!department) return;
+
+        this.actionLoading.set(true);
         this.departmentService.toggleDepartmentStatus(department.deptId).subscribe({
             next: (updatedDepartment) => {
+                this.actionLoading.set(false);
+                this.showStatusConfirm.set(false);
                 if (updatedDepartment) {
                     this.departmentStore.updateDepartment(updatedDepartment);
+                    const targetStatus = updatedDepartment.isActive ? '啟用' : '停用';
+                    this.messageService.success(`部門「${department.deptName}」狀態已切換為${targetStatus}`);
+                } else {
+                    this.messageService.error('狀態切換失敗');
                 }
             },
             error: (error) => {
+                this.actionLoading.set(false);
+                this.showStatusConfirm.set(false);
                 console.error('切換狀態失敗:', error);
+                this.messageService.error('狀態切換失敗，請稍後再試');
             }
         });
+    }
+
+    // Modal 關閉方法
+    onCancelDelete(): void {
+        this.showDeleteConfirm.set(false);
+        this.actionDepartment.set(null);
+    }
+
+    onCancelStatusToggle(): void {
+        this.showStatusConfirm.set(false);
+        this.actionDepartment.set(null);
     }
 
     // 表單事件
     onFormSaved(department: Department): void {
         if (this.formMode() === 'create') {
             this.departmentStore.addDepartment(department);
+            this.messageService.success(`部門「${department.deptName}」新增成功`);
         } else {
             this.departmentStore.updateDepartment(department);
+            this.messageService.success(`部門「${department.deptName}」更新成功`);
         }
         this.showForm.set(false);
         this.loadDepartments(); // 重新載入以確保資料一致性

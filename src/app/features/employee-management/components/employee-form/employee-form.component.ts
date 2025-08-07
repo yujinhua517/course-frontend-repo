@@ -67,29 +67,28 @@ export class EmployeeFormComponent implements OnInit {
         size: 'lg'
     }));
 
+    // Effects - 在字段初始化中使用 effect()
+    private readonly submitEffect = effect(() => {
+        const submitResult = this.submitResource.value();
+        const submitError = this.submitResource.error();
+
+        if (submitResult) {
+            this.saved.emit(submitResult);
+            this.error.set(null);
+        } else if (submitError) {
+            this.error.set(this.isEditMode() ? '更新員工失敗，請稍後再試' : '建立員工失敗，請稍後再試');
+        }
+    });
+
+    private readonly departmentsEffect = effect(() => {
+        const deptError = this.departmentsResource.error();
+        if (deptError) {
+            this.error.set('載入部門資料失敗，請重新整理頁面');
+        }
+    });
+
     ngOnInit(): void {
         this.initializeForm();
-
-        // Effect to handle submit result
-        effect(() => {
-            const submitResult = this.submitResource.value();
-            const submitError = this.submitResource.error();
-
-            if (submitResult) {
-                this.saved.emit(submitResult);
-                this.error.set(null);
-            } else if (submitError) {
-                this.error.set(this.isEditMode() ? '更新員工失敗，請稍後再試' : '建立員工失敗，請稍後再試');
-            }
-        });
-
-        // Effect to handle departments loading error
-        effect(() => {
-            const deptError = this.departmentsResource.error();
-            if (deptError) {
-                this.error.set('載入部門資料失敗，請重新整理頁面');
-            }
-        });
     }
 
     private initializeForm(): void {

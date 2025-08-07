@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of, delay } from 'rxjs';
-import { map, catchError } from 'rxjs/operators';
+import { Observable, of, delay, forkJoin } from 'rxjs';
+import { map, catchError, switchMap } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
 import { camelToSnake } from '../../../core/utils/object-case.util';
 import {
@@ -188,18 +188,62 @@ export class EmployeeService extends BaseQueryService<Employee, EmployeeSearchPa
     }
 
     /**
-     * 切換員工啟用狀態
+     * 批量刪除員工 (後端目前無此 API，使用逐一刪除方式)
+     */
+    bulkDeleteEmployees(ids: number[]): Observable<boolean> {
+        if (this.useMockData) {
+            return of(true).pipe(delay(800));
+        }
+
+        // 由於後端目前沒有 bulk-delete API，使用逐一刪除方式
+        const deleteRequests = ids.map(id =>
+            this.http.post<ApiResponse<void>>(`${this.apiUrl}/delete`, { empId: id })
+                .pipe(
+                    map(response => response.code === 1000),
+                    catchError(() => of(false))
+                )
+        );
+
+        return forkJoin(deleteRequests).pipe(
+            map((results: boolean[]) => results.every(result => result === true)),
+            catchError(this.httpErrorHandler.handleError('bulkDeleteEmployees', false))
+        );
+    }
+
+    /**
+     * 切換員工啟用狀態 (後端目前無此 API，使用更新方式)
      */
     toggleActiveStatus(id: number): Observable<Employee | null> {
         if (this.useMockData) {
             return of(this.toggleMockEmployeeStatus(id)).pipe(delay(500));
         }
 
-        return this.http.post<ApiResponse<Employee>>(`${this.apiUrl}/toggle-status`, { empId: id })
-            .pipe(
-                map(response => response.data || null),
-                catchError(this.httpErrorHandler.handleError('toggleEmployeeStatus', null))
-            );
+        // 先獲取當前資料，然後更新狀態
+        return this.getEmployeeById(id).pipe(
+            switchMap((employee: Employee | null) => {
+                if (!employee) {
+                    throw new Error('Employee not found');
+                }
+
+                const updateDto = {
+                    empId: id,
+                    empCode: employee.empCode,
+                    empName: employee.empName,
+                    empEmail: employee.empEmail,
+                    empPhone: employee.empPhone,
+                    deptId: employee.deptId,
+                    jobTitle: employee.jobTitle,
+                    hireDate: employee.hireDate,
+                    isActive: !employee.isActive
+                };
+
+                return this.http.post<ApiResponse<Employee>>(`${this.apiUrl}/update`, updateDto)
+                    .pipe(
+                        map(response => response.data || null),
+                        catchError(this.httpErrorHandler.handleError('toggleActiveStatus', null))
+                    );
+            })
+        );
     }
 
     // Mock 資料處理方法

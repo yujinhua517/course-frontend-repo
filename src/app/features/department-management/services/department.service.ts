@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of, map, delay, catchError, switchMap } from 'rxjs';
+import { Observable, of, map, delay, catchError, switchMap, forkJoin } from 'rxjs';
 import { BaseQueryService } from '../../../core/services/base-query.service';
 import { camelToSnake } from '../../../core/utils/object-case.util';
 import {
@@ -391,9 +391,51 @@ export class DepartmentService extends BaseQueryService<Department, DepartmentSe
     }
 
     /**
+     * 批量刪除部門 (後端目前無此 API，使用逐一刪除方式)
+     */
+    bulkDeleteDepartments(ids: number[]): Observable<boolean> {
+        if (this.useMockData) {
+            return of(null).pipe(
+                delay(800),
+                map(() => {
+                    const currentUser = this.getCurrentUser();
+                    ids.forEach(id => {
+                        const departmentIndex = this.mockData.findIndex(dept => dept.deptId === id);
+                        if (departmentIndex !== -1) {
+                            this.mockData[departmentIndex] = {
+                                ...this.mockData[departmentIndex],
+                                isActive: false,
+                                updateTime: new Date().toISOString(),
+                                updateUser: currentUser
+                            };
+                        }
+                    });
+                    this.departmentsSignal.set([...this.mockData]);
+                    return true;
+                }),
+                catchError(this.httpErrorHandler.handleError('bulkDeleteDepartments', false))
+            );
+        }
+
+        // 由於後端目前沒有 bulk-delete API，使用逐一刪除方式
+        const deleteRequests = ids.map(id =>
+            this.http.post<ApiResponse<boolean>>(`${this.apiUrl}/delete`, { deptId: id })
+                .pipe(
+                    map(response => response.code === 1000),
+                    catchError(() => of(false))
+                )
+        );
+
+        return forkJoin(deleteRequests).pipe(
+            map((results: boolean[]) => results.every(result => result === true)),
+            catchError(this.httpErrorHandler.handleError('bulkDeleteDepartments', false))
+        );
+    }
+
+    /**
      * Toggle department active status
      */
-    toggleDepartmentStatus(departmentId: number): Observable<Department> {
+    toggleActiveStatus(departmentId: number): Observable<Department> {
         return this.getDepartmentById(departmentId).pipe(
             switchMap((dept: Department | null) => {
                 if (!dept) throw new Error(`Department with id ${departmentId} not found`);
@@ -408,8 +450,15 @@ export class DepartmentService extends BaseQueryService<Department, DepartmentSe
                     isActive: !dept.isActive
                 });
             }),
-            catchError(this.httpErrorHandler.handleError('toggleDepartmentStatus', null as any))
+            catchError(this.httpErrorHandler.handleError('toggleActiveStatus', null as any))
         );
+    }
+
+    /**
+     * Toggle department active status (別名，保持向後相容)
+     */
+    toggleDepartmentStatus(departmentId: number): Observable<Department> {
+        return this.toggleActiveStatus(departmentId);
     }
 
     /**

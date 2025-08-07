@@ -10,6 +10,7 @@ import { EmployeeViewComponent } from '../../components/employee-view/employee-v
 import { Employee } from '../../models/employee.model';
 import { UserStore } from '../../../../core/auth/user.store';
 import type { User, Permission } from '../../../../models/user.model';
+import { GlobalMessageService } from '../../../../core/message/global-message.service';
 import { TableHeaderComponent, TableHeaderConfig, TableColumn } from '../../../../shared/components/table-header/table-header.component';
 import { TableBodyComponent, TableBodyConfig, TableBodyColumn } from '../../../../shared/components/table-body/table-body.component';
 import { StatusBadgeComponent } from '../../../../shared/components/status-badge/status-badge.component';
@@ -51,6 +52,7 @@ import { HighlightPipe } from '../../../../shared/pipes/highlight.pipe';
 export class EmployeeListComponent implements OnInit {
     private employeeStore = inject(EmployeeStore);
     private employeeService = inject(EmployeeService);
+    private messageService = inject(GlobalMessageService);
     // 權限管理
     private readonly userStore = inject(UserStore);
 
@@ -90,6 +92,12 @@ export class EmployeeListComponent implements OnInit {
     selectedEmployees = signal<Employee[]>([]);
     showBulkDeleteConfirm = signal(false);
     bulkDeleteLoading = signal(false);
+
+    // Individual action signals
+    showDeleteConfirm = signal(false);
+    showStatusConfirm = signal(false);
+    actionEmployee = signal<Employee | null>(null);
+    actionLoading = signal(false);
 
     // 搜尋篩選配置
     readonly searchFilterConfig = computed<SearchFilterConfig>(() => ({
@@ -355,6 +363,29 @@ export class EmployeeListComponent implements OnInit {
         showItemIcon: true
     }));
 
+    readonly deleteConfirmConfig = computed<ConfirmationModalConfig>(() => {
+        const employee = this.actionEmployee();
+        return {
+            title: '確認刪除員工',
+            message: `您確定要刪除員工「${employee?.empName}」(${employee?.empCode})嗎？此操作無法復原。`,
+            type: 'danger',
+            confirmText: '確認刪除',
+            cancelText: '取消'
+        };
+    });
+
+    readonly statusConfirmConfig = computed<ConfirmationModalConfig>(() => {
+        const employee = this.actionEmployee();
+        const isActive = employee?.isActive;
+        return {
+            title: `確認${isActive ? '離職' : '復職'}員工`,
+            message: `您確定要將員工「${employee?.empName}」(${employee?.empCode})設為${isActive ? '離職' : '在職'}狀態嗎？`,
+            type: isActive ? 'warning' : 'info',
+            confirmText: `確認${isActive ? '離職' : '復職'}`,
+            cancelText: '取消'
+        };
+    });
+
     // Store signals
     employees = this.employeeStore.employees;
     loading = this.employeeStore.loading;
@@ -503,18 +534,34 @@ export class EmployeeListComponent implements OnInit {
     }
 
     onDelete(employee: Employee): void {
-        if (confirm(`確定要刪除員工「${employee.empName}」嗎？`)) {
-            this.employeeService.deleteEmployee(employee.empId).subscribe({
-                next: (success) => {
-                    if (success) {
-                        this.employeeStore.removeEmployee(employee.empId);
-                    }
-                },
-                error: (error) => {
-                    console.error('刪除員工失敗:', error);
+        this.actionEmployee.set(employee);
+        this.showDeleteConfirm.set(true);
+    }
+
+    // 確認刪除員工
+    onConfirmDelete(): void {
+        const employee = this.actionEmployee();
+        if (!employee) return;
+
+        this.actionLoading.set(true);
+        this.employeeService.deleteEmployee(employee.empId).subscribe({
+            next: (success) => {
+                this.actionLoading.set(false);
+                this.showDeleteConfirm.set(false);
+                if (success) {
+                    this.employeeStore.removeEmployee(employee.empId);
+                    this.messageService.success(`員工「${employee.empName}」已成功刪除`);
+                } else {
+                    this.messageService.error('刪除失敗');
                 }
-            });
-        }
+            },
+            error: (error) => {
+                this.actionLoading.set(false);
+                this.showDeleteConfirm.set(false);
+                console.error('刪除員工失敗:', error);
+                this.messageService.error('刪除失敗，請稍後再試');
+            }
+        });
     }
 
     onBulkDelete(): void {
@@ -532,25 +579,27 @@ export class EmployeeListComponent implements OnInit {
 
     private performBulkDelete(): void {
         const selected = this.selectedEmployees();
+        const ids = selected.map(emp => emp.empId);
 
-        // 逐一刪除選中的員工（因為後端沒有批量刪除API）
-        const deletePromises = selected.map(emp =>
-            firstValueFrom(this.employeeService.deleteEmployee(emp.empId))
-        );
+        if (ids.length === 0) {
+            this.bulkDeleteLoading.set(false);
+            return;
+        }
 
-        Promise.all(deletePromises).then((results) => {
-            const successCount = results.filter(result => result === true).length;
-            if (successCount > 0) {
-                // 從本地狀態移除已刪除的員工
-                selected.forEach(emp => {
-                    this.employeeStore.removeEmployee(emp.empId);
-                });
-                this.selectedEmployees.set([]);
+        // 使用新的 bulkDelete 方法
+        this.employeeService.bulkDeleteEmployees(ids).subscribe({
+            next: (success) => {
+                this.bulkDeleteLoading.set(false);
+                if (success) {
+                    // 重新載入資料
+                    this.employeeStore.loadEmployees();
+                    this.selectedEmployees.set([]);
+                }
+            },
+            error: (error) => {
+                this.bulkDeleteLoading.set(false);
+                console.error('Bulk delete error:', error);
             }
-            this.bulkDeleteLoading.set(false);
-        }).catch((error) => {
-            console.error('批量刪除失敗:', error);
-            this.bulkDeleteLoading.set(false);
         });
     }
 
@@ -567,26 +616,56 @@ export class EmployeeListComponent implements OnInit {
     //     });
     // }
     onToggleStatus(employee: Employee): void {
-        const targetStatus = employee.isActive ? '離職' : '在職';
-        if (!confirm(`確定要將「${employee.empName}」的狀態切換至「${targetStatus}」嗎？`)) return;
+        this.actionEmployee.set(employee);
+        this.showStatusConfirm.set(true);
+    }
+
+    // 確認切換狀態
+    onConfirmToggleStatus(): void {
+        const employee = this.actionEmployee();
+        if (!employee) return;
+
+        this.actionLoading.set(true);
         this.employeeService.toggleActiveStatus(employee.empId).subscribe({
             next: (updatedEmployee) => {
+                this.actionLoading.set(false);
+                this.showStatusConfirm.set(false);
                 if (updatedEmployee) {
                     this.employeeStore.updateEmployee(updatedEmployee);
+                    const targetStatus = updatedEmployee.isActive ? '在職' : '離職';
+                    this.messageService.success(`員工「${employee.empName}」狀態已切換為${targetStatus}`);
+                } else {
+                    this.messageService.error('狀態切換失敗');
                 }
             },
             error: (error) => {
+                this.actionLoading.set(false);
+                this.showStatusConfirm.set(false);
                 console.error('切換狀態失敗:', error);
+                this.messageService.error('狀態切換失敗，請稍後再試');
             }
         });
+    }
+
+    // Modal 關閉方法
+    onCancelDelete(): void {
+        this.showDeleteConfirm.set(false);
+        this.actionEmployee.set(null);
+    }
+
+    onCancelStatusToggle(): void {
+        this.showStatusConfirm.set(false);
+        this.actionEmployee.set(null);
     }
 
     // 表單事件
     onFormSaved(employee: Employee): void {
         if (this.formMode() === 'create') {
             this.employeeStore.addEmployee(employee);
+            this.messageService.success(`員工「${employee.empName}」新增成功`);
         } else {
             this.employeeStore.updateEmployee(employee);
+            this.messageService.success(`員工「${employee.empName}」更新成功`);
         }
         this.showForm.set(false);
         this.loadEmployees(); // 重新載入以確保資料一致性

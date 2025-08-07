@@ -1,232 +1,145 @@
----
+--- 
 applyTo: "**"
 description: Complete Angular 19+ Coding, Structure, and Naming Guidelines (LLM/AI, Team Onboarding, Maintenance, Testing)
 ---
 
-# 🟢 Angular 19+ 團隊專案結構與開發規範
+# Angular 19+ 團隊專案 Copilot 指令（含實作範例）
 
-**參考自 angular.dev/llms 與業界最佳實踐，適用於 LLM 產物生成、團隊協作、可維護專案。**
+## 專案簡介
+本專案為 Angular 19+ 企業級應用，採用 feature-based 架構、standalone component、signals、現代 Angular API。
 
----
+## 資料夾結構
+- `/src/app/core/`：全域服務（HttpErrorHandlerService、DialogService、AuthService）、守衛、攔截器、工具。
+- `/src/app/features/`：功能專屬 components、services、store、models、pipes、pages、routes。
+- `/src/app/shared/`：Stateless UI components、共用 pipes、utils（不得含業務邏輯）。
+- `/src/assets/`：靜態資源（images、icons、fonts、i18n）。
+- `/environments/`：環境變數。
 
-## 1. **共用組件與樣式優先原則**
+## 程式規範
+- 資料夾/檔案一律 kebab-case，型別/類別 PascalCase，變數/函式 camelCase，常數 UPPER_SNAKE_CASE。
+- 每個組件皆分 ts/html/scss 檔，不得 inline template/style。
+- 共用 UI/pipes/services/SCSS 必須優先覆用，不可重複建立。
+- 所有業務邏輯只可在 core/services 或 features/services，不得進 shared/。
+- 所有 HTTP 請求統一用 `HttpErrorHandlerService`，嚴禁各自 handleError。
+- API 回應格式為 `{ code: number, message: string, data?: T }`，`code === 1000` 為成功。
+- 前端資料 camelCase，後端 snake_case，轉換請用 `core/utils/object-case.util.ts`。
 
-* **共用資源/元件必須優先**：`src/app/shared` 或全域 library 已有資源（Table/Modal/Badge/Button 等），**不可重複造輪子**。
-* 建新元件、pipe、工具前，先檢查 `shared/components`、`shared/pipes`、`shared/utils` 是否已存在可用資源。
-* **如現有共用資源不符需求，請先提出擴充建議，不可私自 copy-paste。**
-* **共用 SCSS 樣式也要公告全組，嚴禁重複建造**。
-* DRY 原則（Don’t Repeat Yourself）為最高優先。
-
----
-
-## 2. 頂層專案結構與命名原則
-
-* **資料夾/檔案結構如下：**
-
-  * `src/app/core/`：全域基礎設施 (e.g., layouts, authentication, global interceptors, guards, shared services, utilities)。
-  * `src/app/features/`：
-    * 每個功能資料夾應包含：
-      * `components/`：業務組件。
-      * `services/`：業務服務。
-      * `store/`：狀態管理（signals/store）。
-      * `models/`：資料模型。
-      * `pipes/`：業務管道。
-      * `pages/`：頁面組件。
-      * `routes.ts`：路由設定檔。
-  * `src/app/shared/`：僅 stateless UI 組件、共用 pipe、工具，**嚴禁業務邏輯**。
-  * `src/environments/`：環境變數檔。
-  * `src/assets/`：靜態資源（圖片、icons、fonts、i18n、多媒體）。
-* **檔名/資料夾名稱一律 kebab-case。**
-* 型別、類別、組件名稱用 PascalCase（如 `UserProfileComponent`）。
-* 變數與函式名稱用 camelCase，常數用 UPPER\_SNAKE\_CASE。
-* Angular artifact 統一後綴（`.component.ts`、`.service.ts`、`.pipe.ts`、`.directive.ts`、`.guard.ts`、`.interceptor.ts`），測試檔名 `.spec.ts`。
-* **每個組件三分檔（ts/html/scss），不得使用 inline template/style（除微型 demo 外）。**
-* **禁止在 HTML 直接 class/id 覆蓋樣式，全部交由 scss 管理。**
-
-**範例：**
-
-```plaintext
-src/
- ├── app/
- │    ├── core/
- │    │    ├── layout/
- │    │    ├── guards/
- │    │    ├── auth/
- │    │    ├── interceptors/
- │    │    ├── services/
- │    │    ├── utils/
- │    │    └── system-parameter.ts
- │    ├── features/
- │    │    ├── products/
- │    │    │    ├── components/
- │    │    │    ├── services/
- │    │    │    ├── store/
- │    │    │    ├── pages/
- │    │    │    ├── models/
- │    │    │    ├── pipes/
- │    │    │    └── products.routes.ts
- │    │    ├── orders/
- │    │    └── cart/
- │    └── shared/
- │         ├── components/
- │         ├── pipes/
- │         └── utils/
- ├── assets/
- │    ├── images/
- │    ├── icons/
- │    ├── fonts/
- │    └── i18n/
- └── environments/
-      ├── environment.ts
-      └── environment.prod.ts
+```typescript
+// API 回應格式 interface 範例
+export interface ApiResponse<T> {
+  code: number;
+  message: string;
+  data?: T;
+}
+// 分頁資料格式
+export interface PagerDto<T> {
+  dataList: T[];
+  totalRecords: number;
+  [key: string]: any;
+}
 ```
 
----
+- Service 一律回傳 Observable，不可用 Promise/callback。
+- 禁止在 component 直接 subscribe()，應用 signals/reactive flow。
 
-## 3. API Response、資料型別與命名規範
+```typescript
+// 服務回傳 Observable 範例
+getUserList(params: QueryParams): Observable<PagerDto<UserDto>> {
+  return this.http.get<ApiResponse<PagerDto<UserDto>>>(`${environment.apiUrl}/users`, { params })
+    .pipe(
+      map(res => {
+        if (res.code === 1000) return res.data!;
+        throw this.errorHandler.handleError(res.message);
+      }),
+      catchError(err => this.errorHandler.handleError(err))
+    );
+}
+```
 
-* 所有 API 回傳標準格式：
+- 依賴注入只用 inject()，不可 constructor。
 
-  ```typescript
-  export interface ApiResponse<T> { code: number; message: string; data?: T; }
-  ```
-* 分頁接口建議格式：
+```typescript
+// inject() 實例
+import { inject } from '@angular/core';
+const http = inject(HttpClient);
+const dialog = inject(DialogService);
+```
 
-  ```typescript
-  export interface PagerDto<T> { dataList: T[]; totalRecords: number; [key: string]: any; }
-  ```
-* 前端 interface、組件/服務/狀態皆用 `camelCase`，API/DB 用 `snake_case`，**轉換由 `core/utils/object-case.util.ts` 統一管理** 進行自動轉換，不得於 `service/component` 內手動轉換。
-* service 回傳一律型別化，方便 signals/resource/AI 流。
+- 狀態管理一律 signals。
 
----
+```typescript
+// signals 狀態管理
+import { signal } from '@angular/core';
+currentSort = signal<SortConfig | null>(null);
+```
 
-## 4. 全域 HTTP 錯誤處理
+- 所有測試 mirror 原始碼結構，命名為 .spec.ts。
 
-* 所有 httpResource/request 都必須經過 `src/app/core/services/http-error-handler.service.ts`。
-* **不得每個 feature/service 自行寫 handleError，必須統一。**
-* 範例用法：
+## 樣式規範
+- 樣式優先順序：Bootstrap 5 → src/styles/ 共用 → shared 組件 → component 自有。
+- SCSS 必用 @use，不可 @import。
+- 禁止 inline style、HTML 直接 class/id 覆蓋樣式。
+- 新增共用 SCSS 須團隊公告。
 
-  ```typescript
-  import { inject } from '@angular/core';
-  import { HttpErrorHandlerService } from 'src/app/core/services/http-error-handler.service';
-  const errorHandler = inject(HttpErrorHandlerService);
-  // 在 resource() 統一 catch error
-  ```
+## UI 與無障礙
+- 表單欄位必有 `<label>` 與 `placeholder`，避免重複說明。
 
----
+```html
+<!-- 標準欄位寫法 -->
+<label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+<input id="email" formControlName="email" placeholder="example@company.com" class="form-control">
+<div *ngIf="isFieldInvalid('email')" class="invalid-feedback">
+  {{ getFieldError('email') }}
+</div>
+```
 
-## 5. 狀態管理與 DI
+- 必填欄位加 `<span class="text-danger">*</span>`。
+- 錯誤訊息顯示於欄位下方。
+- 遵循 WCAG 2.1 AA。
+- 圖片必用 NgOptimizedImage，不可用原生 <img>。
 
-* **本地 state 全部用 signals，不可 class property 儲存狀態。**
-* 優先用 `signal()`、`computed()`、`effect()` 管理本地狀態。
-* `input()`、`input.required()` 取代 `@Input()`，`output()` 取代 `@Output()`。
-* 需雙向綁定時用 `linkedSignal()`。
-* \*\*服務注入一律用 `inject()`，**不得用 constructor 注入**。
-* 取用 Angular 原生 service（如 ActivatedRoute, ChangeDetectorRef）時，統一用 inject()。
+```html
+<!-- 圖片元件示範 -->
+<ng-optimized-image src="assets/images/example.png" width="120" height="80" alt="說明文字"/>
+```
 
----
+- 組件應小型、聚焦、單一職責。
 
-## 6. 路由、資料流、CRUD、mock 切換
+## 路由與資料流
+- 各 feature 資料夾內有 routes，使用 loadComponent()，不可 NgModule routing。
+- API 資料一律用 resource/httpResource，需有 request()/loader()。
+- mock 與 API 一鍵切換，flag 寫在 service。
 
-* 路由檔案放於 feature 目錄內，lazy route 用 `loadComponent()`，禁止 NgModule-based routing。
-* 路由設定用 `withComponentInputBinding()` 於 `provideRouter()`。
-* 路由參數用 `input()` signals 接收；查詢參數用 `inject(ActivatedRoute)`。
-* **資料存取一律用 resource()/httpResource()，每個 resource 都必須有 request() 和 loader()。**
-* signals 提供 resource 參數，禁止於組件內 subscribe()，一律用 reactive data flow。
-* **每個 service 必須支援一鍵切換 mock data/真實 API，**
-  如：
-
-  ```typescript
-  private useMockData = true;
-  getList(params: QueryParams): Observable<Entity[]> {
-    if (this.useMockData) {
-      return of(this.mockList).pipe(delay(300));
-    }
-    return this.http.get<Entity[]>('/api/entity', { params });
+```typescript
+// 一鍵 mock / API 切換範例
+private useMockData = true;
+getList(params: QueryParams): Observable<Entity[]> {
+  if (this.useMockData) {
+    return of(this.mockList).pipe(delay(300));
   }
-  ```
-* 只需切換一處 flag，所有 CRUD 流程自動切換。
+  return this.http.get<Entity[]>('/api/entity', { params });
+}
+```
+
+- 禁止 component subscribe()，一律 signals/reactive flow。
+
+## 表單與元件邏輯
+- 表單用 reactive form + FormBuilder，不可用 template-driven form（除非 legacy）。
+
+```typescript
+// Reactive Form 建立範例
+form = this.fb.group({
+  email: ['', [Validators.required, Validators.email]],
+  password: ['', [Validators.required]]
+});
+```
+
+- initializeData() 僅初始化狀態，不可自動查詢，查詢需由使用者觸發。
+- 排序必須三段（asc/desc/null）。
 
 ---
 
-## 7. SCSS 樣式與最佳化層級
-
-* **所有 SCSS 檔案必須用 @use，不可用 @import**，新程式碼強制、舊程式碼逐步改寫。
-
-  ```scss
-  @use 'variables' as *;
-  ```
-* 共用 SCSS（如 `_variables.scss`, `_mixins.scss`）放在 `src/styles/`，並用 `@use` 引入。
-* SCSS 樣式管理層級順序：1. styles/共用 → 2. shared/組件 → 3. 各自 component。
-* 禁止於 component 內重複建立可重用樣式。
-* **禁止 inline style、禁止於 HTML 用 class/id 覆蓋樣式，所有覆蓋於 scss 控管。**
-
----
-
-## 8. UI/UX 與 Accessibility（可及性）
-
-* 表單、互動元件皆須符合 WCAG 2.1 AA 標準。
-* input 必有 label，placeholder 僅作短提示，不可與 label 重複。
-* 錯誤訊息於欄位下方顯示。
-* 必填欄位明確標示（如 `<span class="text-danger">*</span>`）。
-* 組件必須小型且聚焦，避免巨型或單一責任元件。
-* **圖片必須用 NgOptimizedImage，禁止使用原生 <img>。**
-
----
-
-## 9. 查詢、排序與資料表元件行為
-
-* 查詢組件初始化不得自動查詢，須由使用者觸發。
-* 排序元件需三階段（asc/desc/null），可重設為無排序。
-* 分頁、排序、查詢等接口建議用 resource/httpResource 提供。
-
----
-
-## 10. 測試與測試檔案
-
-* 測試檔必須與 source 同目錄 `.spec.ts`，涵蓋組件、服務、pipe。
-* 結構 mirror 原始碼，方便導覽。
-* 使用 TestBed 配置 module，ComponentFixture 操作查詢 DOM。
-* 非同步邏輯用 fakeAsync()/tick()。
-* HTTP 測試用 HttpClientTestingModule、HttpTestingController。
-* 優先用 toHaveBeenCalledWith() 斷言。
-
----
-
-## 11. 現代 Angular 控制流程
-
-* 使用 `@if`、`@for`、`@defer` 控制流程。
-* 禁止使用 `*ngIf`、`*ngFor`。
-* 所有組件預設設為 `ChangeDetectionStrategy.OnPush`。
-* 避免 ngClass/ngStyle，建議用 \[class]/\[style] 綁定。
-* 表單一律用 FormBuilder 與 reactive form，禁用 template-driven form。
-* 結構扁平、避免深層巢狀。
-
----
-
-## 12. 禁止事項（重點統整）
-
-* 禁止於專案 root 建立技術層資料夾（如 components/、services/），一律 feature-first 分組。
-* 禁止將業務邏輯放入 shared/，僅允許 UI/pipes/utils。
-* 禁止重複建立 table/modal/badge/button 等共用組件。
-* 禁止覆蓋 Bootstrap 樣式於 component 內。
-* 禁止硬編碼 env 變數與 API。
-* 除非必要，不得用 inline style。
-* 禁止任何手動 subscribe() 或不經 errorHandler 處理。
-
----
-
-## 13. 其他補充與團隊溝通
-
-* 一律用 Angular CLI/Vite generator 產生元件與服務。
-* 定期重構、清理未用檔案或組件。
-* 建議各 feature/core 資料夾補 README.md，說明職責與設計理念。
-* 重要資源更新須公告全組。
-* 規範每季檢視，依團隊現況微調。
-
----
-
-## 14. Do & Don’t 對照表
+## ✅ Do & ❌ Don’t 對照表
 
 | ✅ 建議做法                    | ❌ 禁止做法                                |
 | ------------------------- | ------------------------------------- |
@@ -234,25 +147,78 @@ src/
 | inject()                  | constructor injection                 |
 | loadComponent()           | loadChildren()                        |
 | resource()/httpResource() | subscribe() in components             |
-| @if/@for                  | \*ngIf/\*ngFor                        |
-| NgOptimizedImage          | plain <img> (無優化)                     |
+| @if/@for                  | *ngIf/*ngFor                          |
+| NgOptimizedImage          | plain <img> (無優化)                  |
 | FormBuilder/Reactive Form | template-driven form                  |
-| 小型、專注組件                   | 巨大、單一組件                               |
-| 清晰命名規則                    | 不一致命名                                 |
-| 三分檔(ts/html/scss)         | inline template/style（除 trivial 外）    |
-| 用 assets/ 管理靜態資源          | 靜態檔案分散在 app/                          |
-| Feature-first 組織          | 技術層 root 資料夾                          |
-| 用 CLI/Vite generator      | 手動、不統一風格                              |
+| 小型、專注組件               | 巨大、單一組件                          |
+| 清晰命名規則                | 不一致命名                             |
+| 三分檔(ts/html/scss)       | inline template/style（除 demo 外）   |
+| 用 assets/ 管理靜態資源      | 靜態檔案分散在 app/                    |
+| Feature-first 組織         | 技術層 root 資料夾                     |
+| 用 CLI/Vite generator      | 手動、不統一風格                       |
 | @use SCSS                 | @import SCSS                          |
-| 一鍵 mock/API 切換            | mock 與 API 分散且硬編碼                     |
+| 一鍵 mock/API 切換         | mock 與 API 分散且硬編碼                |
+| 共用服務/資源/樣式優先      | 重複造輪子、未先公告就自建              |
+| 共用錯誤處理服務           | 各自實作 handleError                   |
+| Observable/型別安全        | Promise/callback/any                   |
 
 ---
 
-## 15. 官方參考與備註
+## 📝 樣本 event handler（查詢/排序）
 
-* [Angular LLM Guidelines](https://angular.dev/llms)
-* [Angular Signals](https://angular.dev/guide/signals)
-* [Angular Routing](https://angular.dev/guide/router)
-* [HttpClient Resource API](https://angular.dev/api/common/http/httpResource)
+```typescript
+// ✅ 正確的排序事件處理
+onSortChange(event: SortChangeEvent): void {
+  this.currentSort = event.direction ? {
+    column: event.column,
+    direction: event.direction
+  } : null; // 關鍵：event.direction 為 null 時要清除排序
+
+  this.paginationConfig.page = 1;
+  this.performSearch();
+}
+
+// ❌ 錯誤：忽略 null 狀態
+onSortChange(event: SortChangeEvent): void {
+  if (event.direction) {
+    this.currentSort = { column: event.column, direction: event.direction };
+  }
+  // 缺少 this.currentSort = null 處理
+}
+
+// ✅ 查詢元件初始化
+initializeData(): void {
+  this.paginationConfig = { page: 1, pageSize: 10 };
+  this.currentSort = null;
+  this.results = { dataList: [], totalRecords: 0 };
+  // 不執行 performSearch()，等待使用者觸發
+}
+```
+
+---
+
+## ✔️ Review Checklist
+
+- [ ] 是否優先覆用共用服務/元件/樣式
+- [ ] API 響應格式正確、錯誤處理是否統一
+- [ ] 命名規範是否一致（camelCase/kebab-case/PascalCase）
+- [ ] 樣式優先順序（Bootstrap→styles→shared→component）是否正確
+- [ ] Accessibility 是否完整（label、placeholder、error、標記）
+- [ ] 是否正確管理環境變數與 API 路徑
+- [ ] 型別安全、Observable 實踐
+- [ ] 是否用 signals/resource/reactive flow 管理狀態
+- [ ] 查詢/排序邏輯是否三階段、初始化是否正確
+- [ ] 所有新功能是否有對應 .spec.ts 測試檔
+- [ ] 禁止事項有無違反（如 inline style、重複元件、直接 subscribe）
+- [ ] README/註解是否清楚
+
+---
+
+## 📚 官方參考
+
+- [Angular LLM Guidelines](https://angular.dev/llms)
+- [Angular Signals](https://angular.dev/guide/signals)
+- [Angular Routing](https://angular.dev/guide/router)
+- [HttpClient Resource API](https://angular.dev/api/common/http/httpResource)
 
 ---

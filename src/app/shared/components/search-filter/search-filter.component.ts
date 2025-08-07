@@ -82,7 +82,7 @@ export class SearchFilterComponent {
         return `總共 "${count}" ${label}`;
     });
 
-    constructor() {
+    ngOnInit(): void {
         // 同步搜尋關鍵字
         this.currentSearchKeyword.set(this.searchKeyword());
     }

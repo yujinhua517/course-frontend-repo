@@ -87,10 +87,10 @@ export class JobRoleFormComponent implements OnInit {
 
     private getFieldLabel(fieldName: string): string {
         const labels: Record<string, string> = {
-            job_role_code: '職務代碼',
-            job_role_name: '職務名稱',
+            jobRoleCode: '職務代碼',
+            jobRoleName: '職務名稱',
             description: '職務描述',
-            is_active: '狀態'
+            isActive: '狀態'
         };
         return labels[fieldName] || fieldName;
     }

@@ -10,17 +10,13 @@ import { LoginService, LoginResponse } from '../../features/login/services/login
     providedIn: 'root'
 })
 export class AuthService {
-    private readonly userStore: UserStore;
-    private readonly router: Router;
-    private readonly messageService: GlobalMessageService;
-    private readonly loginService: LoginService;
+    private readonly userStore = inject(UserStore);
+    private readonly router = inject(Router);
+    private readonly messageService = inject(GlobalMessageService);
+    private readonly loginService = inject(LoginService);
 
     // App 啟動時自動還原 user 狀態
     constructor() {
-        this.userStore = inject(UserStore);
-        this.router = inject(Router);
-        this.messageService = inject(GlobalMessageService);
-        this.loginService = inject(LoginService);
         this.restoreUserFromStorage();
     }
 
