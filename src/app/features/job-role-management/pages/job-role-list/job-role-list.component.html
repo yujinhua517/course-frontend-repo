@@ -6,13 +6,13 @@
             職務主檔管理
         </h2>
         <div class="header-actions d-flex gap-2">
-            @if (selectedJobRoles().length > 0 && hasDeletePermission()) {
+            @if (selectedJobRoles().length > 0 && permissions().delete) {
             <button type="button" class="btn btn-outline-danger" (click)="onBulkDelete()" aria-label="批量刪除">
                 <i class="bi bi-trash me-1"></i>
                 刪除選中項目 ({{ selectedJobRoles().length }})
             </button>
             }
-            @if (hasCreatePermission()) {
+            @if (permissions().create) {
             <button type="button" class="btn btn-outline-secondary" (click)="exportData()" aria-label="匯出資料">
                 <i class="bi bi-download me-1"></i>
                 匯出
@@ -126,11 +126,11 @@
 </app-confirmation-modal>
 
 <!-- 個別刪除確認模態框 -->
-<app-confirmation-modal [config]="deleteConfirmConfig()" [show]="showDeleteConfirm()"
-    [loading]="actionLoading()" (confirmed)="onConfirmDelete()" (cancelled)="onCancelDelete()">
+<app-confirmation-modal [config]="deleteConfirmConfig()" [show]="showDeleteConfirm()" [loading]="actionLoading()"
+    (confirmed)="onConfirmDelete()" (cancelled)="onCancelDelete()">
 </app-confirmation-modal>
 
 <!-- 狀態切換確認模態框 -->
-<app-confirmation-modal [config]="statusConfirmConfig()" [show]="showStatusConfirm()"
-    [loading]="actionLoading()" (confirmed)="onConfirmToggleStatus()" (cancelled)="onCancelStatusToggle()">
+<app-confirmation-modal [config]="statusConfirmConfig()" [show]="showStatusConfirm()" [loading]="actionLoading()"
+    (confirmed)="onConfirmToggleStatus()" (cancelled)="onCancelStatusToggle()">
 </app-confirmation-modal>

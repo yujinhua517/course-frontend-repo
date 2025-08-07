@@ -62,13 +62,13 @@
                     </option>
                     }
                 </select>
-                <div id="dept_level_help" class="form-text">
+                <div id="deptLevel_help" class="form-text">
                     <small class="text-muted">
                         階層關係：BI(最高層) → BU → TU/SU → LOB-T/LOB-S
                     </small>
                 </div>
                 @if (getFieldError('deptLevel'); as error) {
-                <div id="dept_level_error" class="invalid-feedback">{{ error }}</div>
+                <div id="deptLevel_error" class="invalid-feedback">{{ error }}</div>
                 }
             </div>
 
@@ -92,7 +92,7 @@
                     <option [value]="dept.deptId">{{ dept.deptName }} ({{ dept.deptCode }})</option>
                     }
                 </select>
-                <div id="parent_dept_help" class="form-text">
+                <div id="parentDept_help" class="form-text">
                     @if (selectedDeptLevel()) {
                     <small class="text-info">
                         @switch (selectedDeptLevel()) {
@@ -125,7 +125,7 @@
                     }
                 </select>
                 @if (getFieldError('managerEmpId'); as error) {
-                <div id="manager_emp_error" class="invalid-feedback">{{ error }}</div>
+                <div id="managerEmp_error" class="invalid-feedback">{{ error }}</div>
                 }
             </div>
 

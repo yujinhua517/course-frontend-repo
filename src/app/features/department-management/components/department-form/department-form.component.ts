@@ -313,13 +313,13 @@ export class DepartmentFormComponent implements OnInit {
 
     private getFieldLabel(fieldName: string): string {
         const labels: Record<string, string> = {
-            'department_code': '部門代碼',
-            'department_name': '部門名稱',
+            'departmentCode': '部門代碼',
+            'departmentName': '部門名稱',
             'description': '描述',
-            'parent_department_id': '上層部門',
-            'manager_id': '部門主管',
+            'parentDepartmentId': '上層部門',
+            'managerId': '部門主管',
             'status': '狀態',
-            'is_active': '啟用狀態',
+            'isActive': '啟用狀態',
         };
         return labels[fieldName] || fieldName;
     }

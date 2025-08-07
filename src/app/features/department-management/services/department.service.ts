@@ -159,7 +159,8 @@ export class DepartmentService extends BaseQueryService<Department, DepartmentSe
      */
     private getCurrentUser(): string {
         const currentUser = this.userStore.user();
-        return currentUser?.username || 'system';
+        // return currentUser?.username || 'system';
+        return currentUser?.username || 'noname';
     }
 
     /**

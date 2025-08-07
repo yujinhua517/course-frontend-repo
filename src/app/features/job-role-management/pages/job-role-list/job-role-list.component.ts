@@ -55,18 +55,26 @@ export class JobRoleListComponent implements OnInit {
     // 權限判斷：基於 action 欄位的細緻權限控制
     private readonly userStore = inject(UserStore);
 
-    // 檢查是否有指定 resource + action 的權限
-    private hasResourceActionPermission(resource: string, action: string): boolean {
-        const user = this.userStore.user() as User | null;
-        if (!user) return false;
-        return (user.permissions ?? []).some((p: Permission) =>
-            p.resource === resource && p.action === action
-        );
-    }
-    readonly hasCreatePermission = computed(() => this.hasResourceActionPermission('jobrole', 'create'));
-    readonly hasUpdatePermission = computed(() => this.hasResourceActionPermission('jobrole', 'update'));
-    readonly hasDeletePermission = computed(() => this.hasResourceActionPermission('jobrole', 'delete'));
-    readonly hasReadPermission = computed(() => this.hasResourceActionPermission('jobrole', 'read'));
+    private readonly hasResourceActionPermission = computed(() => {
+        return (resource: string, action: string): boolean => {
+            const user = this.userStore.user() as User | null;
+            if (!user) return false;
+            return (user.permissions ?? []).some((p: Permission) =>
+                p.resource === resource && p.action === action
+            );
+        };
+    });
+
+    // 權限快捷計算屬性
+    readonly permissions = computed(() => {
+        const hasPermission = this.hasResourceActionPermission();
+        return {
+            create: hasPermission('jobrole', 'create'),
+            read: hasPermission('jobrole', 'read'),
+            update: hasPermission('jobrole', 'update'),
+            delete: hasPermission('jobrole', 'delete')
+        };
+    });
 
     // Store signals
     jobRoles = this.jobRoleStore.jobRoles;
@@ -158,7 +166,7 @@ export class JobRoleListComponent implements OnInit {
         message: this.searchKeyword() || this.statusFilter() !== undefined
             ? '請嘗試調整搜尋條件或篩選器'
             : '開始建立您的第一個職務',
-        primaryAction: this.hasCreatePermission() ? {
+        primaryAction: this.permissions().create ? {
             label: '新增職務',
             action: 'create',
             icon: 'plus-circle',
@@ -255,7 +263,7 @@ export class JobRoleListComponent implements OnInit {
 
     // 表頭配置
     readonly tableHeaderConfig = computed<TableHeaderConfig>(() => ({
-        showSelectColumn: this.hasDeletePermission(),
+        showSelectColumn: this.permissions().delete,
         isAllSelected: this.isAllSelected(),
         isPartiallySelected: this.isPartiallySelected(),
         sortColumn: this.sortColumn(),
@@ -329,7 +337,7 @@ export class JobRoleListComponent implements OnInit {
 
         return {
             data: this.jobRoles(),
-            showSelectColumn: this.hasDeletePermission(),
+            showSelectColumn: this.permissions().delete,
             trackByFn: (index: number, item: JobRole) => item.jobRoleCode,
             rowCssClass: (item: JobRole) => this.isSelected(item) ? 'table-active' : '',
             columns: [
@@ -795,15 +803,15 @@ export class JobRoleListComponent implements OnInit {
             buttons: [
                 {
                     type: 'view' as const,
-                    visible: this.hasReadPermission()
+                    visible: this.permissions().read
                 },
                 {
                     type: 'edit' as const,
-                    visible: this.hasUpdatePermission()
+                    visible: this.permissions().update
                 },
                 {
                     type: 'delete' as const,
-                    visible: this.hasDeletePermission()
+                    visible: this.permissions().delete
                 }
             ],
             size: 'sm' as const,
