@@ -1,0 +1,14 @@
+@use "../../../../../styles/variables" as *;
+@use "../../../../shared/styles/list-page" as list;
+
+.course-event-list-container {
+    @include list.complete-list-page;
+
+    // 表格組件已在各自的組件中處理 display: contents
+
+    // 表格選中狀態由 table-body 組件處理
+
+    // 表單控制樣式已移至 src/styles/_form-controls.scss
+
+    // 模態框樣式已移至 src/styles/_modal-view.scss
+}

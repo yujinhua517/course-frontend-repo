@@ -1,148 +1,3 @@
-// import { inject, Injectable } from '@angular/core';
-// import { HttpClient } from '@angular/common/http';
-// import { Observable } from 'rxjs';
-// import { map } from 'rxjs/operators';
-// import { User, RoleName, PermissionName } from '../../../models/user.model';
-
-// export interface LoginRequest {
-//   username: string;
-//   password: string;
-// }
-
-// export interface LoginResponse {
-//   user: User;
-//   token?: string;
-//   refreshToken?: string;
-// }
-
-// // 後端 API 回應格式
-// interface BackendAuthResponse {
-//   code: number;
-//   message: string;
-//   data: {
-//     access_token: string;
-//     token_type: string;
-//     expires_in: number;
-//     user_id: number;
-//     username: string;
-//     role: string;
-//     last_login_time: string;
-//   };
-// }
-
-// @Injectable({ providedIn: 'root' })
-// export class LoginService {
-//   private readonly http = inject(HttpClient);
-//   private readonly useMockData = true; // 設定為 false 時使用真實 API
-
-//   login(username: string, password: string): Observable<LoginResponse> {
-//     // --- mock start ---
-//     // 原本API呼叫註解如下：
-//     // const loginRequest: LoginRequest = { username, password };
-//     // return this.http.post<BackendAuthResponse>('/api/auth/login', loginRequest).pipe(
-//     //   map(response => { ... })
-//     // );
-
-//     // mock admin
-//     if (username === 'admin') {
-//       const permissions = Object.values(PermissionName).map((name, idx) => ({
-//         id: (idx + 1).toString(),
-//         name,
-//         resource: name.split('_')[0].toLowerCase(),
-//         action: name.split('_')[1]?.toLowerCase() || 'all',
-//         description: name.replace(/_/g, ' ').toLowerCase()
-//       }));
-//       const roles = [{
-//         id: '1',
-//         name: RoleName.ADMIN,
-//         description: 'Administrator',
-//         permissions
-//       }];
-//       const user: User = {
-//         id: '1',
-//         username: 'admin',
-//         email: 'admin@example.com',
-//         firstName: 'Super',
-//         lastName: 'Admin',
-//         roles,
-//         permissions,
-//         isActive: true,
-//         lastLoginAt: new Date(),
-//         createdAt: new Date()
-//       };
-//       return new Observable<LoginResponse>(observer => {
-//         setTimeout(() => {
-//           observer.next({ user, token: 'mock-token-admin', refreshToken: undefined });
-//           observer.complete();
-//         }, 300);
-//       });
-//     }
-//     // mock 一般員工
-//     const permissions = [
-//       {
-//         id: '1',
-//         name: PermissionName.COURSE_READ,
-//         resource: 'course',
-//         action: 'read',
-//         description: 'course read'
-//       },
-//       {
-//         id: '2',
-//         name: PermissionName.COMPETENCY_READ,
-//         resource: 'competency',
-//         action: 'read',
-//         description: 'competency read'
-//       },
-//       {
-//         id: '3',
-//         name: PermissionName.EMPLOYEE_READ,
-//         resource: 'employee',
-//         action: 'read',
-//         description: 'employee read'
-//       },
-//       {
-//         id: '4',
-//         name: PermissionName.DEPARTMENT_READ,
-//         resource: 'department',
-//         action: 'read',
-//         description: 'department read'
-//       },
-//       {
-//         id: '5',
-//         name: PermissionName.USER_READ,
-//         resource: 'user',
-//         action: 'read',
-//         description: 'user read'
-//       }
-//     ];
-//     const roles = [{
-//       id: '2',
-//       name: RoleName.EMPLOYEE,
-//       description: 'Employee',
-//       permissions
-//     }];
-//     const user: User = {
-//       id: '2',
-//       username,
-//       email: `${username}@example.com`,
-//       firstName: 'Normal',
-//       lastName: 'User',
-//       roles,
-//       permissions,
-//       isActive: true,
-//       lastLoginAt: new Date(),
-//       createdAt: new Date()
-//     };
-//     return new Observable<LoginResponse>(observer => {
-//       setTimeout(() => {
-//         observer.next({ user, token: 'mock-token-employee', refreshToken: undefined });
-//         observer.complete();
-//       }, 300);
-//     });
-//     // --- mock end ---
-//   }
-// }
-
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -282,10 +137,10 @@ export class LoginService {
     const permissions = [
       {
         id: '1',
-        name: PermissionName.COURSE_READ,
-        resource: 'course',
+        name: PermissionName.COURSE_EVENT_READ,
+        resource: 'course event',
         action: 'read',
-        description: 'course read'
+        description: 'course event read'
       },
       {
         id: '2',
@@ -375,11 +230,9 @@ export class LoginService {
     if (role === 'ADMIN') {
       // 管理員擁有所有權限 - 簡化權限映射邏輯
       return Object.values(PermissionName).map((name, idx) => {
-        // 標準處理：將權限名稱分割為 resource 和 action
         const parts = name.split('_');
-        const resource = parts[0]?.toLowerCase() || 'unknown';
-        const action = parts[1]?.toLowerCase() || 'all';
-
+        const resource = parts.slice(0, parts.length - 1).join('_').toLowerCase();
+        const action = parts[parts.length - 1].toLowerCase();
         return {
           id: (idx + 1).toString(),
           name,
@@ -388,15 +241,16 @@ export class LoginService {
           description: name.replace(/_/g, ' ').toLowerCase()
         };
       });
+
     } else if (role === 'USER') {
       // 一般員工只有讀取權限
       return [
         {
           id: '1',
-          name: PermissionName.COURSE_READ,
-          resource: 'course',
+          name: PermissionName.COURSE_EVENT_READ,
+          resource: 'course event',
           action: 'read',
-          description: 'course read'
+          description: 'course event read'
         },
         {
           id: '2',
@@ -432,6 +286,13 @@ export class LoginService {
           resource: 'jobrole',
           action: 'read',
           description: 'job role read'
+        },
+        {
+          id: '7',
+          name: PermissionName.COURSE_EVENT_READ,
+          resource: 'course_event',
+          action: 'read',
+          description: 'course event read'
         },
       ];
     } else if (role === 'MANAGER') {

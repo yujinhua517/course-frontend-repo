@@ -57,6 +57,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/department-management/pages/department-list/department-list.component').then(m => m.DepartmentListComponent)
         //loadComponent: () => import('./features/department-management/pages/department-list/department-list-refactored.component').then(m => m.DepartmentListRefactoredComponent)
       },
+      {
+        path: 'course-event',
+        canActivate: [PermissionGuard],
+        data: { permissions: [PermissionName.COURSE_EVENT_READ] },
+        loadComponent: () => import('./features/course-event-management/pages/course-event-list/course-event-list.component').then(m => m.CourseEventListComponent)
+      },
       // 你也可以在這裡加更多 child page
     ]
   },

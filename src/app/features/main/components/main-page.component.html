@@ -43,6 +43,12 @@
                 </a>
             </li>
             <li class="nav-item mb-1">
+                <a class="nav-link" routerLink="/course-event" routerLinkActive="active"
+                    (click)="debugSidebarClick('課程活動'); sidebarOpen.set(false)">
+                    <i class="bi bi-calendar-event icon-accent me-2"></i>課程活動
+                </a>
+            </li>
+            <li class="nav-item mb-1">
                 <a class="nav-link" routerLink="/department" routerLinkActive="active"
                     (click)="debugSidebarClick('部門主檔'); sidebarOpen.set(false)">
                     <i class="bi bi-building icon-accent me-2"></i>部門主檔
