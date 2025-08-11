@@ -132,7 +132,7 @@
     <!-- 按鈕區域 -->
     <div slot="footer">
         <app-form-buttons [loading]="loading()" [submitDisabled]="form.invalid" [submitButtonText]="submitButtonText()"
-            (cancelled)="onCancel()">
+            formId="courseEventForm" (cancelled)="onCancel()">
         </app-form-buttons>
     </div>
 </app-base-modal>

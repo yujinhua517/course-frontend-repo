@@ -455,9 +455,13 @@ export class CourseEventListComponent implements OnInit {
     }
 
     onEdit(courseEvent: CourseEvent): void {
+        console.group('[CourseEventListComponent] onEdit');
+        console.debug('Selected courseEvent for edit:', courseEvent);
         this.selectedCourseEvent.set(courseEvent);
         this.formMode.set('edit');
         this.showForm.set(true);
+        console.debug('formMode:', this.formMode());
+        console.groupEnd();
     }
 
     onView(courseEvent: CourseEvent): void {
@@ -482,15 +486,22 @@ export class CourseEventListComponent implements OnInit {
 
     // 表單事件
     onFormSaved(courseEvent: CourseEvent): void {
+        console.group('[CourseEventListComponent] onFormSaved');
+        console.debug('Incoming saved entity:', courseEvent);
+        console.debug('Current formMode:', this.formMode());
         if (this.formMode() === 'create') {
+            console.debug('Adding new entity to store');
             this.courseEventStore.addCourseEvent(courseEvent);
             this.messageService.success('課程活動建立成功');
         } else {
+            console.debug('Updating existing entity in store');
             this.courseEventStore.updateCourseEvent(courseEvent);
             this.messageService.success('課程活動更新成功');
         }
         this.showForm.set(false);
+        console.debug('Trigger reload after save');
         this.loadCourseEvents(); // 重新載入以確保資料一致性
+        console.groupEnd();
     }
 
     onFormCancelled(): void {

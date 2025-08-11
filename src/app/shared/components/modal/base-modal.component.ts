@@ -49,29 +49,30 @@ export class ErrorAlertComponent {
     imports: [CommonModule],
     template: `
         <div class="d-flex justify-content-end gap-2">
-            <button 
-                type="button" 
-                class="btn btn-secondary" 
-                [disabled]="loading()" 
-                (click)="onCancel()"
-                [attr.aria-label]="cancelButtonLabel()">
-                <i class="bi bi-x-lg me-1"></i>
-                {{ cancelButtonText() }}
-            </button>
+  <button 
+    type="button" 
+    class="btn btn-secondary" 
+    [disabled]="loading()" 
+    (click)="onCancel()"
+    [attr.aria-label]="cancelButtonLabel()">
+    <i class="bi bi-x-lg me-1"></i>
+    {{ cancelButtonText() }}
+  </button>
 
-            <button 
-                type="submit" 
-                class="btn btn-primary" 
-                [disabled]="loading() || submitDisabled()"
-                [attr.aria-label]="submitButtonLabel()">
-                @if (loading()) {
-                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                }
-                <i class="bi bi-check-lg me-1"></i>
-                {{ submitButtonText() }}
-            </button>
-        </div>
-    `,
+  <button 
+    type="submit" 
+    class="btn btn-primary" 
+    [disabled]="loading() || submitDisabled()"
+    [attr.aria-label]="submitButtonLabel()"
+    (click)="onSubmitClick($event)"
+    [attr.form]="formId()">
+    @if (loading()) {
+      <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+    }
+    <i class="bi bi-check-lg me-1"></i>
+    {{ submitButtonText() }}
+  </button>
+</div>`,
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class FormButtonsComponent {
@@ -81,6 +82,8 @@ export class FormButtonsComponent {
     readonly cancelButtonText = input<string>('取消');
     readonly submitButtonLabel = input<string | undefined>(undefined);
     readonly cancelButtonLabel = input<string | undefined>(undefined);
+    // 當按鈕置於 form 外部 (例如 modal footer slot)，需指定 formId 以觸發該 form 的提交
+    readonly formId = input<string | undefined>(undefined);
     readonly cancelled = output<void>();
 
     onCancel(): void {
@@ -118,7 +121,7 @@ export class FormButtonsComponent {
     `,
     styles: `
         @use "../../../../styles/variables" as *;
-        
+
         .form-label i {
             color: $brand-primary;
             margin-right: 0.5rem;

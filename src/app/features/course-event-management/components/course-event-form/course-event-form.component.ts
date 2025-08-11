@@ -12,6 +12,7 @@ import {
     ModalConfig
 } from '../../../../shared/components/modal';
 import { CourseEvent, CourseEventCreateDto, CourseEventUpdateDto, SEMESTER_OPTIONS } from '../../models/course-event.model';
+import { UserStore } from '../../../../core/auth/user.store';
 
 @Component({
     selector: 'app-course-event-form',
@@ -28,6 +29,7 @@ import { CourseEvent, CourseEventCreateDto, CourseEventUpdateDto, SEMESTER_OPTIO
 })
 export class CourseEventFormComponent extends FormModalBaseComponent<CourseEvent, CourseEventCreateDto, CourseEventUpdateDto> implements OnInit {
     private courseEventService = inject(CourseEventService);
+    private userStore = inject(UserStore);
 
     // Additional state specific to course events
     availableYears = signal<string[]>([]);
@@ -109,32 +111,66 @@ export class CourseEventFormComponent extends FormModalBaseComponent<CourseEvent
     }
 
     protected async performSubmit(data: CourseEventCreateDto | CourseEventUpdateDto): Promise<CourseEvent> {
-        // Convert date format to backend expected format (yyyy-MM-dd)
-        const formattedData = { ...data };
-        if (formattedData.expectedCompletionDate) {
-            formattedData.expectedCompletionDate = formattedData.expectedCompletionDate;
+        console.group('[CourseEventFormComponent] performSubmit');
+        console.debug('Mode:', this.mode());
+        console.debug('Raw incoming form data:', data);
+
+        // Shallow clone
+        const formattedData: any = { ...data };
+
+        // 日期欄位：若需要進一步格式化可在此處理 (目前已為 yyyy-MM-dd)
+        const dateFields = ['expectedCompletionDate', 'submissionDeadline', 'activationDate'] as const;
+        dateFields.forEach(f => {
+            const v = formattedData[f];
+            if (v instanceof Date) {
+                formattedData[f] = v.toISOString().split('T')[0];
+            }
+        });
+
+        // isActive 可能是字串 (select value="true"/"false")，統一轉為 boolean
+        if (typeof formattedData.isActive === 'string') {
+            formattedData.isActive = formattedData.isActive === 'true';
         }
-        if (formattedData.submissionDeadline) {
-            formattedData.submissionDeadline = formattedData.submissionDeadline;
-        }
-        if (formattedData.activationDate) {
-            formattedData.activationDate = formattedData.activationDate;
-        }
+
+        console.debug('Normalized formattedData:', formattedData);
 
         if (this.isEditMode()) {
             const currentEntity = this.entity();
             if (!currentEntity?.courseEventId) {
+                console.error('Missing courseEventId in edit mode, entity:', currentEntity);
+                console.groupEnd();
                 throw new Error('Course event ID is required for update');
             }
-            const updateData = {
+            const updateData: CourseEventUpdateDto = {
                 ...formattedData,
-                courseEventId: currentEntity.courseEventId
-            } as CourseEventUpdateDto;
-            const result = await firstValueFrom(this.courseEventService.updateCourseEvent(currentEntity.courseEventId, updateData));
-            return result!;
+                courseEventId: currentEntity.courseEventId,
+                // 後端若需要紀錄更新者：嘗試附帶 update_user (若後端未自動填則透過 VO 映射)
+                // 這裡型別介面沒有 updateUser 屬性，故暫以型別斷言擴充
+                ...(this.userStore.user() ? { updateUser: this.userStore.user()!.username } : {}) as any
+            };
+            console.debug('Update payload (final):', updateData);
+            try {
+                const result = await firstValueFrom(this.courseEventService.updateCourseEvent(currentEntity.courseEventId, updateData));
+                console.debug('Update result from service:', result);
+                console.groupEnd();
+                return result!;
+            } catch (err) {
+                console.error('Update request failed:', err);
+                console.groupEnd();
+                throw err;
+            }
         } else {
-            const result = await firstValueFrom(this.courseEventService.createCourseEvent(formattedData as CourseEventCreateDto));
-            return result!;
+            console.debug('Create payload (final):', formattedData);
+            try {
+                const result = await firstValueFrom(this.courseEventService.createCourseEvent(formattedData as CourseEventCreateDto));
+                console.debug('Create result from service:', result);
+                console.groupEnd();
+                return result!;
+            } catch (err) {
+                console.error('Create request failed:', err);
+                console.groupEnd();
+                throw err;
+            }
         }
     }
 
