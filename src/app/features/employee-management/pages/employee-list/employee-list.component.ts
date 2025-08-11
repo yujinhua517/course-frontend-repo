@@ -101,7 +101,7 @@ export class EmployeeListComponent implements OnInit {
 
     // 搜尋篩選配置
     readonly searchFilterConfig = computed<SearchFilterConfig>(() => ({
-        searchPlaceholder: '搜尋員工姓名、工號、部門...',
+        searchPlaceholder: '搜尋No.、姓名、工號、Email、入職日期',
         searchLabel: '關鍵字搜尋',
         filters: [
             {

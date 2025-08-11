@@ -108,7 +108,7 @@ export class CourseEventListComponent implements OnInit {
 
     // 搜尋篩選配置
     readonly searchFilterConfig = computed<SearchFilterConfig>(() => ({
-        searchPlaceholder: '搜尋活動標題、年度、學期...',
+        searchPlaceholder: '搜尋No.、年度、標題、狀態、日期',
         searchLabel: '關鍵字搜尋',
         filters: [
             {

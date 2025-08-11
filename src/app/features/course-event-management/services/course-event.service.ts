@@ -58,6 +58,9 @@ export class CourseEventService extends BaseQueryService<CourseEvent, CourseEven
                 } else if (/^\d+$/.test(keyword)) {
                     // 如果是純數字，搜尋 courseEventId
                     customParams['courseEventId'] = parseInt(keyword, 10);
+                } else if (/^\d{4}-\d{2}-\d{2}$/.test(keyword)) {
+                    // 如果是日期格式 yyyy-mm-dd，搜尋 activationDate
+                    customParams['activationDate'] = keyword;
                 } else {
                     // 否則搜尋活動標題
                     customParams['activityTitle'] = keyword;

@@ -38,6 +38,10 @@
         }
     }
 
+    .form-control::placeholder {
+        font-size: 0.75rem; // 12px
+    }
+
     .input-group {
         .form-control {
             border-right: 0;

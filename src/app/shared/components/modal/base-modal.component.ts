@@ -116,6 +116,13 @@ export class FormButtonsComponent {
             }
         </div>
     `,
+    styles: `
+        @use "../../../../styles/variables" as *;
+        
+        .form-label i {
+            color: $brand-primary;
+            margin-right: 0.5rem;
+        }`,
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class FormFieldComponent {

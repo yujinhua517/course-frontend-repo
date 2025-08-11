@@ -220,7 +220,7 @@ export class JobRoleListComponent implements OnInit {
 
     // 搜尋篩選配置
     readonly searchFilterConfig = computed<SearchFilterConfig>(() => ({
-        searchPlaceholder: '搜尋職務名稱或代碼...',
+        searchPlaceholder: '搜尋No.、職務名稱或代碼',
         searchLabel: '關鍵字搜尋',
         filters: [
             {

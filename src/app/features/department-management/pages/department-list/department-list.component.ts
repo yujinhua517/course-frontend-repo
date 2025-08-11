@@ -94,7 +94,7 @@ export class DepartmentListComponent implements OnInit {
     actionLoading = signal(false);
     // 搜尋篩選配置
     readonly searchFilterConfig = computed<SearchFilterConfig>(() => ({
-        searchPlaceholder: '搜尋部門名稱、代碼...',
+        searchPlaceholder: '搜尋No.、部門名稱、代碼',
         searchLabel: '關鍵字搜尋',
         filters: [
             {

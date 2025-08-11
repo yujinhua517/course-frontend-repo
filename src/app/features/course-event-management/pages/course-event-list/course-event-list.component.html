@@ -87,7 +87,7 @@
 
     <ng-template #dateTemplate let-courseEvent let-column="column">
         @if (courseEvent[column.key]) {
-        {{ courseEvent[column.key] | date:'yyyy/MM/dd' }}
+        <span [innerHTML]="(courseEvent[column.key] | date:'yyyy-MM-dd') | highlight:searchKeyword()"></span>
         } @else {
         <span class="text-muted">-</span>
         }

@@ -98,7 +98,7 @@
     </ng-template> -->
 
     <ng-template #dateTemplate let-employee>
-        {{ employee.hireDate | date:'yyyy/MM/dd' }}
+        <span [innerHTML]="employee.hireDate | date:'yyyy-MM-dd' | highlight:searchKeyword()"></span>
     </ng-template>
 
     <ng-template #actionsTemplate let-employee>

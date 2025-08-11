@@ -47,18 +47,28 @@ export class EmployeeService extends BaseQueryService<Employee, EmployeeSearchPa
         if (params?.keyword) {
             const keyword = params.keyword.trim();
             if (keyword) {
-                // 根據關鍵字特性決定搜尋策略
-                if (/^[A-Z]{1,}\d+$/i.test(keyword)) {
-                    // 如果看起來像員工代碼 (如 EMP001, DEV001)，搜尋 empCode
+                // 1. 判斷是否為工號（至少一個字母 + 至少一個數字）
+                if (/^[A-Za-z]{1,}\d+$/.test(keyword)) {
                     customParams['empCode'] = keyword;
-                } else if (/^\d+$/.test(keyword)) {
-                    // 如果是純數字，搜尋 empId
+
+                    // 2. 判斷是否為 empId（純數字，且長度 <= 10 避免誤判電話）
+                } else if (/^\d{1,10}$/.test(keyword)) {
                     customParams['empId'] = parseInt(keyword, 10);
-                } else if (keyword.includes('@')) {
-                    // 如果包含 @，搜尋 empEmail
+
+                    // 3. 判斷是否為 Email（比較嚴謹的格式檢查）
+                } else if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(keyword)) {
                     customParams['empEmail'] = keyword;
+
+                    // 4. 判斷是否為台灣手機號碼（09 開頭 + 8 位數字）
+                } else if (/^09\d{8}$/.test(keyword)) {
+                    customParams['empPhone'] = keyword;
+
+                    // 5. 判斷是否為日期（yyyy-mm-dd）
+                } else if (/^\d{4}-\d{2}-\d{2}$/.test(keyword)) {
+                    customParams['hireDate'] = keyword;
+
+                    // 6. 預設搜尋姓名
                 } else {
-                    // 否則搜尋員工姓名
                     customParams['empName'] = keyword;
                 }
             }
