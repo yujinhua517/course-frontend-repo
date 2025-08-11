@@ -4,166 +4,104 @@
     <!-- 表單內容 -->
     <form id="courseEventForm" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate slot="body">
         <!-- 錯誤訊息 -->
-        @if (error()) {
-        <div class="alert alert-danger d-flex align-items-center mb-3" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i>
-            <div>{{ error() }}</div>
-            <button type="button" class="btn-close ms-auto" (click)="clearError()" aria-label="關閉錯誤訊息">
-            </button>
-        </div>
-        }
+        <app-error-alert [error]="error()" (clearError)="clearError()"></app-error-alert>
 
         <div class="row g-3">
             <!-- 年度 -->
             <div class="col-md-6">
-                <label for="year" class="form-label required">
-                    <i class="bi bi-calendar4-range me-1"></i>
-                    年度
-                </label>
-                <select id="year" class="form-select" [class.is-invalid]="isFieldInvalid('year')" formControlName="year"
-                    aria-describedby="year_help year_error">
-                    <option value="">請選擇年度</option>
-                    @for (yearOption of yearOptions(); track yearOption.value) {
-                    <option [value]="yearOption.value">{{ yearOption.label }}</option>
-                    }
-                </select>
-                <div id="year_help" class="form-text">
-                    請選擇課程活動的執行年度
-                </div>
-                @if (getFieldError('year'); as error) {
-                <div id="year_error" class="invalid-feedback">{{ error }}</div>
-                }
+                <app-form-field fieldId="year" label="年度" icon="bi bi-calendar4-range" [required]="true"
+                    [error]="getFieldError('year')">
+                    <select id="year" class="form-select" [class.is-invalid]="isFieldInvalid('year')"
+                        formControlName="year" aria-describedby="year_help year_error">
+                        <option value="">請選擇年度</option>
+                        @for (yearOption of yearOptions(); track yearOption.value) {
+                        <option [value]="yearOption.value">{{ yearOption.label }}</option>
+                        }
+                    </select>
+                </app-form-field>
             </div>
 
             <!-- 上/下半年 -->
             <div class="col-md-6">
-                <label for="semester" class="form-label required">
-                    <i class="bi bi-calendar3 me-1"></i>
-                    上/下半年
-                </label>
-                <select id="semester" class="form-select" [class.is-invalid]="isFieldInvalid('semester')"
-                    formControlName="semester" aria-describedby="semester_help semester_error">
-                    <option value="">請選擇上/下半年</option>
-                    @for (semesterOption of semesterOptions; track semesterOption.value) {
-                    <option [value]="semesterOption.value">{{ semesterOption.label }}</option>
-                    }
-                </select>
-                <div id="semester_help" class="form-text">
-                    請選擇課程活動的執行時間段
-                </div>
-                @if (getFieldError('semester'); as error) {
-                <div id="semester_error" class="invalid-feedback">{{ error }}</div>
-                }
+                <app-form-field fieldId="semester" label="上/下半年" icon="bi bi-calendar3" [required]="true"
+                    [error]="getFieldError('semester')">
+                    <select id="semester" class="form-select" [class.is-invalid]="isFieldInvalid('semester')"
+                        formControlName="semester" aria-describedby="semester_help semester_error">
+                        <option value="">請選擇上/下半年</option>
+                        @for (semesterOption of semesterOptions; track semesterOption.value) {
+                        <option [value]="semesterOption.value">{{ semesterOption.label }}</option>
+                        }
+                    </select>
+                </app-form-field>
             </div>
 
             <!-- 活動標題 -->
             <div class="col-12">
-                <label for="activityTitle" class="form-label required">
-                    <i class="bi bi-tag me-1"></i>
-                    活動標題
-                </label>
-                <input type="text" id="activityTitle" class="form-control"
-                    [class.is-invalid]="isFieldInvalid('activityTitle')" formControlName="activityTitle"
-                    placeholder="請輸入課程活動標題" maxlength="200" aria-describedby="activityTitle_help activityTitle_error">
-                <div id="activityTitle_help" class="form-text">
-                    請輸入課程活動的標題，例如：「2025H1 課程安排啟動」
-                </div>
-                @if (getFieldError('activityTitle'); as error) {
-                <div id="activityTitle_error" class="invalid-feedback">{{ error }}</div>
-                }
+                <app-form-field fieldId="activityTitle" label="活動標題" icon="bi bi-card-heading" [required]="true"
+                    [error]="getFieldError('activityTitle')">
+                    <input id="activityTitle" type="text" class="form-control"
+                        [class.is-invalid]="isFieldInvalid('activityTitle')" formControlName="activityTitle"
+                        placeholder="請輸入活動標題" maxlength="200" aria-describedby="activityTitle_help activityTitle_error">
+                </app-form-field>
             </div>
 
             <!-- 活動描述 -->
             <div class="col-12">
-                <label for="description" class="form-label">
-                    <i class="bi bi-file-text me-1"></i>
-                    活動描述
-                </label>
-                <textarea id="description" class="form-control" [class.is-invalid]="isFieldInvalid('description')"
-                    formControlName="description" placeholder="請輸入課程活動的詳細描述" rows="3" maxlength="1000"
-                    aria-describedby="description_help description_error"></textarea>
-                <div id="description_help" class="form-text">
-                    可選填，詳細描述課程活動的內容、目標等資訊
-                </div>
-                @if (getFieldError('description'); as error) {
-                <div id="description_error" class="invalid-feedback">{{ error }}</div>
-                }
+                <app-form-field fieldId="description" label="活動描述" icon="bi bi-text-paragraph"
+                    [error]="getFieldError('description')">
+                    <textarea id="description" class="form-control" rows="4"
+                        [class.is-invalid]="isFieldInvalid('description')" formControlName="description"
+                        placeholder="請輸入活動描述（選填）" maxlength="1000"
+                        aria-describedby="description_help description_error"></textarea>
+                </app-form-field>
             </div>
 
             <!-- 預期完成日期 -->
             <div class="col-md-4">
-                <label for="expectedCompletionDate" class="form-label">
-                    <i class="bi bi-calendar-check me-1"></i>
-                    預期完成日期
-                </label>
-                <input type="date" id="expectedCompletionDate" class="form-control"
-                    [class.is-invalid]="isFieldInvalid('expectedCompletionDate')"
-                    formControlName="expectedCompletionDate"
-                    aria-describedby="expectedCompletionDate_help expectedCompletionDate_error">
-                <div id="expectedCompletionDate_help" class="form-text">
-                    可選填，課程活動預期完成的日期
-                </div>
-                @if (getFieldError('expectedCompletionDate'); as error) {
-                <div id="expectedCompletionDate_error" class="invalid-feedback">{{ error }}</div>
-                }
+                <app-form-field fieldId="expectedCompletionDate" label="預期完成日期" icon="bi bi-calendar-check"
+                    [required]="true" [error]="getFieldError('expectedCompletionDate')" helpText="各主管安排課程的預計完成日">
+                    <input id="expectedCompletionDate" type="date" class="form-control"
+                        [class.is-invalid]="isFieldInvalid('expectedCompletionDate')"
+                        formControlName="expectedCompletionDate"
+                        aria-describedby="expectedCompletionDate_help expectedCompletionDate_error">
+                </app-form-field>
             </div>
 
             <!-- 提交截止日期 -->
             <div class="col-md-4">
-                <label for="submissionDeadline" class="form-label">
-                    <i class="bi bi-calendar-x me-1"></i>
-                    提交截止日期
-                </label>
-                <input type="date" id="submissionDeadline" class="form-control"
-                    [class.is-invalid]="isFieldInvalid('submissionDeadline')" formControlName="submissionDeadline"
-                    aria-describedby="submissionDeadline_help submissionDeadline_error">
-                <div id="submissionDeadline_help" class="form-text">
-                    可選填，相關文件或申請的提交截止日期
-                </div>
-                @if (getFieldError('submissionDeadline'); as error) {
-                <div id="submissionDeadline_error" class="invalid-feedback">{{ error }}</div>
-                }
+                <app-form-field fieldId="submissionDeadline" label="提交截止日期" icon="bi bi-calendar-x" [required]="true"
+                    [error]="getFieldError('submissionDeadline')" helpText="對公司提交課程人員的截止日">
+                    <input id="submissionDeadline" type="date" class="form-control"
+                        [class.is-invalid]="isFieldInvalid('submissionDeadline')" formControlName="submissionDeadline"
+                        aria-describedby="submissionDeadline_help submissionDeadline_error">
+                </app-form-field>
             </div>
 
             <!-- 啟動日期 -->
             <div class="col-md-4">
-                <label for="activationDate" class="form-label">
-                    <i class="bi bi-calendar-plus me-1"></i>
-                    啟動日期
-                </label>
-                <input type="date" id="activationDate" class="form-control"
-                    [class.is-invalid]="isFieldInvalid('activationDate')" formControlName="activationDate"
-                    aria-describedby="activationDate_help activationDate_error">
-                <div id="activationDate_help" class="form-text">
-                    可選填，課程活動的正式啟動日期
-                </div>
-                @if (getFieldError('activationDate'); as error) {
-                <div id="activationDate_error" class="invalid-feedback">{{ error }}</div>
-                }
+                <app-form-field fieldId="activationDate" label="啟動日期" icon="bi bi-calendar-plus" [required]="true"
+                    [error]="getFieldError('activationDate')">
+                    <input id="activationDate" type="date" class="form-control"
+                        [class.is-invalid]="isFieldInvalid('activationDate')" formControlName="activationDate"
+                        aria-describedby="activationDate_help activationDate_error">
+                </app-form-field>
             </div>
 
             <!-- 啟用狀態 -->
-            <div class="col-md-12">
-                <label for="isActive" class="form-label required">
-                    <i class="bi bi-toggle-on me-1"></i>
-                    啟用狀態
-                </label>
-                <select id="isActive" class="form-select" [class.is-invalid]="isFieldInvalid('isActive')"
-                    formControlName="isActive" aria-describedby="isActive_help isActive_error">
-                    <option value="true">啟用</option>
-                    <option value="false">停用</option>
-                </select>
-                <div id="isActive_help" class="form-text">
-                    選擇課程活動的啟用狀態
-                </div>
-                @if (getFieldError('isActive'); as error) {
-                <div id="isActive_error" class="invalid-feedback">{{ error }}</div>
-                }
+            <div class="col-12">
+                <app-form-field fieldId="isActive" label="啟用狀態" icon="bi bi-toggle-on" [required]="true"
+                    [error]="getFieldError('isActive')">
+                    <select id="isActive" class="form-select" [class.is-invalid]="isFieldInvalid('isActive')"
+                        formControlName="isActive" aria-describedby="isActive_help isActive_error">
+                        <option value="true">啟用</option>
+                        <option value="false">停用</option>
+                    </select>
+                </app-form-field>
             </div>
         </div>
 
         <!-- 系統欄位說明（編輯模式） -->
-        @if (isEditMode() && courseEvent()) {
+        @if (isEditMode() && entity()) {
         <div class="system-fields mt-4">
             <h6 class="text-muted mb-3">
                 <i class="bi bi-info-circle me-1"></i>
@@ -171,49 +109,21 @@
             </h6>
             <div class="row g-3">
                 <div class="col-md-6">
-                    <div class="system-field">
-                        <div class="system-field-label">
-                            <i class="bi bi-person me-1"></i>
-                            建立者
-                        </div>
-                        <div class="system-field-value">{{ courseEvent()!.createUser }}</div>
-                    </div>
+                    <label class="form-label text-muted">課程活動ID</label>
+                    <div class="form-control-plaintext">{{ entity()?.courseEventId || 'N/A' }}</div>
                 </div>
                 <div class="col-md-6">
-                    <div class="system-field">
-                        <div class="system-field-label">
-                            <i class="bi bi-clock me-1"></i>
-                            建立時間
-                        </div>
-                        <div class="system-field-value">
-                            {{ courseEvent()!.createTime | date:'yyyy/MM/dd HH:mm:ss' }}
-                        </div>
-                    </div>
+                    <label class="form-label text-muted">建立時間</label>
+                    <div class="form-control-plaintext">{{ entity()?.createTime || 'N/A' }}</div>
                 </div>
-                @if (courseEvent()!.updateUser) {
                 <div class="col-md-6">
-                    <div class="system-field">
-                        <div class="system-field-label">
-                            <i class="bi bi-person-check me-1"></i>
-                            最後更新者
-                        </div>
-                        <div class="system-field-value">{{ courseEvent()!.updateUser }}</div>
-                    </div>
+                    <label class="form-label text-muted">最後更新</label>
+                    <div class="form-control-plaintext">{{ entity()?.updateTime || 'N/A' }}</div>
                 </div>
-                }
-                @if (courseEvent()!.updateTime) {
                 <div class="col-md-6">
-                    <div class="system-field">
-                        <div class="system-field-label">
-                            <i class="bi bi-clock-history me-1"></i>
-                            最後更新時間
-                        </div>
-                        <div class="system-field-value">
-                            {{ courseEvent()!.updateTime | date:'yyyy/MM/dd HH:mm:ss' }}
-                        </div>
-                    </div>
+                    <label class="form-label text-muted">更新者</label>
+                    <div class="form-control-plaintext">{{ entity()?.updateUser || 'N/A' }}</div>
                 </div>
-                }
             </div>
         </div>
         }
@@ -221,19 +131,8 @@
 
     <!-- 按鈕區域 -->
     <div slot="footer">
-        <button type="button" class="btn btn-secondary" (click)="onCancel()" [disabled]="loading()">
-            <i class="bi bi-x-circle me-1"></i>
-            取消
-        </button>
-        <button type="submit" class="btn btn-primary" [disabled]="loading() || form.invalid" form="courseEventForm">
-            @if (loading()) {
-            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-            處理中...
-            } @else {
-            <i class="bi bi-check-circle me-1"></i>
-            {{ submitButtonText() }}
-            }
-        </button>
+        <app-form-buttons [loading]="loading()" [submitDisabled]="form.invalid" [submitButtonText]="submitButtonText()"
+            (cancelled)="onCancel()">
+        </app-form-buttons>
     </div>
-
 </app-base-modal>

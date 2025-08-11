@@ -651,4 +651,9 @@ export class CourseEventListComponent implements OnInit {
         const action = actions[event.key as keyof typeof actions];
         if (action) action();
     }
+
+    exportData(): void {
+        // TODO: Implement export functionality
+        console.log('Export data functionality to be implemented');
+    }
 }

@@ -1,56 +1,36 @@
-import { Component, OnInit, input, output, signal, computed, inject, resource, effect } from '@angular/core';
+import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { ReactiveFormsModule, Validators } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { CourseEventService } from '../../services/course-event.service';
-import { BaseModalComponent, ModalConfig } from '../../../../shared/components/modal/base-modal.component';
+import {
+    BaseModalComponent,
+    FormModalBaseComponent,
+    ErrorAlertComponent,
+    FormButtonsComponent,
+    FormFieldComponent,
+    ModalConfig
+} from '../../../../shared/components/modal';
 import { CourseEvent, CourseEventCreateDto, CourseEventUpdateDto, SEMESTER_OPTIONS } from '../../models/course-event.model';
 
 @Component({
     selector: 'app-course-event-form',
     templateUrl: './course-event-form.component.html',
     styleUrls: ['./course-event-form.component.scss'],
-    imports: [CommonModule, ReactiveFormsModule, BaseModalComponent]
+    imports: [
+        CommonModule,
+        ReactiveFormsModule,
+        BaseModalComponent,
+        ErrorAlertComponent,
+        FormButtonsComponent,
+        FormFieldComponent
+    ]
 })
-export class CourseEventFormComponent implements OnInit {
-    private fb = inject(FormBuilder);
+export class CourseEventFormComponent extends FormModalBaseComponent<CourseEvent, CourseEventCreateDto, CourseEventUpdateDto> implements OnInit {
     private courseEventService = inject(CourseEventService);
 
-    // Inputs
-    mode = input.required<'create' | 'edit'>();
-    courseEvent = input<CourseEvent | null>(null);
-
-    // Outputs
-    saved = output<CourseEvent>();
-    cancelled = output<void>();
-
-    // State
-    form!: FormGroup;
-    private readonly _submitTrigger = signal<{ action: 'create' | 'update', data: any } | null>(null);
-    error = signal<string | null>(null);
+    // Additional state specific to course events
     availableYears = signal<string[]>([]);
-
-    // Resource for form submission
-    private readonly submitResource = resource({
-        request: this._submitTrigger,
-        loader: async ({ request }) => {
-            if (!request) return null;
-
-            if (request.action === 'create') {
-                return firstValueFrom(this.courseEventService.createCourseEvent(request.data));
-            } else {
-                return firstValueFrom(this.courseEventService.updateCourseEvent(this.courseEvent()!.courseEventId!, request.data));
-            }
-        }
-    });
-
-    // Computed properties
-    loading = computed(() => this.submitResource.isLoading());
-    submitLoading = computed(() => this.submitResource.isLoading());
-
-    // Computed
-    isEditMode = computed(() => this.mode() === 'edit');
-    submitButtonText = computed(() => this.isEditMode() ? '更新' : '建立');
 
     // Options
     semesterOptions = SEMESTER_OPTIONS;
@@ -59,49 +39,32 @@ export class CourseEventFormComponent implements OnInit {
         label: year
     })));
 
-    // Modal configuration
-    modalConfig = computed<ModalConfig>(() => ({
+    // Modal configuration implementation
+    readonly modalConfig = computed<ModalConfig>(() => ({
         title: this.isEditMode() ? '編輯課程活動' : '新增課程活動',
         icon: 'bi bi-calendar-event',
         size: 'lg'
     }));
 
-    // Effects - 在字段初始化中使用 effect()
-    private readonly submitEffect = effect(() => {
-        const submitResult = this.submitResource.value();
-        const submitError = this.submitResource.error();
-
-        if (submitResult) {
-            this.saved.emit(submitResult);
-            this.error.set(null);
-        } else if (submitError) {
-            this.error.set(this.isEditMode() ? '更新課程活動失敗，請稍後再試' : '建立課程活動失敗，請稍後再試');
-        }
-    });
+    // Field labels implementation
+    readonly fieldLabels = {
+        year: '年度',
+        semester: '學期',
+        activityTitle: '活動標題',
+        description: '活動描述',
+        expectedCompletionDate: '預期完成日期',
+        submissionDeadline: '提交截止日期',
+        activationDate: '啟動日期',
+        isActive: '啟用狀態'
+    };
 
     ngOnInit(): void {
         this.loadAvailableYears();
         this.initializeForm();
     }
 
-    private loadAvailableYears(): void {
-        this.courseEventService.getAvailableYears().subscribe({
-            next: (years) => {
-                this.availableYears.set(years);
-            },
-            error: (error) => {
-                console.error('Failed to load available years:', error);
-                // 回退到靜態年度
-                const fallbackYears = Array.from({ length: 6 }, (_, i) =>
-                    (new Date().getFullYear() - 2 + i).toString()
-                );
-                this.availableYears.set(fallbackYears);
-            }
-        });
-    }
-
-    private initializeForm(): void {
-        const courseEventData = this.courseEvent();
+    protected initializeForm(): void {
+        const courseEventData = this.entity();
 
         this.form = this.fb.group({
             year: [
@@ -122,106 +85,87 @@ export class CourseEventFormComponent implements OnInit {
             ],
             expectedCompletionDate: [
                 courseEventData?.expectedCompletionDate ? this.formatDateForInput(courseEventData.expectedCompletionDate) : '',
-                []
+                [Validators.required]
             ],
             submissionDeadline: [
                 courseEventData?.submissionDeadline ? this.formatDateForInput(courseEventData.submissionDeadline) : '',
-                []
+                [Validators.required]
             ],
             activationDate: [
                 courseEventData?.activationDate ? this.formatDateForInput(courseEventData.activationDate) : '',
-                []
+                [Validators.required]
             ],
             isActive: [
                 courseEventData?.isActive ?? true,
                 [Validators.required]
             ]
         });
-    }
 
-    private formatDateForInput(date: Date | string): string {
-        if (!date) return '';
-        const d = new Date(date);
-        return d.toISOString().split('T')[0];
-    }
-
-    getFieldError(fieldName: string): string | null {
-        const field = this.form.get(fieldName);
-        if (field?.invalid && (field.dirty || field.touched)) {
-            if (field.errors?.['required']) {
-                return this.getFieldLabel(fieldName) + '為必填欄位';
-            }
-            if (field.errors?.['maxlength']) {
-                const maxLength = field.errors['maxlength'].requiredLength;
-                return this.getFieldLabel(fieldName) + `不可超過 ${maxLength} 個字元`;
-            }
+        // 編輯模式時年度和學期不可修改
+        if (this.isEditMode()) {
+            this.form.get('year')?.disable();
+            this.form.get('semester')?.disable();
         }
-        return null;
     }
 
-    private getFieldLabel(fieldName: string): string {
-        const labels: Record<string, string> = {
-            year: '年度',
-            semester: '學期',
-            activityTitle: '活動標題',
-            description: '活動描述',
-            expectedCompletionDate: '預期完成日期',
-            submissionDeadline: '提交截止日期',
-            activationDate: '啟動日期',
-            isActive: '啟用狀態'
-        };
-        return labels[fieldName] || fieldName;
-    }
-
-    isFieldInvalid(fieldName: string): boolean {
-        const field = this.form.get(fieldName);
-        return !!(field?.invalid && (field.dirty || field.touched));
-    }
-
-    onSubmit(): void {
-        if (this.form.invalid) {
-            this.markAllFieldsAsTouched();
-            return;
+    protected async performSubmit(data: CourseEventCreateDto | CourseEventUpdateDto): Promise<CourseEvent> {
+        // Convert date format to backend expected format (yyyy-MM-dd)
+        const formattedData = { ...data };
+        if (formattedData.expectedCompletionDate) {
+            formattedData.expectedCompletionDate = formattedData.expectedCompletionDate;
         }
-
-        this.error.set(null);
-        const formValue = this.form.getRawValue(); // 使用 getRawValue 來包含 disabled 欄位
-
-        // 轉換日期格式為後端期望的格式 (yyyy-MM-dd)
-        if (formValue.expectedCompletionDate) {
-            formValue.expectedCompletionDate = formValue.expectedCompletionDate; // 保持 yyyy-MM-dd 格式
+        if (formattedData.submissionDeadline) {
+            formattedData.submissionDeadline = formattedData.submissionDeadline;
         }
-        if (formValue.submissionDeadline) {
-            formValue.submissionDeadline = formValue.submissionDeadline; // 保持 yyyy-MM-dd 格式
-        }
-        if (formValue.activationDate) {
-            formValue.activationDate = formValue.activationDate; // 保持 yyyy-MM-dd 格式
+        if (formattedData.activationDate) {
+            formattedData.activationDate = formattedData.activationDate;
         }
 
         if (this.isEditMode()) {
-            this._submitTrigger.set({
-                action: 'update',
-                data: { ...formValue, courseEventId: this.courseEvent()!.courseEventId! }
-            });
+            const currentEntity = this.entity();
+            if (!currentEntity?.courseEventId) {
+                throw new Error('Course event ID is required for update');
+            }
+            const updateData = {
+                ...formattedData,
+                courseEventId: currentEntity.courseEventId
+            } as CourseEventUpdateDto;
+            const result = await firstValueFrom(this.courseEventService.updateCourseEvent(currentEntity.courseEventId, updateData));
+            return result!;
         } else {
-            this._submitTrigger.set({
-                action: 'create',
-                data: formValue
-            });
+            const result = await firstValueFrom(this.courseEventService.createCourseEvent(formattedData as CourseEventCreateDto));
+            return result!;
         }
     }
 
-    private markAllFieldsAsTouched(): void {
-        Object.keys(this.form.controls).forEach(key => {
-            this.form.get(key)?.markAsTouched();
+    protected getEntityName(): string {
+        return '課程活動';
+    }
+
+    private loadAvailableYears(): void {
+        this.courseEventService.getAvailableYears().subscribe({
+            next: (years) => {
+                this.availableYears.set(years);
+            },
+            error: (error) => {
+                console.error('Failed to load available years:', error);
+                // 回退到靜態年度
+                const fallbackYears = Array.from({ length: 6 }, (_, i) =>
+                    (new Date().getFullYear() - 2 + i).toString()
+                );
+                this.availableYears.set(fallbackYears);
+            }
         });
     }
 
-    onCancel(): void {
-        this.cancelled.emit();
-    }
-
-    clearError(): void {
-        this.error.set(null);
+    private formatDateForInput(dateString: string): string {
+        if (!dateString) return '';
+        // 如果已經是 yyyy-MM-dd 格式，直接返回
+        if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            return dateString;
+        }
+        // 否則轉換為 yyyy-MM-dd 格式
+        const date = new Date(dateString);
+        return date.toISOString().split('T')[0];
     }
 }

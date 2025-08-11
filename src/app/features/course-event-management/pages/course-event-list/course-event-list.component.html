@@ -13,6 +13,10 @@
             </button>
             }
             @if (permissions().create) {
+            <button type="button" class="btn btn-outline-secondary" (click)="exportData()" aria-label="匯出資料">
+                <i class="bi bi-download me-1"></i>
+                匯出
+            </button>
             <button type="button" class="btn btn-primary" (click)="onAdd()" aria-label="新增課程活動">
                 <i class="bi bi-plus-circle me-1"></i>
                 新增課程活動
@@ -118,7 +122,7 @@
 
 <!-- 表單模態視窗 -->
 @if (showForm()) {
-<app-course-event-form [mode]="formMode()" [courseEvent]="selectedCourseEvent()" (saved)="onFormSaved($event)"
+<app-course-event-form [mode]="formMode()" [entity]="selectedCourseEvent()" (saved)="onFormSaved($event)"
     (cancelled)="onFormCancelled()">
 </app-course-event-form>
 }
