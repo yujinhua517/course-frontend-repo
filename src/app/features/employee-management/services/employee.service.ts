@@ -138,16 +138,38 @@ export class EmployeeService extends BaseQueryService<Employee, EmployeeSearchPa
     }
 
     /**
-     * 根據 ID 取得單一員工
+     * 根據 ID 取得單一員工 - 確保包含部門名稱
      */
     getEmployeeById(id: number): Observable<Employee | null> {
         if (this.useMockData) {
             return of(this.getMockEmployeeById(id)).pipe(delay(300));
         }
 
+        // 嘗試直接獲取，如果沒有部門名稱則使用查詢方式
         return this.http.get<ApiResponse<Employee>>(`${this.apiUrl}/find/${id}`)
             .pipe(
                 map(response => response.data || null),
+                switchMap((employee: Employee | null) => {
+                    if (!employee) return of(null);
+
+                    // 如果沒有部門名稱，使用查詢方式重新獲取
+                    if (!employee.deptName) {
+                        console.debug('[EmployeeService] deptName missing in findById, using query approach');
+                        return this.getPagedData({ empId: id }).pipe(
+                            map(serviceResponse => {
+                                if (serviceResponse.code === 1000 &&
+                                    serviceResponse.data &&
+                                    serviceResponse.data.dataList &&
+                                    serviceResponse.data.dataList.length > 0) {
+                                    return serviceResponse.data.dataList[0];
+                                }
+                                return employee; // 回退到原始資料
+                            })
+                        );
+                    }
+
+                    return of(employee);
+                }),
                 catchError(this.httpErrorHandler.handleError('getEmployeeById', null))
             );
     }
@@ -262,6 +284,18 @@ export class EmployeeService extends BaseQueryService<Employee, EmployeeSearchPa
                     console.debug('Step 3: API response =', response);
                     return response.data || null;
                 }),
+                // 🔧 修復：確保返回的資料包含部門名稱
+                switchMap((updatedEmployee: Employee | null) => {
+                    if (!updatedEmployee) return of(null);
+
+                    // 如果更新後的員工資料缺少 deptName，重新獲取完整資料
+                    if (!updatedEmployee.deptName) {
+                        console.debug('Step 3.5: deptName missing, fetching complete data');
+                        return this.getEmployeeById(updatedEmployee.empId);
+                    }
+
+                    return of(updatedEmployee);
+                }),
                 catchError(err => {
                     console.error('Step 4: API error =', err);
                     // 如果後端沒有 toggle-status API，回退到原來的方式
@@ -288,7 +322,14 @@ export class EmployeeService extends BaseQueryService<Employee, EmployeeSearchPa
 
                                 return this.http.post<ApiResponse<Employee>>(`${this.apiUrl}/update`, updateDto)
                                     .pipe(
-                                        map(response => response.data || null)
+                                        map(response => response.data || null),
+                                        // 🔧 在回退模式中也確保返回完整資料
+                                        switchMap((updatedEmp: Employee | null) => {
+                                            if (!updatedEmp || !updatedEmp.deptName) {
+                                                return this.getEmployeeById(id);
+                                            }
+                                            return of(updatedEmp);
+                                        })
                                     );
                             })
                         );

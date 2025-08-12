@@ -631,6 +631,7 @@ export class EmployeeListComponent implements OnInit {
                 this.actionLoading.set(false);
                 this.showStatusConfirm.set(false);
                 if (updatedEmployee) {
+                    // ✅ 服務層已確保返回完整資料，包含 deptName
                     this.employeeStore.updateEmployee(updatedEmployee);
                     const targetStatus = updatedEmployee.isActive ? '在職' : '離職';
                     this.messageService.success(`員工「${employee.empName}」狀態已切換為${targetStatus}`);

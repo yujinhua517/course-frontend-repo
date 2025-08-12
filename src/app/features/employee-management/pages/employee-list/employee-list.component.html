@@ -80,7 +80,7 @@
     </ng-template>
 
     <ng-template #deptTemplate let-employee>
-        <span [innerHTML]="employee.deptName | highlight:searchKeyword()"></span>
+        <span [innerHTML]="(employee.deptName || '未指定') | highlight:searchKeyword()"></span>
     </ng-template>
 
     <ng-template #jobTemplate let-employee>
