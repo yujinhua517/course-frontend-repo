@@ -190,13 +190,13 @@ export class CourseEventListComponent implements OnInit {
                 key: 'semester',
                 label: '學期',
                 sortable: true,
-                width: '10%'
+                width: '8%'
             },
             {
                 key: 'activityTitle',
                 label: '活動標題',
                 sortable: true,
-                width: '25%'
+                width: '17%'
             },
             {
                 key: 'description',
@@ -241,14 +241,55 @@ export class CourseEventListComponent implements OnInit {
         data: this.courseEvents(),
         showSelectColumn: this.permissions().delete,
         columns: [
-            { key: 'courseEventId', template: this.idTemplate, align: 'center' },
-            { key: 'year', template: this.yearTemplate, cssClass: 'fw-medium text-primary', },
-            { key: 'semester', template: this.semesterTemplate, align: 'center' },
-            { key: 'activityTitle', template: this.activityTitleTemplate },
-            { key: 'description', template: this.descriptionTemplate },
-            { key: 'isActive', template: this.statusTemplate, align: 'center' },
-            { key: 'activationDate', template: this.dateTemplate, align: 'center' },
-            { key: 'actions', template: this.actionTemplate, align: 'center' }
+            {
+                key: 'courseEventId',
+                template: this.idTemplate,
+                cssClass: 'fw-normal',
+                width: '8%'
+            },
+            {
+                key: 'year',
+                template: this.yearTemplate,
+                cssClass: 'fw-medium text-primary',
+                width: '10%'
+            },
+            {
+                key: 'semester',
+                template: this.semesterTemplate,
+                cssClass: 'text-muted small',
+                width: '8%'
+            },
+            {
+                key: 'activityTitle',
+                template: this.activityTitleTemplate,
+                cssClass: 'fw-normal',
+                width: '17%'
+            },
+            {
+                key: 'description',
+                template: this.descriptionTemplate,
+                cssClass: 'text-muted small',
+                width: '230'
+            },
+            {
+                key: 'isActive',
+                template: this.statusTemplate,
+                align: 'center',
+                width: '10%'
+            },
+            {
+                key: 'activationDate',
+                template: this.dateTemplate,
+                cssClass: 'text-muted small',
+                width: '12%'
+            },
+            // { key: 'activationDate', template: this.dateTemplate, align: 'center' },
+            {
+                key: 'actions',
+                template: this.actionTemplate,
+                align: 'center',
+                width: '15%'
+            }
         ],
         trackByFn: (index: number, item: CourseEvent) => item.courseEventId || index
     }));
