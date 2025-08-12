@@ -2,6 +2,7 @@ import { Component, OnInit, input, output, signal, computed, inject } from '@ang
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { JobRoleService } from '../../services/job-role.service';
+import { UserStore } from '../../../../core/auth/user.store';
 import { BaseModalComponent, ModalConfig } from '../../../../shared/components/modal/base-modal.component';
 import { JobRole, JobRoleCreateDto, JobRoleUpdateDto } from '../../models/job-role.model';
 
@@ -12,6 +13,7 @@ import { JobRole, JobRoleCreateDto, JobRoleUpdateDto } from '../../models/job-ro
     imports: [CommonModule, ReactiveFormsModule, BaseModalComponent]
 })
 export class JobRoleFormComponent implements OnInit {
+    private userStore = inject(UserStore);
     private fb = inject(FormBuilder);
     private jobRoleService = inject(JobRoleService);
 
@@ -138,14 +140,15 @@ export class JobRoleFormComponent implements OnInit {
 
     private updateJobRole(formValue: any): void {
         const jobRoleData = this.jobRole()!;
-        const updateDto: JobRoleUpdateDto = {
+        const updateDto: JobRoleUpdateDto & { updateUser?: string } = {
             jobRoleId: jobRoleData.jobRoleId!,
             jobRoleCode: formValue.jobRoleCode,
             jobRoleName: formValue.jobRoleName,
             description: formValue.description,
-            isActive: formValue.isActive
+            isActive: formValue.isActive,
+            ...(this.userStore.user() ? { updateUser: this.userStore.user()!.username } : {})
         };
-
+        console.debug('[JobRoleFormComponent] update payload:', updateDto);
         this.jobRoleService.updateJobRole(jobRoleData.jobRoleId!, updateDto).subscribe({
             next: (response) => {
                 this.loading.set(false);

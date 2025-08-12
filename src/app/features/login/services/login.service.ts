@@ -339,6 +339,34 @@ export class LoginService {
           resource: 'course_event',
           action: 'read',
           description: 'course event read'
+        },
+        {
+          id: '7',
+          name: PermissionName.EMPLOYEE_READ,
+          resource: 'employee',
+          action: 'read',
+          description: 'employee read'
+        },
+        {
+          id: '8',
+          name: PermissionName.EMPLOYEE_UPDATE,
+          resource: 'employee',
+          action: 'update',
+          description: 'employee update'
+        },
+        {
+          id: '9',
+          name: PermissionName.DEPARTMENT_UPDATE,
+          resource: 'department',
+          action: 'update',
+          description: 'department update'
+        },
+        {
+          id: '10',
+          name: PermissionName.DEPARTMENT_READ,
+          resource: 'department',
+          action: 'read',
+          description: 'department read'
         }
       ];
     }

@@ -89,6 +89,10 @@ export class FormButtonsComponent {
     onCancel(): void {
         this.cancelled.emit();
     }
+    onSubmitClick(event: Event): void {
+        console.log('[FormButtonsComponent] submit button clicked', event);
+    }
+
 }
 
 /**

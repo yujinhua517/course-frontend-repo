@@ -14,6 +14,7 @@ import {
 import { HttpErrorHandlerService } from '../../../core/services/http-error-handler.service';
 import { BaseQueryService } from '../../../core/services/base-query.service';
 import { MOCK_EMPLOYEES } from '../services/mock-employees.data';
+import { UserStore } from '../../../core/auth/user.store';
 
 @Injectable({
     providedIn: 'root'
@@ -25,6 +26,8 @@ export class EmployeeService extends BaseQueryService<Employee, EmployeeSearchPa
     protected override readonly defaultSortColumn = 'empId';
     protected override readonly mockData: Employee[] = MOCK_EMPLOYEES;
     protected override readonly useMockData = false; // 切換到真實 API
+
+    private userStore = inject(UserStore);
 
     /**
      * 覆寫排序欄位映射：前端 camelCase -> 後端 snake_case
@@ -157,7 +160,13 @@ export class EmployeeService extends BaseQueryService<Employee, EmployeeSearchPa
             return of(this.createMockEmployee(employeeData)).pipe(delay(600));
         }
 
-        return this.http.post<ApiResponse<Employee>>(`${this.apiUrl}/create`, employeeData)
+        // 自動補上 createUser
+        const createPayload = {
+            ...employeeData,
+            createUser: this.userStore.user()?.username
+        };
+
+        return this.http.post<ApiResponse<Employee>>(`${this.apiUrl}/create`, createPayload)
             .pipe(
                 map(response => response.data || null),
                 catchError(this.httpErrorHandler.handleError('createEmployee', null))
@@ -172,10 +181,14 @@ export class EmployeeService extends BaseQueryService<Employee, EmployeeSearchPa
             return of(this.updateMockEmployee(id, employeeData)).pipe(delay(600));
         }
 
-        return this.http.post<ApiResponse<Employee>>(`${this.apiUrl}/update`, {
+        // 自動補上 updateUser
+        const updatePayload = {
             ...employeeData,
-            empId: id
-        })
+            empId: id,
+            updateUser: this.userStore.user()?.username
+        };
+
+        return this.http.post<ApiResponse<Employee>>(`${this.apiUrl}/update`, updatePayload)
             .pipe(
                 map(response => response.data || null),
                 catchError(this.httpErrorHandler.handleError('updateEmployee', null))
@@ -221,39 +234,75 @@ export class EmployeeService extends BaseQueryService<Employee, EmployeeSearchPa
     }
 
     /**
-     * 切換員工啟用狀態 (後端目前無此 API，使用更新方式)
+     * 切換員工啟用狀態 - 使用直接 API 調用避免併發問題
      */
     toggleActiveStatus(id: number): Observable<Employee | null> {
+        console.group('[EmployeeService] toggleActiveStatus');
+        console.debug('Step 1: input id =', id);
         if (this.useMockData) {
-            return of(this.toggleMockEmployeeStatus(id)).pipe(delay(500));
+            console.debug('Step 2: useMockData = true, call toggleMockEmployeeStatus');
+            const result = of(this.toggleMockEmployeeStatus(id)).pipe(delay(500));
+            console.debug('Step 3: mock result Observable =', result);
+            console.groupEnd();
+            return result;
         }
 
-        // 先獲取當前資料，然後更新狀態
-        return this.getEmployeeById(id).pipe(
-            switchMap((employee: Employee | null) => {
-                if (!employee) {
-                    throw new Error('Employee not found');
-                }
+        // 直接調用後端的切換 API，讓後端處理狀態邏輯
+        const user = this.userStore.user();
+        const togglePayload = {
+            empId: id,
+            updateUser: user?.username
+        };
 
-                const updateDto = {
-                    empId: id,
-                    empCode: employee.empCode,
-                    empName: employee.empName,
-                    empEmail: employee.empEmail,
-                    empPhone: employee.empPhone,
-                    deptId: employee.deptId,
-                    jobTitle: employee.jobTitle,
-                    hireDate: employee.hireDate,
-                    isActive: !employee.isActive
-                };
+        console.debug('Step 2: togglePayload =', togglePayload);
 
-                return this.http.post<ApiResponse<Employee>>(`${this.apiUrl}/update`, updateDto)
-                    .pipe(
-                        map(response => response.data || null),
-                        catchError(this.httpErrorHandler.handleError('toggleActiveStatus', null))
-                    );
-            })
-        );
+        const obs = this.http.post<ApiResponse<Employee>>(`${this.apiUrl}/toggle-status`, togglePayload)
+            .pipe(
+                map(response => {
+                    console.debug('Step 3: API response =', response);
+                    return response.data || null;
+                }),
+                catchError(err => {
+                    console.error('Step 4: API error =', err);
+                    // 如果後端沒有 toggle-status API，回退到原來的方式
+                    if (err.status === 404) {
+                        console.debug('Step 5: Fallback to get-then-update approach');
+                        return this.getEmployeeById(id).pipe(
+                            switchMap((employee: Employee | null) => {
+                                if (!employee) {
+                                    throw new Error('Employee not found');
+                                }
+
+                                const updateDto = {
+                                    empId: id,
+                                    empCode: employee.empCode,
+                                    empName: employee.empName,
+                                    empEmail: employee.empEmail,
+                                    empPhone: employee.empPhone,
+                                    deptId: employee.deptId,
+                                    jobTitle: employee.jobTitle,
+                                    hireDate: employee.hireDate,
+                                    isActive: !employee.isActive,
+                                    updateUser: user?.username
+                                };
+
+                                return this.http.post<ApiResponse<Employee>>(`${this.apiUrl}/update`, updateDto)
+                                    .pipe(
+                                        map(response => response.data || null)
+                                    );
+                            })
+                        );
+                    }
+                    return this.httpErrorHandler.handleError('toggleActiveStatus', null)(err);
+                })
+            );
+
+        obs.subscribe({
+            next: (data) => console.debug('Step 6: toggleActiveStatus result =', data),
+            error: (err) => console.error('Step 7: toggleActiveStatus error =', err),
+            complete: () => console.groupEnd()
+        });
+        return obs;
     }
 
     // Mock 資料處理方法
@@ -264,6 +313,7 @@ export class EmployeeService extends BaseQueryService<Employee, EmployeeSearchPa
     private createMockEmployee(employeeData: EmployeeCreateDto): Employee {
         const newId = Math.max(...this.mockData.map((e: Employee) => e.empId)) + 1;
         const now = new Date().toISOString();
+        const currentUser = this.userStore.user()?.username || 'system_service_1';
 
         return {
             empId: newId,
@@ -276,9 +326,9 @@ export class EmployeeService extends BaseQueryService<Employee, EmployeeSearchPa
             hireDate: employeeData.hireDate,
             isActive: employeeData.isActive ?? true,
             createTime: now,
-            createUser: 'current_user',
+            createUser: currentUser,
             updateTime: now,
-            updateUser: 'current_user'
+            updateUser: currentUser
         };
     }
 
@@ -299,7 +349,7 @@ export class EmployeeService extends BaseQueryService<Employee, EmployeeSearchPa
             hireDate: employeeData.hireDate ?? existing.hireDate,
             isActive: employeeData.isActive ?? existing.isActive,
             updateTime: new Date().toISOString(),
-            updateUser: 'current_user'
+            updateUser: this.userStore.user()?.username || 'system_service_2'
         };
     }
 
@@ -313,7 +363,7 @@ export class EmployeeService extends BaseQueryService<Employee, EmployeeSearchPa
             ...existing,
             isActive: !existing.isActive,
             updateTime: new Date().toISOString(),
-            updateUser: 'current_user'
+            updateUser: this.userStore.user()?.username || 'system'
         };
     }
 }

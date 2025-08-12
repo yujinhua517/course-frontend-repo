@@ -13,6 +13,7 @@ import {
 } from '../models/job-role.model';
 import { HttpErrorHandlerService } from '../../../core/services/http-error-handler.service';
 import { BaseQueryService } from '../../../core/services/base-query.service';
+import { UserStore } from '../../../core/auth/user.store';
 
 @Injectable({
     providedIn: 'root'
@@ -23,6 +24,7 @@ export class JobRoleService extends BaseQueryService<JobRole, JobRoleSearchParam
     protected override readonly apiUrl = `${environment.apiBaseUrl}/job-roles`;
     protected override readonly defaultSortColumn = 'jobRoleId';
     protected override readonly useMockData = false;
+    private userStore = inject(UserStore);
 
     // Mock 資料 (使用 camelCase)
     protected override readonly mockData: JobRole[] = [
@@ -346,7 +348,8 @@ export class JobRoleService extends BaseQueryService<JobRole, JobRoleSearchParam
                     jobRoleCode: jobRole.jobRoleCode,
                     jobRoleName: jobRole.jobRoleName,
                     description: jobRole.description,
-                    isActive: !jobRole.isActive
+                    isActive: !jobRole.isActive,
+                    updateUser: this.userStore.user()?.username
                 };
 
                 return this.http.post<ApiResponse<JobRole>>(`${this.apiUrl}/update`, updateDto)

@@ -5,6 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { EmployeeService } from '../../services/employee.service';
 import { BaseModalComponent, ModalConfig } from '../../../../shared/components/modal/base-modal.component';
 import { Employee, EmployeeCreateDto, EmployeeUpdateDto } from '../../models/employee.model';
+import { UserStore } from '../../../../core/auth/user.store';
 import { DepartmentService } from '../../../department-management/services/department.service';
 import { Department } from '../../../department-management/models/department.model';
 
@@ -15,6 +16,7 @@ import { Department } from '../../../department-management/models/department.mod
     imports: [CommonModule, ReactiveFormsModule, BaseModalComponent]
 })
 export class EmployeeFormComponent implements OnInit {
+    private userStore = inject(UserStore);
     private fb = inject(FormBuilder);
     private employeeService = inject(EmployeeService);
     private departmentService = inject(DepartmentService);
@@ -205,9 +207,10 @@ export class EmployeeFormComponent implements OnInit {
         }
 
         if (this.isEditMode()) {
+            const updateUser = this.userStore.user()?.username;
             this._submitTrigger.set({
                 action: 'update',
-                data: { ...formValue, empId: this.employee()!.empId }
+                data: { ...formValue, empId: this.employee()!.empId, ...(updateUser ? { updateUser } : {}) }
             });
         } else {
             this._submitTrigger.set({

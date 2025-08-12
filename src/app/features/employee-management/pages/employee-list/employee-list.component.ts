@@ -623,7 +623,7 @@ export class EmployeeListComponent implements OnInit {
     // 確認切換狀態
     onConfirmToggleStatus(): void {
         const employee = this.actionEmployee();
-        if (!employee) return;
+        if (!employee || this.actionLoading()) return; // 防止重複操作
 
         this.actionLoading.set(true);
         this.employeeService.toggleActiveStatus(employee.empId).subscribe({

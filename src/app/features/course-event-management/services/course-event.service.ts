@@ -15,6 +15,7 @@ import { HttpErrorHandlerService } from '../../../core/services/http-error-handl
 import { BaseQueryService } from '../../../core/services/base-query.service';
 import { MOCK_COURSE_EVENTS } from './mock-course-events.data';
 import { PagerDto } from '../../../core/models/common.model';
+import { UserStore } from '../../../core/auth/user.store';
 
 @Injectable({
     providedIn: 'root'
@@ -26,6 +27,7 @@ export class CourseEventService extends BaseQueryService<CourseEvent, CourseEven
     protected override readonly defaultSortColumn = 'courseEventId';
     protected override readonly mockData: CourseEvent[] = MOCK_COURSE_EVENTS;
     protected override readonly useMockData = false; // 暫時使用 mock data，因為後端沒有 /years 端點
+    private userStore = inject(UserStore);
 
     /**
      * 覆寫排序欄位映射：前端 camelCase -> 後端 snake_case
@@ -175,29 +177,30 @@ export class CourseEventService extends BaseQueryService<CourseEvent, CourseEven
      */
     createCourseEvent(courseEventData: CourseEventCreateDto): Observable<CourseEvent | null> {
         console.group('[CourseEventService] createCourseEvent');
-        console.debug('Request payload (original):', courseEventData);
-        if (this.useMockData) {
-            const mock$ = of(this.createMockCourseEvent(courseEventData)).pipe(delay(600));
-            console.debug('Using mock data flow');
-            console.groupEnd();
-            return mock$;
-        }
+        try {
+            console.debug('Request payload (original):', courseEventData);
+            if (this.useMockData) {
+                const mock$ = of(this.createMockCourseEvent(courseEventData)).pipe(delay(600));
+                console.debug('Using mock data flow');
+                return mock$;
+            }
 
-        return this.http.post<ApiResponse<CourseEvent>>(`${this.apiUrl}/create`, courseEventData)
-            .pipe(
-                map(response => {
-                    console.debug('Create response raw:', response);
-                    const data = response.data || null;
-                    console.debug('Parsed create data:', data);
-                    console.groupEnd();
-                    return data;
-                }),
-                catchError(err => {
-                    console.error('Create request error:', err);
-                    console.groupEnd();
-                    return this.httpErrorHandler.handleError('createCourseEvent', null)(err);
-                })
-            );
+            return this.http.post<ApiResponse<CourseEvent>>(`${this.apiUrl}/create`, courseEventData)
+                .pipe(
+                    map(response => {
+                        console.debug('Create response raw:', response);
+                        const data = response.data || null;
+                        console.debug('Parsed create data:', data);
+                        return data;
+                    }),
+                    catchError(err => {
+                        console.error('Create request error:', err);
+                        return this.httpErrorHandler.handleError('createCourseEvent', null)(err);
+                    })
+                );
+        } finally {
+            console.groupEnd();
+        }
     }
 
     /**
@@ -205,40 +208,41 @@ export class CourseEventService extends BaseQueryService<CourseEvent, CourseEven
      */
     updateCourseEvent(id: number, courseEventData: CourseEventUpdateDto): Observable<CourseEvent | null> {
         console.group('[CourseEventService] updateCourseEvent');
-        console.debug('ID:', id);
-        console.debug('Request payload (original):', courseEventData);
-        if (this.useMockData) {
-            const mock$ = of(this.updateMockCourseEvent(id, courseEventData)).pipe(delay(600));
-            console.debug('Using mock data flow');
+        try {
+            console.debug('ID:', id);
+            console.debug('Request payload (original):', courseEventData);
+            if (this.useMockData) {
+                const mock$ = of(this.updateMockCourseEvent(id, courseEventData)).pipe(delay(600));
+                console.debug('Using mock data flow');
+                return mock$;
+            }
+
+            // 若前端附帶 updateUser，後端可能期望 snake_case: update_user
+            const payload: any = {
+                ...courseEventData,
+                courseEventId: id
+            };
+            if ((courseEventData as any).updateUser && !(courseEventData as any).update_user) {
+                payload.update_user = (courseEventData as any).updateUser;
+            }
+            console.debug('Final update payload sent to API:', payload);
+
+            return this.http.post<ApiResponse<CourseEvent>>(`${this.apiUrl}/update`, payload)
+                .pipe(
+                    map(response => {
+                        console.debug('Update response raw:', response);
+                        const data = response.data || null;
+                        console.debug('Parsed update data:', data);
+                        return data;
+                    }),
+                    catchError(err => {
+                        console.error('Update request error:', err);
+                        return this.httpErrorHandler.handleError('updateCourseEvent', null)(err);
+                    })
+                );
+        } finally {
             console.groupEnd();
-            return mock$;
         }
-
-        // 若前端附帶 updateUser，後端可能期望 snake_case: update_user
-        const payload: any = {
-            ...courseEventData,
-            courseEventId: id
-        };
-        if ((courseEventData as any).updateUser && !(courseEventData as any).update_user) {
-            payload.update_user = (courseEventData as any).updateUser;
-        }
-        console.debug('Final update payload sent to API:', payload);
-
-        return this.http.post<ApiResponse<CourseEvent>>(`${this.apiUrl}/update`, payload)
-            .pipe(
-                map(response => {
-                    console.debug('Update response raw:', response);
-                    const data = response.data || null;
-                    console.debug('Parsed update data:', data);
-                    console.groupEnd();
-                    return data;
-                }),
-                catchError(err => {
-                    console.error('Update request error:', err);
-                    console.groupEnd();
-                    return this.httpErrorHandler.handleError('updateCourseEvent', null)(err);
-                })
-            );
     }
 
     /**
@@ -303,7 +307,8 @@ export class CourseEventService extends BaseQueryService<CourseEvent, CourseEven
                     expectedCompletionDate: courseEvent.expectedCompletionDate,
                     submissionDeadline: courseEvent.submissionDeadline,
                     activationDate: courseEvent.activationDate,
-                    isActive: !courseEvent.isActive
+                    isActive: !courseEvent.isActive,
+                    updateUser: this.userStore.user()?.username
                 };
 
                 return this.http.post<ApiResponse<CourseEvent>>(`${this.apiUrl}/update`, updateDto)
