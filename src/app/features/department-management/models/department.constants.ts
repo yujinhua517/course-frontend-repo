@@ -44,15 +44,6 @@ export const API_STATUS_CODES = {
 } as const;
 
 /**
- * 分頁預設值
- */
-export const PAGINATION_DEFAULTS = {
-    PAGE: 1,
-    PAGE_SIZE: 10,
-    MAX_PAGE_SIZE: 1000
-} as const;
-
-/**
  * 表單驗證常數
  */
 export const VALIDATION_RULES = {

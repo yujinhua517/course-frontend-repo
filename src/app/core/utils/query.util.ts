@@ -5,7 +5,20 @@
  * 符合 Angular 19+ 規範，使用純函數設計
  */
 
-import { BaseQueryDto, BaseSearchParams, PaginationConfig, SortConfig, PAGINATION_DEFAULTS } from '../models/common.model';
+import { BaseQueryDto, BaseSearchParams, PAGINATION_DEFAULTS } from '../../models/common.model';
+
+/**
+ * 本地型別定義
+ */
+interface PaginationConfig {
+    page: number;
+    pageSize: number;
+}
+
+interface SortConfig<T> {
+    field: keyof T;
+    direction: 'asc' | 'desc';
+}
 
 /**
  * 分頁計算工具類
@@ -61,14 +74,13 @@ export class QueryParamsBuilder {
      * 建構基礎查詢參數（用於 API 請求）
      */
     static buildBaseQuery(params: BaseSearchParams): BaseQueryDto {
-        const page = params.page || 1;
+        const page = params.page || PAGINATION_DEFAULTS.PAGE;
         const pageSize = params.pageSize || PAGINATION_DEFAULTS.PAGE_SIZE;
 
         return {
-            firstIndexInPage: PaginationUtil.calculateFirstIndex(page, pageSize),
-            lastIndexInPage: PaginationUtil.calculateLastIndex(page, pageSize),
-            pageable: true,
-            pageSize,
+            pageable: params.pageable ?? true,
+            // page,
+            // pageSize,
             sortColumn: params.sortColumn,
             sortDirection: params.sortDirection
         };
@@ -90,9 +102,7 @@ export class QueryParamsBuilder {
     static resetToFirstPage<T extends BaseSearchParams>(params: T): T {
         return {
             ...params,
-            page: 1,
-            pageIndex: 0,
-            firstIndexInPage: 1
+            page: PAGINATION_DEFAULTS.PAGE
         };
     }
 }
@@ -225,7 +235,7 @@ export class QueryTransformer {
             sortDirection: data.sortDirection,
             // 計算額外分頁資訊
             totalPages: PaginationUtil.calculateTotalPages(data.totalRecords || 0, pageSize),
-            page: requestParams.pageIndex || 0,
+            page: requestParams.page || PAGINATION_DEFAULTS.PAGE,
             size: pageSize,
             hasNext: page < PaginationUtil.calculateTotalPages(data.totalRecords || 0, pageSize),
             hasPrevious: page > 1

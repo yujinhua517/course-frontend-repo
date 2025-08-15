@@ -56,8 +56,8 @@ export class EmployeeStore {
         // 使用 BaseQueryService 的統一查詢方法，依賴 interceptor 自動轉換
         this.employeeService.getPagedData(searchParams).subscribe({
             next: (response) => {
-                this._employees.set(response.data.dataList);
-                this._total.set(response.data.totalRecords);
+                this._employees.set(response.data?.dataList || []);
+                this._total.set(response.data?.totalRecords || 0);
                 this._currentPage.set(params?.page || this._currentPage());
                 this._loading.set(false);
             },
@@ -96,7 +96,7 @@ export class EmployeeStore {
         this.loadEmployees({
             ...this._searchParams(),
             sortColumn: sortColumn as string,
-            sortDirection: sortDirection.toUpperCase()
+            sortDirection: sortDirection
         });
     }
 

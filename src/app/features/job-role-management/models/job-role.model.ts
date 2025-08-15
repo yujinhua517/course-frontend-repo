@@ -2,7 +2,7 @@ import {
     BaseSearchParams,
     QueryOptions,
     ServiceListResponse
-} from '../../../core/models/common.model';
+} from '../../../models/common.model';
 
 export interface JobRole {
     jobRoleId?: number; // 新增主鍵欄位
@@ -66,4 +66,4 @@ export type {
     ApiResponse,
     PagerDto,
     ServiceListResponse
-} from '../../../core/models/common.model';
+} from '../../../models/common.model';

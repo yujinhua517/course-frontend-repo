@@ -14,7 +14,7 @@ import {
 import { HttpErrorHandlerService } from '../../../core/services/http-error-handler.service';
 import { BaseQueryService } from '../../../core/services/base-query.service';
 import { MOCK_COURSE_EVENTS } from './mock-course-events.data';
-import { PagerDto } from '../../../core/models/common.model';
+import { PagerDto } from '../../../models/common.model';
 import { UserStore } from '../../../core/auth/user.store';
 
 @Injectable({

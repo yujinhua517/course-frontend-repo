@@ -4,9 +4,8 @@ import {
     QueryOptions,
     ApiResponse,
     PagerDto,
-    ServiceListResponse,
-    SortConfig
-} from '../../../core/models/common.model';
+    ServiceListResponse
+} from '../../../models/common.model';
 
 export interface Department {
     deptId: number;
@@ -73,7 +72,7 @@ export interface DepartmentFilters {
 }
 
 // 重新匯出統一介面供其他模組使用
-export type { ApiResponse, PagerDto } from '../../../core/models/common.model';
+export type { ApiResponse, PagerDto } from '../../../models/common.model';
 
 /**
  * 部門階層關係定義

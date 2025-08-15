@@ -396,9 +396,9 @@ export class CourseEventListComponent implements OnInit {
             keyword: this.searchKeyword() || undefined,
             isActive: this.statusFilter(),
             year: this.yearFilter(),
-            semester: this.semesterFilter(),
+            semester: this.semesterFilter() as 'H1' | 'H2' | undefined,
             sortColumn: this.sortColumn(),
-            sortDirection: this.sortDirection().toUpperCase(),
+            sortDirection: this.sortDirection() as 'asc' | 'desc',
             page: this.currentPage(),
             pageSize: this.pageSize()
         });

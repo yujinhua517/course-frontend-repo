@@ -1,7 +1,7 @@
 ---
 mode: 'agent'
 tools: ['codebase', 'editFiles']
-description: '腳手架自動生成 models'
+description: '自動生成 models'
 ---
 # Step 2: 輸入本功能所有欄位/enum/驗證/角色權限
 

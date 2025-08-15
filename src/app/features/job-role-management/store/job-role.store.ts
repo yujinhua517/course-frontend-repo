@@ -1,7 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { JobRole, JobRoleSearchParams } from '../models/job-role.model';
 import { JobRoleService } from '../services/job-role.service';
-import { PagerDto } from '../../../core/models/common.model';
+import { PagerDto } from '../../../models/common.model';
 
 export interface JobRoleState {
     jobRoles: JobRole[];
@@ -77,12 +77,13 @@ export class JobRoleStore {
             }));
         }
 
+        const currentState = this.state();
         const queryParams = {
             ...searchParams,
-            page: this.state().currentPage,
-            pageSize: this.state().pageSize,
-            sortColumn: this.state().sortColumn,
-            sortDirection: this.state().sortDirection
+            page: params?.page || currentState.currentPage,
+            pageSize: params?.pageSize || currentState.pageSize,
+            sortColumn: currentState.sortColumn,
+            sortDirection: currentState.sortDirection
         };
 
         console.log('Job-Role Store loadJobRoles called with params:', queryParams);
@@ -92,8 +93,8 @@ export class JobRoleStore {
                 console.log('Job-Role Service response:', response);
                 this.state.update(state => ({
                     ...state,
-                    jobRoles: response.data.dataList,
-                    total: response.data.totalRecords,
+                    jobRoles: response.data?.dataList || [],
+                    total: response.data?.totalRecords || 0,
                     loading: false,
                     error: null
                 }));

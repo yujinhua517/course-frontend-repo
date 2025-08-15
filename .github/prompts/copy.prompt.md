@@ -9,6 +9,8 @@ description: '自動產生 Angular 完整 CRUD 功能，檔案結構、UI/SCSS/H
 
 ---
 
+## Development Workflow
+
 ## Step 1: 確認要製作的功能與參考模板
 - 詢問用戶**要產生哪個功能/實體**（例如 course、employee、department...）。
 - 詢問**要 mirror 哪個現有功能或模板**（如 employee-management、department-management...）。

@@ -56,8 +56,8 @@ export class CourseEventStore {
         // 使用 BaseQueryService 的統一查詢方法，依賴 interceptor 自動轉換
         this.courseEventService.getPagedData(searchParams).subscribe({
             next: (response) => {
-                this._courseEvents.set(response.data.dataList);
-                this._total.set(response.data.totalRecords);
+                this._courseEvents.set(response.data?.dataList || []);
+                this._total.set(response.data?.totalRecords || 0);
                 this._currentPage.set(params?.page || this._currentPage());
                 this._loading.set(false);
             },
@@ -87,7 +87,7 @@ export class CourseEventStore {
     filterBySemester(semester?: string): void {
         this.loadCourseEvents({
             ...this._searchParams(),
-            semester: semester,
+            semester: semester as 'H1' | 'H2' | undefined,
             page: 1
         });
     }
@@ -104,7 +104,7 @@ export class CourseEventStore {
         this.loadCourseEvents({
             ...this._searchParams(),
             sortColumn: sortColumn as string,
-            sortDirection: sortDirection.toUpperCase()
+            sortDirection: sortDirection
         });
     }
 

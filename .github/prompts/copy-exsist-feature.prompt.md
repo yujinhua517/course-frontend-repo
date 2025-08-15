@@ -1,7 +1,7 @@
 ---
 mode: 'agent'
 tools: ['codebase', 'editFiles']
-description: '腳手架自動生成 Angular CRUD 功能（UI/SCSS/HTML 必須嚴格複製指定模板，只更換表單/表格欄位）'
+description: '自動生成 Angular CRUD 功能（UI/SCSS/HTML 必須嚴格複製指定模板，只更換表單/表格欄位）'
 ---
 
 ---

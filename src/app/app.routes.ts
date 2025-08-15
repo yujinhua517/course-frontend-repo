@@ -27,12 +27,6 @@ export const routes: Routes = [
         loadComponent: () => import('./features/demo/demo-page.component').then(m => m.DemoPageComponent)
       },
       {
-        path: 'competency',
-        canActivate: [PermissionGuard],
-        data: { permissions: [PermissionName.COMPETENCY_READ] },
-        loadComponent: () => import('./features/competency-management/pages/competency-list/competency-list.component').then(m => m.CompetencyListComponent)
-      },
-      {
         path: 'job-role',
         canActivate: [PermissionGuard],
         data: {

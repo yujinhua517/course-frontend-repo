@@ -4,7 +4,7 @@ import {
     ApiResponse,
     PagerDto,
     ServiceListResponse
-} from '../../../core/models/common.model';
+} from '../../../models/common.model';
 
 // 核心員工介面
 export interface Employee {
@@ -96,4 +96,4 @@ export type {
     ApiResponse,
     PagerDto,
     ServiceListResponse
-} from '../../../core/models/common.model';
+} from '../../../models/common.model';

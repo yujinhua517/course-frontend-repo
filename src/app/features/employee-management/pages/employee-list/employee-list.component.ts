@@ -427,7 +427,7 @@ export class EmployeeListComponent implements OnInit {
             keyword: this.searchKeyword() || undefined,
             isActive: this.statusFilter() ?? undefined,
             sortColumn: this.sortColumn(),
-            sortDirection: this.sortDirection().toUpperCase()
+            sortDirection: this.sortDirection() as 'asc' | 'desc'
         });
     }
 

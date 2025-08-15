@@ -10,12 +10,12 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, of, map, delay, catchError } from 'rxjs';
 import {
     BaseSearchParams,
+    BaseQueryDto,
     PagerDto,
     ApiResponse,
     ServiceListResponse,
-    PAGINATION_DEFAULTS,
-    SortDirection
-} from '../models/common.model';
+    PAGINATION_DEFAULTS
+} from '../../models/common.model';
 import { QueryTransformer, PaginationUtil, QueryParamsBuilder } from '../utils/query.util';
 import { HttpErrorHandlerService } from '../services/http-error-handler.service';
 import { environment } from '../../../environments/environment';
@@ -69,7 +69,7 @@ export abstract class BaseQueryService<T, TSearchParams extends BaseSearchParams
         filteredData = this.applyMockSorting(filteredData, params);
 
         // 應用分頁
-        const page = params?.page || 1;
+        const page = params?.page || PAGINATION_DEFAULTS.PAGE;
         const pageSize = params?.pageSize || PAGINATION_DEFAULTS.PAGE_SIZE;
         const startIndex = (page - 1) * pageSize;
         const endIndex = startIndex + pageSize;
@@ -78,15 +78,9 @@ export abstract class BaseQueryService<T, TSearchParams extends BaseSearchParams
         const result: PagerDto<T> = {
             dataList: pagedData,
             totalRecords: filteredData.length,
-            firstIndexInPage: startIndex + 1,
-            lastIndexInPage: Math.min(endIndex, filteredData.length),
-            pageable: true,
+            page,
             pageSize,
-            sortColumn: params?.sortColumn || this.defaultSortColumn,
-            sortDirection: params?.sortDirection || 'asc',
             totalPages: PaginationUtil.calculateTotalPages(filteredData.length, pageSize),
-            page: page - 1, // 0-based for frontend
-            size: pageSize,
             hasNext: page < PaginationUtil.calculateTotalPages(filteredData.length, pageSize),
             hasPrevious: page > 1
         };
@@ -114,17 +108,22 @@ export abstract class BaseQueryService<T, TSearchParams extends BaseSearchParams
     /**
      * 建構 API 請求參數
      */
-    protected buildApiParams(params?: TSearchParams): Record<string, any> {
-        const page = params?.page || 1;
-        const pageSize = params?.pageSize || PAGINATION_DEFAULTS.PAGE_SIZE;
+    protected buildApiParams(params?: TSearchParams): BaseQueryDto & Record<string, any> {
+        // 如果前端傳 page/pageSize，轉換為 firstIndexInPage/lastIndexInPage
+        let firstIndexInPage = params?.firstIndexInPage;
+        let lastIndexInPage = params?.lastIndexInPage;
+
+        if (params?.page && params?.pageSize) {
+            firstIndexInPage = ((params.page - 1) * params.pageSize) + 1;
+            lastIndexInPage = params.page * params.pageSize;
+        }
 
         const mappedSortColumn = this.mapSortColumn(params?.sortColumn);
 
-        const apiParams = {
-            firstIndexInPage: PaginationUtil.calculateFirstIndex(page, pageSize),
-            lastIndexInPage: PaginationUtil.calculateLastIndex(page, pageSize),
-            pageable: true,
-            pageSize,
+        const apiParams: BaseQueryDto & Record<string, any> = {
+            pageable: params?.pageable ?? true,
+            firstIndexInPage,
+            lastIndexInPage,
             sortColumn: mappedSortColumn || this.defaultSortColumn,
             sortDirection: params?.sortDirection || 'asc',
             ...(params?.isActive !== undefined && { isActive: params.isActive }),
@@ -150,24 +149,17 @@ export abstract class BaseQueryService<T, TSearchParams extends BaseSearchParams
             throw new Error('API 回應資料為空');
         }
 
-        const page = requestParams?.page || 1;
+        // 計算前端 UI 需要的 page/pageSize（為了方便顯示）
         const pageSize = requestParams?.pageSize || PAGINATION_DEFAULTS.PAGE_SIZE;
+        const page = backendData.firstIndexInPage ?
+            Math.floor((backendData.firstIndexInPage - 1) / pageSize) + 1 :
+            requestParams?.page || PAGINATION_DEFAULTS.PAGE;
 
         const adaptedData: PagerDto<T> = {
-            dataList: backendData.dataList || [],
-            totalRecords: backendData.totalRecords || 0,
-            firstIndexInPage: PaginationUtil.calculateFirstIndex(page, pageSize),
-            lastIndexInPage: Math.min(
-                PaginationUtil.calculateLastIndex(page, pageSize),
-                backendData.totalRecords || 0
-            ),
-            pageable: backendData.pageable ?? true,
+            ...backendData,
+            page,
             pageSize,
-            sortColumn: backendData.sortColumn,
-            sortDirection: backendData.sortDirection,
             totalPages: PaginationUtil.calculateTotalPages(backendData.totalRecords || 0, pageSize),
-            page: page - 1, // 0-based for frontend
-            size: pageSize,
             hasNext: page < PaginationUtil.calculateTotalPages(backendData.totalRecords || 0, pageSize),
             hasPrevious: page > 1
         };
@@ -223,9 +215,11 @@ export abstract class BaseQueryService<T, TSearchParams extends BaseSearchParams
             data: {
                 dataList: [],
                 totalRecords: 0,
-                firstIndexInPage: 0,
-                lastIndexInPage: 0,
-                pageable: true
+                page: PAGINATION_DEFAULTS.PAGE,
+                pageSize: PAGINATION_DEFAULTS.PAGE_SIZE,
+                totalPages: 0,
+                hasNext: false,
+                hasPrevious: false
             }
         };
     }

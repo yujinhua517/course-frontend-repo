@@ -21,7 +21,7 @@ import {
     SortDirection,
     SORT_DIRECTIONS
 } from '../models/department.constants';
-import { PAGINATION_DEFAULTS } from '../../../core/models/common.model';
+import { PAGINATION_DEFAULTS } from '../../../models/common.model';
 import { QueryParamsBuilder } from '../../../core/utils/query.util';
 import { environment } from '../../../../environments/environment';
 import { UserStore } from '../../../core/auth/user.store';
@@ -184,7 +184,7 @@ export class DepartmentService extends BaseQueryService<Department, DepartmentSe
             page: options.page || PAGINATION_DEFAULTS.PAGE,
             pageSize: options.pageSize || PAGINATION_DEFAULTS.PAGE_SIZE,
             sortColumn: this.mapSortColumn(options.sort?.field),
-            sortDirection: options.sort?.direction?.toUpperCase() as 'ASC' | 'DESC' || 'ASC'
+            sortDirection: options.sort?.direction || 'asc'
         };
 
         return this.getPagedData(searchParams) as Observable<DepartmentListResponse>;
@@ -199,7 +199,7 @@ export class DepartmentService extends BaseQueryService<Department, DepartmentSe
             pageSize: PAGINATION_DEFAULTS.MAX_PAGE_SIZE,
             filters: { activeOnly: true }
         }).pipe(
-            map(response => response.data.dataList),
+            map(response => response.data?.dataList || []),
             catchError(this.httpErrorHandler.handleError('getActiveDepartments', []))
         );
     }
@@ -213,7 +213,7 @@ export class DepartmentService extends BaseQueryService<Department, DepartmentSe
             pageSize: PAGINATION_DEFAULTS.MAX_PAGE_SIZE,
             filters: { rootOnly: true, activeOnly: true }
         }).pipe(
-            map(response => response.data.dataList),
+            map(response => response.data?.dataList || []),
             catchError(this.httpErrorHandler.handleError('getRootDepartments', []))
         );
     }
