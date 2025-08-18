@@ -23,29 +23,26 @@ export interface QueryOptions<T = any, F = any> {
     pageSize?: number;
     sort?: { field: keyof T; direction: 'asc' | 'desc' }; // keyof T = 編譯期防呆
     searchTerm?: string;
-    filters?: F; // UI 狀態；送出前再轉對應 API 欄位
+    filters?: F; // UI 狀態；送出前再轉對應 API 欄位；F = 一個泛型，代表「不同功能」可以決定自己要的過濾型別。
 }
 
 /** 🔴 模組可繼承的搜尋基底（屬請求契約的一部分） */
 export interface BaseSearchParams extends BaseQueryDto {
     keyword?: string;
     isActive?: boolean;
-    // 前端 UI 便利方法（UI 元件用，最終轉為 firstIndexInPage/lastIndexInPage）
-    page?: number;
-    pageSize?: number;
 }
 
 /* ================== 基礎回應 ================== */
 
 /** 🔴 分頁結果 DTO（回應用；鍵名/結構要接住後端回傳） */
 export interface PagerDto<T> {
-    dataList: T[];                // 攔截器會將 data_list 轉為 dataList
-    totalRecords: number;         // 攔截器會將 total_records 轉為 totalRecords
-    firstIndexInPage?: number;    // 該頁第一筆的 index (由1開始)
-    lastIndexInPage?: number;     // 該頁最後一筆的 index (由1開始)
-    pageable?: boolean;           // 是否分頁
-    sortColumn?: string;          // 排序欄位
-    sortDirection?: string;       // 排序方向
+    dataList: T[];                // 後端 data_list，攔截器自動轉換
+    totalRecords: number;         // 後端 total_records，攔截器自動轉換
+    firstIndexInPage?: number;    // 後端 first_index_in_page，攔截器自動轉換
+    lastIndexInPage?: number;     // 後端 last_index_in_page，攔截器自動轉換
+    pageable?: boolean;           // 後端 pageable，無需轉換
+    sortColumn?: string;          // 後端 sort_column，攔截器自動轉換
+    sortDirection?: string;       // 後端 sort_direction，攔截器自動轉換
     // 前端計算欄位（為了 UI 方便）
     page?: number;
     pageSize?: number;

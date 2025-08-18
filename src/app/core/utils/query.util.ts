@@ -64,6 +64,33 @@ export class PaginationUtil {
             pageSize: validPageSize
         };
     }
+
+    /**
+     * 將前端的 page/pageSize 轉換為後端的 firstIndexInPage/lastIndexInPage
+     * 這個方法專門用於 Store 到 API 的轉換
+     */
+    static toBackendPagination(page: number, pageSize: number): {
+        firstIndexInPage: number;
+        lastIndexInPage: number;
+    } {
+        return {
+            firstIndexInPage: this.calculateFirstIndex(page, pageSize),
+            lastIndexInPage: this.calculateLastIndex(page, pageSize)
+        };
+    }
+
+    /**
+     * 將後端的 firstIndexInPage/lastIndexInPage 轉換為前端的 page/pageSize
+     * 這個方法專門用於 API 回應到 Store 的轉換
+     */
+    static toFrontendPagination(firstIndexInPage: number, lastIndexInPage: number): {
+        page: number;
+        pageSize: number;
+    } {
+        const pageSize = lastIndexInPage - firstIndexInPage + 1;
+        const page = this.calculatePage(firstIndexInPage, pageSize);
+        return { page, pageSize };
+    }
 }
 
 /**
@@ -74,13 +101,10 @@ export class QueryParamsBuilder {
      * 建構基礎查詢參數（用於 API 請求）
      */
     static buildBaseQuery(params: BaseSearchParams): BaseQueryDto {
-        const page = params.page || PAGINATION_DEFAULTS.PAGE;
-        const pageSize = params.pageSize || PAGINATION_DEFAULTS.PAGE_SIZE;
-
         return {
             pageable: params.pageable ?? true,
-            // page,
-            // pageSize,
+            firstIndexInPage: params.firstIndexInPage,
+            lastIndexInPage: params.lastIndexInPage,
             sortColumn: params.sortColumn,
             sortDirection: params.sortDirection
         };
@@ -102,7 +126,8 @@ export class QueryParamsBuilder {
     static resetToFirstPage<T extends BaseSearchParams>(params: T): T {
         return {
             ...params,
-            page: PAGINATION_DEFAULTS.PAGE
+            firstIndexInPage: 1,
+            lastIndexInPage: PAGINATION_DEFAULTS.PAGE_SIZE
         };
     }
 }
@@ -201,14 +226,12 @@ export class QueryTransformer {
             ...(sortColumn && { sortColumn }),
             ...(params.keyword && { keyword: params.keyword }),
             ...(params.isActive !== undefined && { isActive: params.isActive }),
-            // 移除不需要的參數
-            pageIndex: undefined,
-            page: undefined
         };
     }
 
     /**
      * 適配後端回應為前端格式
+     * 注意：攔截器已經處理了 snake_case -> camelCase 轉換
      */
     static adaptResponse<T>(
         backendResponse: any,
@@ -219,24 +242,20 @@ export class QueryTransformer {
         }
 
         const data = backendResponse.data;
-        const page = requestParams.page || 1;
-        const pageSize = requestParams.pageSize || PAGINATION_DEFAULTS.PAGE_SIZE;
+
+        // 攔截器已經轉換了欄位名稱，直接使用即可
+        // 只需要計算前端 UI 需要的額外欄位
+        const firstIndex = data.firstIndexInPage || 1;
+        const lastIndex = data.lastIndexInPage || PAGINATION_DEFAULTS.PAGE_SIZE;
+        const pageSize = lastIndex - firstIndex + 1;
+        const page = PaginationUtil.calculatePage(firstIndex, pageSize);
 
         return {
-            dataList: data.dataList || [],
-            totalRecords: data.totalRecords || 0,
-            firstIndexInPage: PaginationUtil.calculateFirstIndex(page, pageSize),
-            lastIndexInPage: Math.min(
-                PaginationUtil.calculateLastIndex(page, pageSize),
-                data.totalRecords || 0
-            ),
-            pageable: data.pageable ?? true,
-            sortColumn: data.sortColumn,
-            sortDirection: data.sortDirection,
-            // 計算額外分頁資訊
+            ...data, // 包含 dataList, totalRecords, firstIndexInPage, lastIndexInPage 等
+            // 計算額外分頁資訊供 UI 使用
+            page: page,
+            pageSize: pageSize,
             totalPages: PaginationUtil.calculateTotalPages(data.totalRecords || 0, pageSize),
-            page: requestParams.page || PAGINATION_DEFAULTS.PAGE,
-            size: pageSize,
             hasNext: page < PaginationUtil.calculateTotalPages(data.totalRecords || 0, pageSize),
             hasPrevious: page > 1
         };

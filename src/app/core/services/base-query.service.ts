@@ -69,15 +69,19 @@ export abstract class BaseQueryService<T, TSearchParams extends BaseSearchParams
         filteredData = this.applyMockSorting(filteredData, params);
 
         // 應用分頁
-        const page = params?.page || PAGINATION_DEFAULTS.PAGE;
-        const pageSize = params?.pageSize || PAGINATION_DEFAULTS.PAGE_SIZE;
-        const startIndex = (page - 1) * pageSize;
-        const endIndex = startIndex + pageSize;
+        const firstIndex = params?.firstIndexInPage || 1;
+        const lastIndex = params?.lastIndexInPage || PAGINATION_DEFAULTS.PAGE_SIZE;
+        const pageSize = lastIndex - firstIndex + 1;
+        const page = PaginationUtil.calculatePage(firstIndex, pageSize);
+        const startIndex = firstIndex - 1; // 轉為 0-based
+        const endIndex = lastIndex;
         const pagedData = filteredData.slice(startIndex, endIndex);
 
         const result: PagerDto<T> = {
             dataList: pagedData,
             totalRecords: filteredData.length,
+            firstIndexInPage: firstIndex,
+            lastIndexInPage: Math.min(lastIndex, filteredData.length),
             page,
             pageSize,
             totalPages: PaginationUtil.calculateTotalPages(filteredData.length, pageSize),
@@ -109,21 +113,12 @@ export abstract class BaseQueryService<T, TSearchParams extends BaseSearchParams
      * 建構 API 請求參數
      */
     protected buildApiParams(params?: TSearchParams): BaseQueryDto & Record<string, any> {
-        // 如果前端傳 page/pageSize，轉換為 firstIndexInPage/lastIndexInPage
-        let firstIndexInPage = params?.firstIndexInPage;
-        let lastIndexInPage = params?.lastIndexInPage;
-
-        if (params?.page && params?.pageSize) {
-            firstIndexInPage = ((params.page - 1) * params.pageSize) + 1;
-            lastIndexInPage = params.page * params.pageSize;
-        }
-
         const mappedSortColumn = this.mapSortColumn(params?.sortColumn);
 
         const apiParams: BaseQueryDto & Record<string, any> = {
             pageable: params?.pageable ?? true,
-            firstIndexInPage,
-            lastIndexInPage,
+            firstIndexInPage: params?.firstIndexInPage,
+            lastIndexInPage: params?.lastIndexInPage,
             sortColumn: mappedSortColumn || this.defaultSortColumn,
             sortDirection: params?.sortDirection || 'asc',
             ...(params?.isActive !== undefined && { isActive: params.isActive }),
@@ -150,10 +145,11 @@ export abstract class BaseQueryService<T, TSearchParams extends BaseSearchParams
         }
 
         // 計算前端 UI 需要的 page/pageSize（為了方便顯示）
-        const pageSize = requestParams?.pageSize || PAGINATION_DEFAULTS.PAGE_SIZE;
-        const page = backendData.firstIndexInPage ?
-            Math.floor((backendData.firstIndexInPage - 1) / pageSize) + 1 :
-            requestParams?.page || PAGINATION_DEFAULTS.PAGE;
+        // 注意：攔截器已經將後端的 snake_case 欄位轉換為 camelCase
+        const firstIndex = backendData.firstIndexInPage || requestParams?.firstIndexInPage || 1;
+        const lastIndex = backendData.lastIndexInPage || requestParams?.lastIndexInPage || PAGINATION_DEFAULTS.PAGE_SIZE;
+        const pageSize = lastIndex - firstIndex + 1;
+        const page = PaginationUtil.calculatePage(firstIndex, pageSize);
 
         const adaptedData: PagerDto<T> = {
             ...backendData,
