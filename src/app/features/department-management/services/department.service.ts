@@ -9,11 +9,10 @@ import {
     UpdateDepartmentRequest,
     DepartmentListResponse,
     DepartmentLevel,
-    ApiResponse,
-    PagerDto,
     DepartmentSearchParams,
     DepartmentQueryOptions
 } from '../models/department.model';
+import { ApiResponse, PagerDto } from '../../../models/common.model';
 import {
     DEPARTMENT_LEVEL_ORDER,
     API_STATUS_CODES,
@@ -178,11 +177,23 @@ export class DepartmentService extends BaseQueryService<Department, DepartmentSe
      * 統一的部門查詢方法 - 使用 BaseQueryService 統一模式
      */
     getDepartments(options: DepartmentQueryOptions = {}): Observable<DepartmentListResponse> {
+        const pageSize = options.pageSize || PAGINATION_DEFAULTS.PAGE_SIZE;
+        const page = options.page || PAGINATION_DEFAULTS.PAGE;
+        const firstIndex = (page - 1) * pageSize + 1;
+        const lastIndex = firstIndex + pageSize - 1;
+        
+        // 處理 filters 中的 activeOnly 轉換
+        const filters = options.filters ? { ...options.filters } : {};
+        if (filters.activeOnly) {
+            filters.isActive = true;
+            delete filters.activeOnly;
+        }
+        
         const searchParams: DepartmentSearchParams = {
-            ...options.filters,
+            ...filters,
             keyword: options.searchTerm,
-            page: options.page || PAGINATION_DEFAULTS.PAGE,
-            pageSize: options.pageSize || PAGINATION_DEFAULTS.PAGE_SIZE,
+            firstIndexInPage: firstIndex,
+            lastIndexInPage: lastIndex,
             sortColumn: this.mapSortColumn(options.sort?.field),
             sortDirection: options.sort?.direction || 'asc'
         };
@@ -211,7 +222,7 @@ export class DepartmentService extends BaseQueryService<Department, DepartmentSe
         return this.getDepartments({
             page: 1,
             pageSize: PAGINATION_DEFAULTS.MAX_PAGE_SIZE,
-            filters: { rootOnly: true, activeOnly: true }
+            filters: { parentDeptId: undefined, activeOnly: true }
         }).pipe(
             map(response => response.data?.dataList || []),
             catchError(this.httpErrorHandler.handleError('getRootDepartments', []))
@@ -225,9 +236,9 @@ export class DepartmentService extends BaseQueryService<Department, DepartmentSe
         return this.getDepartments({
             page: 1,
             pageSize: PAGINATION_DEFAULTS.MAX_PAGE_SIZE,
-            filters: { parentId, activeOnly: true }
+            filters: { parentDeptId: parentId, activeOnly: true }
         }).pipe(
-            map(response => response.data),
+            map(response => response.data?.dataList || []),
             catchError(this.httpErrorHandler.handleError('getChildDepartments', []))
         );
     }

@@ -5,7 +5,7 @@
  * 依賴攔截器進行前後端格式轉換
  */
 
-import { Injectable, inject, computed, signal } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of, map, delay, catchError } from 'rxjs';
 import {
@@ -16,10 +16,8 @@ import {
     ServiceListResponse,
     PAGINATION_DEFAULTS
 } from '../../models/common.model';
-import { QueryTransformer, PaginationUtil, QueryParamsBuilder } from '../utils/query.util';
+import { PaginationUtil, QueryParamsBuilder } from '../utils/query.util';
 import { HttpErrorHandlerService } from '../services/http-error-handler.service';
-import { environment } from '../../../environments/environment';
-
 /**
  * 排序欄位映射函數類型
  */

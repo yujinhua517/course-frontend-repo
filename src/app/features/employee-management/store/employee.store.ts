@@ -2,6 +2,11 @@ import { Injectable, signal, computed, inject } from '@angular/core';
 import { EmployeeService } from '../services/employee.service';
 import { Employee, EmployeeSearchParams } from '../models/employee.model';
 
+interface EmployeeStoreParams extends EmployeeSearchParams {
+    page?: number;
+    pageSize?: number;
+}
+
 @Injectable({
     providedIn: 'root'
 })
@@ -31,17 +36,26 @@ export class EmployeeStore {
     readonly hasNextPage = computed(() => this._currentPage() < this.totalPages());
     readonly hasPreviousPage = computed(() => this._currentPage() > 1);
 
-    loadEmployees(params?: EmployeeSearchParams): void {
+    loadEmployees(params?: EmployeeStoreParams): void {
         this._loading.set(true);
         this._error.set(null);
 
-        const searchParams = {
+        const currentPage = params?.page || this._currentPage();
+        const pageSize = params?.pageSize || this._pageSize();
+        const firstIndex = (currentPage - 1) * pageSize + 1;
+        const lastIndex = firstIndex + pageSize - 1;
+
+        const searchParams: EmployeeSearchParams = {
             ...this._searchParams(),
             ...params,
-            page: params?.page || this._currentPage(),
-            pageSize: this._pageSize(),
+            firstIndexInPage: firstIndex,
+            lastIndexInPage: lastIndex,
             pageable: true
         };
+
+        // 移除 page 和 pageSize，因為它們不在 EmployeeSearchParams 中
+        delete (searchParams as any).page;
+        delete (searchParams as any).pageSize;
 
         // 只有當明確傳入時才覆蓋，避免清除現有的搜尋條件
         if (params?.keyword !== undefined) {
@@ -58,7 +72,7 @@ export class EmployeeStore {
             next: (response) => {
                 this._employees.set(response.data?.dataList || []);
                 this._total.set(response.data?.totalRecords || 0);
-                this._currentPage.set(params?.page || this._currentPage());
+                this._currentPage.set(currentPage);
                 this._loading.set(false);
             },
             error: (error) => {

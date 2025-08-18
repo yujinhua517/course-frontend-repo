@@ -1,7 +1,12 @@
 import { Injectable, computed, signal, inject } from '@angular/core';
-import { Department, DepartmentSearchParams, DepartmentQueryOptions } from '../models/department.model';
+import { Department, DepartmentSearchParams, DepartmentQueryOptions, DepartmentLevel } from '../models/department.model';
 import { DepartmentService } from '../services/department.service';
 import { environment } from '../../../../environments/environment';
+
+interface DepartmentStoreParams extends DepartmentSearchParams {
+    page?: number;
+    pageSize?: number;
+}
 
 @Injectable({
     providedIn: 'root'
@@ -55,50 +60,38 @@ export class DepartmentStore {
         });
     }
 
-    loadDepartments(params?: DepartmentSearchParams): void {
+    loadDepartments(params?: DepartmentStoreParams): void {
         this._loading.set(true);
         this._error.set(null);
 
-        const searchParams = {
+        const currentPage = params?.page || this._currentPage();
+        const pageSize = params?.pageSize || this._pageSize();
+        const firstIndex = (currentPage - 1) * pageSize + 1;
+        const lastIndex = firstIndex + pageSize - 1;
+
+        const searchParams: DepartmentSearchParams = {
             ...this._searchParams(),
             ...params,
-            page: params?.page || this._currentPage(),
-            pageSize: params?.pageSize || this._pageSize()
+            firstIndexInPage: firstIndex,
+            lastIndexInPage: lastIndex,
+            pageable: true
         };
+
+        // 移除 page 和 pageSize，因為它們不在 DepartmentSearchParams 中
+        delete (searchParams as any).page;
+        delete (searchParams as any).pageSize;
 
         this._searchParams.set(searchParams);
         console.log('Department Store loadDepartments called with params:', searchParams);
 
-        // 使用新的統一查詢介面
-        this.departmentService.getDepartments({
-            page: searchParams.page || 1,
-            pageSize: searchParams.pageSize || 10,
-            searchTerm: searchParams.keyword || '',
-            filters: {
-                level: searchParams.deptLevel,
-                isActive: searchParams.isActive,
-                parentId: searchParams.parentDeptId
-            },
-            sort: searchParams.sortColumn && searchParams.sortDirection ? {
-                field: searchParams.sortColumn as keyof Department,
-                direction: searchParams.sortDirection as 'asc' | 'desc'
-            } : undefined
-        }).subscribe({
+        // 使用 BaseQueryService 的統一查詢方法
+        this.departmentService.getPagedData(searchParams).subscribe({
             next: (response) => {
-                //console.log('Department Service response:', response);
-
-                // response.data 是 PagerDto<Department> 類型
-                const pagerData = response.data;
-                const departments = pagerData?.dataList || [];
+                const departments = response.data?.dataList || [];
                 this._departments.set(departments);
-                this._total.set(pagerData?.totalRecords || 0);
-                this._currentPage.set(searchParams.page || 1);
-                this._pageSize.set(searchParams.pageSize || 10);
+                this._total.set(response.data?.totalRecords || 0);
+                this._currentPage.set(currentPage);
                 this._loading.set(false);
-                //console.log('載入部門資料:', {
-                //    count: departments.length,
-                //    total: pagerData?.totalRecords || 0
-                //});
             },
             error: (error) => {
                 this._error.set('載入部門資料失敗');
@@ -136,7 +129,7 @@ export class DepartmentStore {
         });
     }
 
-    filterByLevel(level: string | undefined): void {
+    filterByLevel(level: DepartmentLevel | undefined): void {
         if (!environment.production) {
             console.log('Department Store filterByLevel called with:', level, 'Type:', typeof level);
         }

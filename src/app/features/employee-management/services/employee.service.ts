@@ -9,8 +9,9 @@ import {
     EmployeeCreateDto,
     EmployeeUpdateDto,
     EmployeeSearchParams,
-    ApiResponse
+    EmployeeListResponse
 } from '../models/employee.model';
+import { ApiResponse } from '../../../models/common.model';
 import { HttpErrorHandlerService } from '../../../core/services/http-error-handler.service';
 import { BaseQueryService } from '../../../core/services/base-query.service';
 import { MOCK_EMPLOYEES } from '../services/mock-employees.data';

@@ -30,7 +30,6 @@ export const routes: Routes = [
         path: 'job-role',
         canActivate: [PermissionGuard],
         data: {
-          //roles: [RoleName.ADMIN, RoleName.MANAGER, RoleName.SUPERVISOR, RoleName.USER],
           permissions: [PermissionName.JOBROLE_READ]
         },
         loadComponent: () => import('./features/job-role-management/pages/job-role-list/job-role-list.component').then(m => m.JobRoleListComponent)
@@ -57,7 +56,7 @@ export const routes: Routes = [
         data: { permissions: [PermissionName.COURSE_EVENT_READ] },
         loadComponent: () => import('./features/course-event-management/pages/course-event-list/course-event-list.component').then(m => m.CourseEventListComponent)
       },
-      // // 你也可以在這裡加更多 child page
+      // 你也可以在這裡加更多 child page
     ]
   },
   {

@@ -28,7 +28,7 @@ export interface QueryOptions<T = any, F = any> {
 
 /** 🔴 模組可繼承的搜尋基底（屬請求契約的一部分） */
 export interface BaseSearchParams extends BaseQueryDto {
-    keyword?: string;
+    keyword?: string; //在service做映射
     isActive?: boolean;
 }
 

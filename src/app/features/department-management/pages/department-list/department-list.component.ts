@@ -4,7 +4,7 @@ import { DepartmentStore } from '../../store/department.store';
 import { DepartmentService } from '../../services/department.service';
 import { DepartmentFormComponent } from '../../components/department-form/department-form.component';
 import { DepartmentViewComponent } from '../../components/department-view/department-view.component';
-import { Department, DEPARTMENT_LEVEL_OPTIONS } from '../../models/department.model';
+import { Department, DepartmentLevel, DEPARTMENT_LEVEL_OPTIONS } from '../../models/department.model';
 import { UserStore } from '../../../../core/auth/user.store';
 import type { User, Permission } from '../../../../models/user.model';
 import { GlobalMessageService } from '../../../../core/message/global-message.service';
@@ -412,7 +412,7 @@ export class DepartmentListComponent implements OnInit {
         this.departmentStore.loadDepartments({
             keyword: this.searchKeyword() || undefined,
             isActive: this.statusFilter() ?? undefined,
-            deptLevel: this.levelFilter() ?? undefined,
+            deptLevel: this.levelFilter() as DepartmentLevel | undefined,
             sortColumn: this.sortColumn(),
             sortDirection: this.sortDirection()
         });

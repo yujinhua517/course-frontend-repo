@@ -9,8 +9,9 @@ import {
     CourseEventCreateDto,
     CourseEventUpdateDto,
     CourseEventSearchParams,
-    ApiResponse
+    CourseEventListResponse
 } from '../models/course-event.model';
+import { ApiResponse } from '../../../models/common.model';
 import { HttpErrorHandlerService } from '../../../core/services/http-error-handler.service';
 import { BaseQueryService } from '../../../core/services/base-query.service';
 import { MOCK_COURSE_EVENTS } from './mock-course-events.data';
