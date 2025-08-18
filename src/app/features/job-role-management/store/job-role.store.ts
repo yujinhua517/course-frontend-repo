@@ -2,6 +2,7 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { JobRole, JobRoleSearchParams } from '../models/job-role.model';
 import { JobRoleService } from '../services/job-role.service';
 import { PagerDto } from '../../../models/common.model';
+import { PaginationUtil } from '../../../core/utils/query.util';
 
 export interface JobRoleState {
     jobRoles: JobRole[];
@@ -78,10 +79,16 @@ export class JobRoleStore {
         }
 
         const currentState = this.state();
+
+        // 轉換前端的 page/pageSize 為後端的 firstIndexInPage/lastIndexInPage
+        const backendPagination = PaginationUtil.toBackendPagination(
+            currentState.currentPage,
+            currentState.pageSize
+        );
+
         const queryParams = {
             ...searchParams,
-            page: params?.page || currentState.currentPage,
-            pageSize: params?.pageSize || currentState.pageSize,
+            ...backendPagination,
             sortColumn: currentState.sortColumn,
             sortDirection: currentState.sortDirection
         };

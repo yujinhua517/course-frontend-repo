@@ -402,9 +402,7 @@ export class JobRoleListComponent implements OnInit {
             keyword: this.searchKeyword() || undefined,
             isActive: this.statusFilter(),
             sortColumn: this.sortColumn(),
-            sortDirection: this.sortDirection(),
-            page: 1,  // 明確指定第一頁
-            pageSize: 10  // 明確指定每頁筆數
+            sortDirection: this.sortDirection()
         });
     }
 
