@@ -143,13 +143,6 @@ export class LoginService {
         description: 'course event read'
       },
       {
-        id: '2',
-        name: PermissionName.COMPETENCY_READ,
-        resource: 'competency',
-        action: 'read',
-        description: 'competency read'
-      },
-      {
         id: '3',
         name: PermissionName.EMPLOYEE_READ,
         resource: 'employee',
@@ -251,13 +244,6 @@ export class LoginService {
           resource: 'course event',
           action: 'read',
           description: 'course event read'
-        },
-        {
-          id: '2',
-          name: PermissionName.COMPETENCY_READ,
-          resource: 'competency',
-          action: 'read',
-          description: 'competency read'
         },
         {
           id: '3',
