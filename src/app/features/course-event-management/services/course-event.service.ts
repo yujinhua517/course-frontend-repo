@@ -208,42 +208,35 @@ export class CourseEventService extends BaseQueryService<CourseEvent, CourseEven
      * 更新課程活動資料
      */
     updateCourseEvent(id: number, courseEventData: CourseEventUpdateDto): Observable<CourseEvent | null> {
-        console.group('[CourseEventService] updateCourseEvent');
-        try {
-            console.debug('ID:', id);
-            console.debug('Request payload (original):', courseEventData);
-            if (this.useMockData) {
-                const mock$ = of(this.updateMockCourseEvent(id, courseEventData)).pipe(delay(600));
-                console.debug('Using mock data flow');
-                return mock$;
-            }
-
-            // 若前端附帶 updateUser，後端可能期望 snake_case: update_user
-            const payload: any = {
-                ...courseEventData,
-                courseEventId: id
-            };
-            if ((courseEventData as any).updateUser && !(courseEventData as any).update_user) {
-                payload.update_user = (courseEventData as any).updateUser;
-            }
-            console.debug('Final update payload sent to API:', payload);
-
-            return this.http.post<ApiResponse<CourseEvent>>(`${this.apiUrl}/update`, payload)
-                .pipe(
-                    map(response => {
-                        console.debug('Update response raw:', response);
-                        const data = response.data || null;
-                        console.debug('Parsed update data:', data);
-                        return data;
-                    }),
-                    catchError(err => {
-                        console.error('Update request error:', err);
-                        return this.httpErrorHandler.handleError('updateCourseEvent', null)(err);
-                    })
-                );
-        } finally {
-            console.groupEnd();
+        if (this.useMockData) {
+            const mock$ = of(this.updateMockCourseEvent(id, courseEventData)).pipe(delay(600));
+            console.debug('Using mock data flow');
+            return mock$;
         }
+
+        // 若前端附帶 updateUser，後端可能期望 snake_case: update_user
+        const payload: any = {
+            ...courseEventData,
+            courseEventId: id
+        };
+        if ((courseEventData as any).updateUser && !(courseEventData as any).update_user) {
+            payload.update_user = (courseEventData as any).updateUser;
+        }
+        // console.debug('Final update payload sent to API:', payload);
+
+        return this.http.post<ApiResponse<CourseEvent>>(`${this.apiUrl}/update`, payload)
+            .pipe(
+                map(response => {
+                    // console.debug('Update response raw:', response);
+                    const data = response.data || null;
+                    // console.debug('Parsed update data:', data);
+                    return data;
+                }),
+                catchError(err => {
+                    console.error('Update request error:', err);
+                    return this.httpErrorHandler.handleError('updateCourseEvent', null)(err);
+                })
+            );
     }
 
     /**

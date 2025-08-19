@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed, inject, ViewChild, TemplateRef, effect, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, signal, computed, inject, ViewChild, TemplateRef, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { firstValueFrom } from 'rxjs';
 import { CourseEventStore } from '../../store/course-event.store';
@@ -105,6 +105,7 @@ export class CourseEventListComponent implements OnInit {
     totalPages = this.courseEventStore.totalPages;
     loading = this.courseEventStore.loading;
     error = this.courseEventStore.error;
+
 
     // 搜尋篩選配置
     readonly searchFilterConfig = computed<SearchFilterConfig>(() => ({

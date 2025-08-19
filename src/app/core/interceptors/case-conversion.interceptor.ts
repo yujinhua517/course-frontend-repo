@@ -63,7 +63,7 @@ export function caseConversionInterceptor(request: HttpRequest<any>, next: HttpH
  */
 function shouldConvertRequest(request: HttpRequest<any>): boolean {
   // 只對 API 請求進行轉換，並且避免重複轉換
-  const apiPaths = ['/api/', '/job-roles', '/departments', '/employees'];
+  const apiPaths = ['/api/', '/job-roles', '/departments', '/employees', '/courses', '/course-events', '/course-event-registrations'];
   const shouldConvert = apiPaths.some(path => request.url.includes(path));
 
   // 檢查請求是否已經被轉換過

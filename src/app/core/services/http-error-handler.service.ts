@@ -1,67 +1,53 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 
-/**
- * 全域 HTTP 錯誤處理服務
- * 統一處理所有 HTTP 請求的錯誤回應
- */
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class HttpErrorHandlerService {
+  /**
+   * A) 回復型（推薦預設）：錯誤時回傳 fallback，不中斷資料流
+   * 用法：catchError(this.httpErrorHandler.handleError<T>('操作名稱', fallback))
+   */
+  handleError<T>(operation = 'operation', fallback: T) {
+    return (error: HttpErrorResponse): Observable<T> => {
+      const message = this.buildMessage(error);
+      this.logError(operation, error, message);
+      return of(fallback);
+    };
+  }
 
   /**
-   * 處理 HTTP 錯誤
+   * B) 拋錯型（必要時用）：錯誤時拋出統一錯誤物件
+   * 用法：catchError(this.httpErrorHandler.handleErrorRethrow('操作名稱'))
    */
-  handleError = (operation = 'operation', result?: any) => {
-    return (error: HttpErrorResponse): Observable<any> => {
-      console.error(`${operation} failed:`, error);
-
-      // 根據錯誤狀態碼進行不同處理
-      let errorMessage = '';
-      
-      if (error.error instanceof ErrorEvent) {
-        // 客戶端錯誤
-        errorMessage = `客戶端錯誤: ${error.error.message}`;
-      } else {
-        // 伺服器端錯誤
-        switch (error.status) {
-          case 400:
-            errorMessage = '請求參數錯誤';
-            break;
-          case 401:
-            errorMessage = '未授權，請重新登入';
-            break;
-          case 403:
-            errorMessage = '權限不足';
-            break;
-          case 404:
-            errorMessage = '請求的資源不存在';
-            break;
-          case 500:
-            errorMessage = '伺服器內部錯誤';
-            break;
-          default:
-            errorMessage = `伺服器錯誤 (${error.status}): ${error.message}`;
-        }
-      }
-
-      // 記錄錯誤到控制台 (可以擴展為發送到日誌系統)
-      this.logError(operation, error, errorMessage);
-
-      // 回傳使用者友善的錯誤訊息
+  handleErrorRethrow(operation = 'operation') {
+    return (error: HttpErrorResponse): Observable<never> => {
+      const message = this.buildMessage(error);
+      this.logError(operation, error, message);
       return throwError(() => ({
         code: error.status || -1,
-        message: errorMessage,
-        originalError: error
+        message,
+        originalError: error,
+        operation,
       }));
     };
-  };
+  }
 
-  /**
-   * 記錄錯誤到控制台或日誌系統
-   */
+  // ========== 私有工具 ==========
+  private buildMessage(error: HttpErrorResponse): string {
+    if (error.error instanceof ErrorEvent) {
+      return `客戶端錯誤: ${error.error.message}`;
+    }
+    switch (error.status) {
+      case 400: return '請求參數錯誤';
+      case 401: return '未授權，請重新登入';
+      case 403: return '權限不足';
+      case 404: return '請求的資源不存在';
+      case 500: return '伺服器內部錯誤';
+      default: return `伺服器錯誤 (${error.status}): ${error.message}`;
+    }
+  }
+
   private logError(operation: string, error: HttpErrorResponse, message: string): void {
     console.group(`🚨 HTTP Error - ${operation}`);
     console.error('狀態:', error.status);

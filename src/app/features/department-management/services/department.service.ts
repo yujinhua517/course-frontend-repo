@@ -1,5 +1,4 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 import { Observable, of, map, delay, catchError, switchMap, forkJoin } from 'rxjs';
 import { BaseQueryService } from '../../../core/services/base-query.service';
 import { camelToSnake } from '../../../core/utils/object-case.util';
@@ -8,23 +7,16 @@ import {
     CreateDepartmentRequest,
     UpdateDepartmentRequest,
     DepartmentListResponse,
-    DepartmentLevel,
     DepartmentSearchParams,
     DepartmentQueryOptions
 } from '../models/department.model';
-import { ApiResponse, PagerDto } from '../../../models/common.model';
+import { ApiResponse } from '../../../models/common.model';
 import {
-    DEPARTMENT_LEVEL_ORDER,
     API_STATUS_CODES,
-    DepartmentStatusType,
-    SortDirection,
-    SORT_DIRECTIONS
 } from '../models/department.constants';
 import { PAGINATION_DEFAULTS } from '../../../models/common.model';
-import { QueryParamsBuilder } from '../../../core/utils/query.util';
 import { environment } from '../../../../environments/environment';
 import { UserStore } from '../../../core/auth/user.store';
-import { HttpErrorHandlerService } from '../../../core/services/http-error-handler.service';
 import { MOCK_DEPARTMENTS } from '../services/mock-departments.data';
 
 @Injectable({
@@ -181,14 +173,14 @@ export class DepartmentService extends BaseQueryService<Department, DepartmentSe
         const page = options.page || PAGINATION_DEFAULTS.PAGE;
         const firstIndex = (page - 1) * pageSize + 1;
         const lastIndex = firstIndex + pageSize - 1;
-        
+
         // 處理 filters 中的 activeOnly 轉換
         const filters = options.filters ? { ...options.filters } : {};
         if (filters.activeOnly) {
             filters.isActive = true;
             delete filters.activeOnly;
         }
-        
+
         const searchParams: DepartmentSearchParams = {
             ...filters,
             keyword: options.searchTerm,

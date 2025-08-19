@@ -192,7 +192,7 @@ export class DepartmentFormComponent implements OnInit {
 
     private loadEmployees(): Promise<void> {
         return new Promise(resolve => {
-            this.employeeService.getPagedData({ 
+            this.employeeService.getPagedData({
                 firstIndexInPage: 1,
                 lastIndexInPage: 1000
             }).subscribe({

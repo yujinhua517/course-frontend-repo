@@ -144,34 +144,27 @@ export class LoginService {
       },
       {
         id: '2',
-        name: PermissionName.COMPETENCY_READ,
-        resource: 'competency',
-        action: 'read',
-        description: 'competency read'
-      },
-      {
-        id: '3',
         name: PermissionName.EMPLOYEE_READ,
         resource: 'employee',
         action: 'read',
         description: 'employee read'
       },
       {
-        id: '4',
+        id: '3',
         name: PermissionName.DEPARTMENT_READ,
         resource: 'department',
         action: 'read',
         description: 'department read'
       },
       {
-        id: '5',
+        id: '4',
         name: PermissionName.USER_READ,
         resource: 'user',
         action: 'read',
         description: 'user read'
       },
       {
-        id: '6',
+        id: '5',
         name: PermissionName.JOBROLE_READ,
         resource: 'jobrole',
         action: 'read',
@@ -254,41 +247,34 @@ export class LoginService {
         },
         {
           id: '2',
-          name: PermissionName.COMPETENCY_READ,
-          resource: 'competency',
-          action: 'read',
-          description: 'competency read'
-        },
-        {
-          id: '3',
           name: PermissionName.EMPLOYEE_READ,
           resource: 'employee',
           action: 'read',
           description: 'employee read'
         },
         {
-          id: '4',
+          id: '3',
           name: PermissionName.DEPARTMENT_READ,
           resource: 'department',
           action: 'read',
           description: 'department read'
         },
         {
-          id: '5',
+          id: '4',
           name: PermissionName.USER_READ,
           resource: 'user',
           action: 'read',
           description: 'user read'
         },
         {
-          id: '6',
+          id: '5',
           name: PermissionName.JOBROLE_READ,
           resource: 'jobrole',
           action: 'read',
           description: 'job role read'
         },
         {
-          id: '7',
+          id: '6',
           name: PermissionName.COURSE_EVENT_READ,
           resource: 'course_event',
           action: 'read',
