@@ -1,247 +1,483 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Observable, tap } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
+
+import {
+    Course,
+    CourseCreateDto,
+    CourseUpdateDto,
+    CourseSearchParams,
+    CourseListResponse,
+    CourseFilters,
+    CourseQueryOptions
+} from '../models/course.model';
+import {
+    PagerDto,
+    ApiResponse,
+    PAGINATION_DEFAULTS,
+    SORT_DEFAULTS
+} from '../../../models/common.model';
+import {
+    PaginationUtil,
+    QueryParamsBuilder,
+    SortUtil,
+    FilterUtil
+} from '../../../core/utils/query.util';
 import { HttpErrorHandlerService } from '../../../core/services/http-error-handler.service';
-import { Observable, of, map, delay, catchError, switchMap, forkJoin } from 'rxjs';
-import { ApiResponse } from '../../../models/common.model';
-import { BaseQueryService } from '../../../core/services/base-query.service';
 import { environment } from '../../../../environments/environment';
-import { UserStore } from '../../../core/auth/user.store';
-import { MOCK_COURSES } from './mock-courses.data';
-import { Course, CourseSearchParams, CourseCreateDto, CourseUpdateDto } from '../models/course.model';
 
 @Injectable({ providedIn: 'root' })
-export class CourseService extends BaseQueryService<Course, CourseSearchParams> {
-    private userStore = inject(UserStore);
-
+export class CourseService {
+    // 🚀 使用 inject()
+    protected readonly http = inject(HttpClient);
+    protected readonly errorHandler = inject(HttpErrorHandlerService);
     protected readonly apiUrl = `${environment.apiBaseUrl}/courses`;
-    protected readonly useMockData = false;
-    protected readonly defaultSortColumn = 'courseId';
-    protected readonly mockData: Course[] = MOCK_COURSES;
 
-    protected override readonly http = inject(HttpClient);
-    protected override readonly httpErrorHandler = inject(HttpErrorHandlerService);
+    // 📊 使用 signals 管理狀態
+    protected readonly coursesSignal = signal<Course[]>([]);
+    protected readonly loadingSignal = signal<boolean>(false);
+    protected readonly searchParamsSignal = signal<CourseSearchParams>({});
+    protected readonly paginationSignal = signal<PagerDto<Course> | null>(null);
 
-    // signals 狀態管理
+    // 🔍 公開的 computed signals
+    readonly courses = this.coursesSignal.asReadonly(); // 外部只能讀取，不能修改
+    readonly loading = this.loadingSignal.asReadonly();
+    readonly searchParams = this.searchParamsSignal.asReadonly();
+    readonly pagination = this.paginationSignal.asReadonly();
+
+    // 📈 計算屬性 - 使用工具函數
+    readonly totalRecords = computed(() => this.pagination()?.totalRecords || 0);
+    readonly currentPage = computed(() => this.pagination()?.page || 1);
+    readonly pageSize = computed(() => this.pagination()?.pageSize || PAGINATION_DEFAULTS.PAGE_SIZE);
+    readonly totalPages = computed(() => this.pagination()?.totalPages || 0);
+    readonly hasNext = computed(() => this.pagination()?.hasNext || false);
+    readonly hasPrevious = computed(() => this.pagination()?.hasPrevious || false);
+    readonly firstIndexInPage = computed(() => this.pagination()?.firstIndexInPage || 1);
+    readonly lastIndexInPage = computed(() => this.pagination()?.lastIndexInPage || 0);
+
     /**
-     * 建立一個 Signal 來存目前的課程清單。
-     * 先用 mockData 當初始值（即使 useMockData = false，這裡也只是初始 state）。
+     * 🔍 搜尋課程 - 主要的查詢方法
+     * @param params 查詢參數
+     * @returns 課程列表回應的 Observable
      */
-    private readonly courseSignal = signal<Course[]>(this.mockData);
     /**
-     * 對外只暴露唯讀的 signal，避免外部直接改 state。
-     * 其他組件可以 this.courseService.courses() 讀取最新值。
+     * 簡單直接的 API 呼叫
      */
-    public readonly courses = this.courseSignal.asReadonly();
+    searchCourses(params: CourseSearchParams): Observable<CourseListResponse> {
+        this.loadingSignal.set(true);
 
-    // 覆寫自訂搜尋參數（如有需要）
-    protected override buildCustomApiParams(params?: CourseSearchParams): Record<string, any> {
-        const customParams: Record<string, any> = {};
-        // TODO: 依需求轉換查詢參數
-        // if (params?.keyword) {
-        //     customParams['courseName'] = params.keyword;
-        // }
-        return customParams;
-    }
+        // 確保 sort_column 和 sort_direction 包含在 API 請求中，使用預設值
+        const apiParams = {
+            ...params,
+            sort_column: params.sortColumn || 'courseId',
+            sort_direction: params.sortDirection || 'asc'
+        };
 
-    // 取得單筆資料
-    // 依 Id 取單筆（回傳乾淨資料）
-    getCourseById(id: number): Observable<Course | null> {
-        if (this.useMockData) {
-            const found = this.mockData.find(c => c.courseId === id) ?? null;
-            return of(found).pipe(delay(300));
-        }
-        return this.http.get<ApiResponse<Course>>(`${this.apiUrl}/find/${id}`).pipe(
-            map(res => {
-                if (res.code !== 1000) throw new Error(res.message || '查詢課程失敗');
-                return res.data ?? null;
+        return this.http.post<CourseListResponse>(`${this.apiUrl}/query`, apiParams).pipe(
+            tap(response => {
+                // 自動更新狀態
+                if (response.code === 1000) {
+                    this.coursesSignal.set(response.data?.dataList || []);
+                    // 更新分頁資訊
+                    this.paginationSignal.set(response.data || null);
+                    // 更新搜尋參數
+                    this.searchParamsSignal.set(params);
+                }
+                this.loadingSignal.set(false);
             }),
-            // ✅ 泛型 + fallback（null）
-            catchError(this.httpErrorHandler.handleError<Course | null>('課程詳細資料查詢', null))
-        );
-    }
-
-    // 建立資料（如有需要）
-    createCourse(courseData: Partial<Course>): Observable<ApiResponse<Course>> {
-        if (this.useMockData) {
-            const created = this.createMockCourse(courseData as any);
-            return of({
-                code: created ? 1000 : -1,
-                message: created ? 'success' : 'mock create failed',
-                data: created ?? undefined
-            }).pipe(delay(600));
-        }
-        return this.http.post<ApiResponse<Course>>(
-            `${this.apiUrl}/create`,
-            courseData
-        ).pipe(
-            catchError(err => {
-                console.error('Create request error:', err);
-                return of({
+            // 👨‍🏫 學習老師：統一錯誤處理
+            catchError(error => {
+                this.loadingSignal.set(false);
+                this.coursesSignal.set([]);
+                this.paginationSignal.set(null);
+                return this.errorHandler.handleError<CourseListResponse>('課程查詢', {
                     code: -1,
-                    message: 'API 請求失敗',
-                    data: undefined
-                });
+                    message: '課程查詢失敗',
+                    data: {
+                        dataList: [],
+                        totalRecords: 0,
+                        pageable: true,
+                        page: 1,
+                        pageSize: PAGINATION_DEFAULTS.PAGE_SIZE,
+                        totalPages: 0,
+                        hasNext: false,
+                        hasPrevious: false
+                    }
+                })(error);
             })
         );
     }
-
-
-    // 更新資料（如有需要）
-    updateCourse(courseData: Course): Observable<ApiResponse<Course>> {
-        if (this.useMockData) {
-            const updated = this.updateMockCourse(courseData as any);
-            return of({
-                code: updated ? 1000 : -1,
-                message: updated ? 'success' : 'mock update failed',
-                data: updated ?? undefined
-            }).pipe(delay(600));
-        }
-        return this.http.post<ApiResponse<Course>>(
-            `${this.apiUrl}/update`,
-            courseData
-        ).pipe(
-            catchError(err => {
-                console.error('Update request error:', err);
-                return of({
-                    code: -1,
-                    message: 'API 請求失敗',
-                    data: undefined
-                });
-            })
-        );
-    }
-
-    // 刪除資料（如有需要）
-    deleteCourse(id: number): Observable<ApiResponse<void>> {
-        if (this.useMockData) {
-            const deleted = this.deleteMockCourse(id);
-            return of({
-                code: deleted ? 1000 : -1,
-                message: deleted ? 'success' : 'mock delete failed',
-                data: undefined
-            }).pipe(delay(600));
-        }
-        return this.http.post<ApiResponse<void>>(
-            `${this.apiUrl}/delete`,
-            { courseId: id }
-        ).pipe(
-            catchError(err => {
-                console.error('Delete request error:', err);
-                return of({
-                    code: -1,
-                    message: 'API 請求失敗',
-                    data: undefined
-                });
-            })
-        );
-    }
-
-    // 取得所有課程（不分頁）
-    getAllCourses(): Observable<Course[]> {
-        if (this.useMockData) {
-            return of(this.mockData).pipe(delay(300));
-        }
-        return this.http.get<ApiResponse<Course[]>>(`${this.apiUrl}`).pipe(
-            map(res => {
-                if (res.code !== 1000) throw new Error(res.message || '取得課程清單失敗');
-                return res.data ?? [];
-            }),
-            // 泛型 + fallback（空陣列）：不中斷資料流
-            catchError(this.httpErrorHandler.handleError<Course[]>('取得課程清單', []))
-        );
-    }
-
 
     /**
-     * 實作Mock資料篩選邏輯
-    */
-    protected override applyMockFilters(data: Course[], params?: CourseSearchParams): Course[] {
-        let filtered = [...data];
+     * 🎯 三態排序功能
+     * @param sortColumn 排序欄位
+     * @param sortDirection 排序方向 (asc/desc/null)
+     * @returns 排序後的課程列表 Observable
+     */
+    sortCourses(sortColumn: keyof Course, sortDirection: 'asc' | 'desc' | null): Observable<CourseListResponse> {
+        const currentParams = { ...this.searchParamsSignal() };
 
-        // 關鍵字搜尋
-        if (params?.keyword) {
-            const keyword = params.keyword.toLowerCase();
-            filtered = filtered.filter(course =>
-                course.courseName.toLowerCase().includes(keyword) ||
-                course.courseName.toLowerCase().includes(keyword)
-            );
+        if (sortDirection === null) {
+            // 清除排序 - 三態排序的第三態
+            delete currentParams.sortColumn;
+            delete currentParams.sortDirection;
+        } else {
+            // 設定新的排序，使用 SortUtil 標準化
+            currentParams.sortColumn = sortColumn as string;
+            currentParams.sortDirection = SortUtil.normalizeDirection(sortDirection);
         }
 
-        // 啟用狀態篩選
-        if (params?.isActive !== undefined) {
-            filtered = filtered.filter(dept => dept.isActive === params.isActive);
-        }
-
-        // learningType篩選
-        if (params?.learningType) {
-            filtered = filtered.filter(course => course.learningType === params.learningType);
-        }
-
-        // skillType篩選
-        if (params?.skillType !== undefined) {
-            filtered = filtered.filter(course => course.skillType === params.skillType);
-        }
-
-        // level篩選
-        if (params?.level !== undefined) {
-            filtered = filtered.filter(course => course.level === params.level);
-        }
-
-        return filtered;
+        return this.searchCourses(currentParams);
     }
 
-    // Mock 資料處理方法
-    private getMockCourseById(id: number): Course | null {
-        return this.mockData.find((course: Course) => course.courseId === id) || null;
+    /**
+     * 🔄 切換排序方向
+     * @param sortColumn 排序欄位
+     * @returns 切換排序後的課程列表 Observable
+     */
+    toggleSort(sortColumn: keyof Course): Observable<CourseListResponse> {
+        const currentParams = this.searchParamsSignal();
+        const currentColumn = currentParams.sortColumn;
+        const currentDirection = currentParams.sortDirection as 'asc' | 'desc';
+
+        let newDirection: 'asc' | 'desc' | null;
+
+        if (currentColumn !== sortColumn) {
+            // 點擊不同欄位，預設升序
+            newDirection = 'asc';
+        } else {
+            // 點擊相同欄位，使用 SortUtil 切換方向（三態循環）
+            if (currentDirection === 'asc') {
+                newDirection = 'desc';
+            } else if (currentDirection === 'desc') {
+                newDirection = null; // 第三態：清除排序
+            } else {
+                newDirection = 'asc';
+            }
+        }
+
+        return this.sortCourses(sortColumn, newDirection);
     }
 
-    private createMockCourse(courseData: CourseCreateDto): Course {
-        const newId = Math.max(...this.mockData.map((e: Course) => e.courseId || 0)) + 1;
-        const now = new Date().toISOString();
+    /**
+     * 🔎 關鍵字搜尋
+     * @param keyword 搜尋關鍵字
+     * @returns 搜尋結果 Observable
+     * 自動清理空白字元
+     * 重置到第一頁
+     * 保留其他搜尋條件
+     */
+    searchByKeyword(keyword: string): Observable<CourseListResponse> {
+        const currentParams = { ...this.searchParamsSignal() };
 
+        // 使用 QueryParamsBuilder 重設到第一頁
+        const resetParams = QueryParamsBuilder.resetToFirstPage(currentParams);
+
+        const searchParams = QueryParamsBuilder.mergeSearchParams(resetParams, {
+            keyword: keyword.trim() || undefined
+        });
+
+        return this.searchCourses(searchParams);
+    }
+
+    /**
+     * 📂 多重篩選功能
+     * @param filters 篩選條件
+     * @returns 篩選結果 Observable
+     * 使用 FilterUtil.cleanFilters() 清理空值
+     * 合併現有搜尋條件
+     * 重置到第一頁
+     */
+    filterCourses(filters: CourseFilters): Observable<CourseListResponse> {
+        const currentParams = { ...this.searchParamsSignal() };
+
+        // 使用 FilterUtil 清理空值並重設到第一頁
+        const cleanedFilters = FilterUtil.cleanFilters(filters);
+        const resetParams = QueryParamsBuilder.resetToFirstPage(currentParams);
+        const mergedParams = FilterUtil.mergeFilters(resetParams, cleanedFilters);
+
+        return this.searchCourses(mergedParams);
+    }
+
+    /**
+     * 📄 分頁功能 - 使用 PaginationUtil
+     * @param page 頁碼 (從 1 開始)
+     * @param pageSize 每頁筆數
+     * @returns 分頁結果 Observable
+     */
+    /**
+     * 執行步驟：
+     * 1. 參數驗證：PaginationUtil.validatePagination()
+     * 2. 格式轉換：PaginationUtil.toBackendPagination()
+     * 3. 合併參數：QueryParamsBuilder.mergeSearchParams()
+     * 4. 執行查詢：呼叫 searchCourses()
+     */
+    loadPage(page: number, pageSize?: number): Observable<CourseListResponse> {
+        const currentParams = { ...this.searchParamsSignal() };
+        const size = pageSize || this.pageSize() || PAGINATION_DEFAULTS.PAGE_SIZE;
+
+        // 使用 PaginationUtil 驗證和轉換分頁參數
+        const validatedPagination = PaginationUtil.validatePagination(page, size);
+        const backendPagination = PaginationUtil.toBackendPagination(
+            validatedPagination.page,
+            validatedPagination.pageSize
+        );
+
+        const searchParams = QueryParamsBuilder.mergeSearchParams(currentParams, {
+            ...backendPagination,
+            pageable: true
+        });
+
+        return this.searchCourses(searchParams);
+    }
+
+    /**
+     * 自動檢查是否有下一頁
+     * @returns 下一頁結果 Observable
+     */
+    nextPage(): Observable<CourseListResponse> {
+        if (!this.hasNext()) {
+            return this.searchCourses(this.searchParamsSignal());
+        }
+
+        const currentPage = this.currentPage();
+        return this.loadPage(currentPage + 1);
+    }
+
+    /**
+     * 自動檢查是否有上一頁
+     * @returns 上一頁結果 Observable
+     */
+    previousPage(): Observable<CourseListResponse> {
+        if (!this.hasPrevious()) {
+            return this.searchCourses(this.searchParamsSignal());
+        }
+
+        const currentPage = this.currentPage();
+        return this.loadPage(Math.max(1, currentPage - 1));
+    }
+
+    /**
+     * 🔄 重新載入 - 使用當前搜尋條件
+     * @returns 重新載入結果 Observable
+     */
+    reload(): Observable<CourseListResponse> {
+        return this.searchCourses(this.searchParamsSignal());
+    }
+
+    /**
+     * 🧹 清除搜尋條件
+     * @returns 清除後的結果 Observable
+     */
+    clearSearch(): Observable<CourseListResponse> {
+        const resetParams: CourseSearchParams = {
+            ...PaginationUtil.toBackendPagination(1, PAGINATION_DEFAULTS.PAGE_SIZE),
+            pageable: true,
+            sortColumn: SORT_DEFAULTS.COURSE,
+            sortDirection: PAGINATION_DEFAULTS.SORT_DIRECTION
+        };
+
+        return this.searchCourses(resetParams);
+    }
+
+    /**
+     * 🎛️ 使用 QueryOptions 進行查詢 (UI 友善的介面)
+     * @param options UI 查詢選項
+     * @returns 查詢結果 Observable
+     */
+    searchWithOptions(options: CourseQueryOptions): Observable<CourseListResponse> {
+        const {
+            page = 1,
+            pageSize = PAGINATION_DEFAULTS.PAGE_SIZE,
+            sort,
+            searchTerm,
+            filters
+        } = options;
+
+        // 使用工具函數轉換參數
+        const validatedPagination = PaginationUtil.validatePagination(page, pageSize);
+        const backendPagination = PaginationUtil.toBackendPagination(
+            validatedPagination.page,
+            validatedPagination.pageSize
+        );
+
+        const baseParams: CourseSearchParams = {
+            ...backendPagination,
+            pageable: true,
+            keyword: searchTerm?.trim() || undefined
+        };
+
+        // 處理排序
+        if (sort) {
+            baseParams.sortColumn = sort.field as string;
+            baseParams.sortDirection = SortUtil.normalizeDirection(sort.direction);
+        }
+
+        // 處理篩選條件
+        const cleanedFilters = filters ? FilterUtil.cleanFilters(filters) : {};
+        const finalParams = FilterUtil.mergeFilters(baseParams, cleanedFilters);
+
+        return this.searchCourses(finalParams);
+    }
+
+
+    //CRUD實作
+    /**
+     * 統一回應處理：
+     * map(response => response.code === 1000 ? response.data || null : null)
+     * 檢查成功碼 (1000)
+     * 提取實際資料
+     * 失敗時回傳 null
+     */
+    /**
+     * 📝 取得單一課程資料
+     * @param courseId 課程ID
+     * @returns 課程詳細資料 Observable
+     */
+    getCourse(courseId: number): Observable<Course | null> {
+        return this.http.get<ApiResponse<Course>>(`${this.apiUrl}/find/${courseId}`).pipe(
+            map(response => response.code === 1000 ? response.data || null : null),
+            catchError(this.errorHandler.handleError<Course | null>('課程詳細資料查詢', null))
+        );
+    }
+
+    /**
+     * ➕ 新增課程
+     * @param data 課程資料
+     * @returns 新增後的課程資料 Observable
+     */
+    createCourse(data: CourseCreateDto): Observable<Course | null> {
+        return this.http.post<ApiResponse<Course>>(`${this.apiUrl}/create`, data).pipe(
+            map(response => response.code === 1000 ? response.data || null : null),
+            tap(result => {
+                if (result) {
+                    // 新增成功後重新載入列表
+                    this.reload().subscribe();
+                }
+            }),
+            catchError(this.errorHandler.handleError<Course | null>('課程新增', null))
+        );
+    }
+
+    /**
+     * ✏️ 更新課程
+     * @param data 課程資料
+     * @returns 更新後的課程資料 Observable
+     */
+    updateCourse(data: CourseUpdateDto): Observable<Course | null> {
+        return this.http.post<ApiResponse<Course>>(`${this.apiUrl}/update`, data).pipe(
+            map(response => response.code === 1000 ? response.data || null : null),
+            tap(result => {
+                if (result) {
+                    // 更新成功後重新載入列表
+                    this.reload().subscribe();
+                }
+            }),
+            catchError(this.errorHandler.handleError<Course | null>('課程更新', null))
+        );
+    }
+
+    /**
+     * 🗑️ 刪除課程
+     * @param courseId 課程ID
+     * @returns 刪除結果 Observable
+     */
+    deleteCourse(courseId: number): Observable<boolean> {
+        return this.http.post<ApiResponse<void>>(`${this.apiUrl}/delete`, { courseId }).pipe(
+            map(response => response.code === 1000),
+            tap(success => {
+                if (success) {
+                    // 刪除成功後重新載入列表
+                    this.reload().subscribe();
+                }
+            }),
+            catchError(this.errorHandler.handleError<boolean>('課程刪除', false))
+        );
+    }
+
+    // 輔助工具
+    /**
+     * 📊 取得目前載入狀態
+     * @returns 是否正在載入
+     */
+    isLoading(): boolean {
+        return this.loadingSignal();
+    }
+
+    /**
+     * 📋 取得目前搜尋參數
+     * @returns 當前搜尋參數
+     */
+    getCurrentSearchParams(): CourseSearchParams {
+        return { ...this.searchParamsSignal() };
+    }
+
+    /**
+     * 🔢 取得目前課程數量
+     * @returns 目前載入的課程數量
+     */
+    getCourseCount(): number {
+        return this.coursesSignal().length;
+    }
+
+    /**
+     * 🎯 檢查是否有搜尋條件
+     * @returns 是否有搜尋條件
+     */
+    hasSearchParams(): boolean {
+        const params = this.searchParamsSignal();
+        return !!(
+            params.keyword ||
+            params.courseEventId ||
+            params.learningType ||
+            params.skillType ||
+            params.level ||
+            params.isActive !== undefined ||
+            params.sortColumn
+        );
+    }
+
+    /**
+     * 📊 取得完整分頁資訊
+     * @returns 分頁資訊物件
+     */
+    getPaginationInfo() {
         return {
-            courseId: newId,
-            courseEventId: courseData.courseEventId,
-            courseName: courseData.courseName,
-            learningType: courseData.learningType,
-            skillType: courseData.skillType,
-            level: courseData.level,
-            hours: courseData.hours,
-            isActive: true,
-            remark: courseData.remark,
-            createTime: now,
-            createUser: "admin",
-            updateTime: now,
-            updateUser: "admin"
+            currentPage: this.currentPage(),
+            pageSize: this.pageSize(),
+            totalPages: this.totalPages(),
+            totalRecords: this.totalRecords(),
+            hasNext: this.hasNext(),
+            hasPrevious: this.hasPrevious(),
+            firstIndexInPage: this.firstIndexInPage(),
+            lastIndexInPage: this.lastIndexInPage()
         };
     }
 
-    private updateMockCourse(courseData: CourseUpdateDto): Course {
-        const existing = this.getMockCourseById(courseData.courseId);
-        if (!existing) {
-            throw new Error('Course not found');
-        }
+    /**
+     * 🔍 取得目前排序狀態
+     * @returns 排序資訊
+     */
+    getCurrentSort(): { column?: string; direction?: 'asc' | 'desc' } {
+        const params = this.searchParamsSignal();
         return {
-            ...existing,
-            courseEventId: courseData.courseEventId ?? existing.courseEventId,
-            courseName: courseData.courseName ?? existing.courseName,
-            learningType: courseData.learningType ?? existing.learningType,
-            skillType: courseData.skillType ?? existing.skillType,
-            level: courseData.level ?? existing.level,
-            hours: courseData.hours ?? existing.hours,
-            isActive: courseData.isActive ?? existing.isActive,
-            remark: courseData.remark ?? existing.remark,
-            updateTime: new Date().toISOString(),
-            updateUser: 'current_user',
+            column: params.sortColumn,
+            direction: params.sortDirection as 'asc' | 'desc'
         };
     }
 
-    private deleteMockCourse(id: number): boolean {
-        const index = this.mockData.findIndex(course => course.courseId === id);
-        if (index !== -1) {
-            this.mockData.splice(index, 1);
-            return true;
-        }
-        return false;
+    /**
+     * 📈 取得統計資訊
+     * @returns 課程統計
+     */
+    getStatistics() {
+        const courses = this.coursesSignal();
+        return {
+            total: this.totalRecords(), // 總筆數
+            currentPageCount: courses.length, // 當前頁筆數
+            activeCount: courses.filter(c => c.isActive).length, // 啟用課程數
+            inactiveCount: courses.filter(c => !c.isActive).length // 停用課程數
+        };
     }
 }

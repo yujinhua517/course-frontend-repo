@@ -56,6 +56,12 @@ export const routes: Routes = [
         data: { permissions: [PermissionName.COURSE_EVENT_READ] },
         loadComponent: () => import('./features/course-event-management/pages/course-event-list/course-event-list.component').then(m => m.CourseEventListComponent)
       },
+      {
+        path: 'course',
+        canActivate: [PermissionGuard],
+        data: { permissions: [PermissionName.COURSE_READ] },
+        loadComponent: () => import('./features/course-management/pages/course-list.component').then(m => m.CourseListComponent)
+      },
       // 你也可以在這裡加更多 child page
     ]
   },

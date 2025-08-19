@@ -1,0 +1,600 @@
+<!-- course-list.component.html -->
+<div class="course-list-container">
+    <!-- 🔍 搜尋和篩選區塊 -->
+    <div class="search-section mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-funnel me-2"></i>
+                    課程搜尋與篩選
+                </h5>
+                <button type="button" class="btn btn-outline-secondary btn-sm" (click)="onClearSearch()"
+                    [disabled]="!hasActiveFilters()">
+                    <i class="bi bi-arrow-clockwise me-1"></i>
+                    清除篩選
+                </button>
+            </div>
+
+            <div class="card-body">
+                <!-- 關鍵字搜尋 -->
+                <div class="row mb-3">
+                    <div class="col-md-8">
+                        <label for="searchKeyword" class="form-label">
+                            課程名稱
+                            <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <input type="text" id="searchKeyword" class="form-control" placeholder="請輸入課程名稱關鍵字"
+                                [(ngModel)]="searchKeyword" (keyup.enter)="onSearch(searchKeyword())" role="searchbox"
+                                aria-label="搜尋課程名稱" [disabled]="loading()">
+                            <button type="button" class="btn btn-primary" (click)="onSearch(searchKeyword())"
+                                [disabled]="loading()">
+                                @if (loading()) {
+                                <span class="spinner-border spinner-border-sm me-1" role="status"
+                                    aria-hidden="true"></span>
+                                } @else {
+                                <i class="bi bi-search me-1"></i>
+                                }
+                                搜尋
+                            </button>
+                        </div>
+
+                        <!-- ✅ 篩選條件顯示區域 -->
+                        @if (hasActiveFilters()) {
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <div class="alert alert-info d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center flex-wrap">
+                                        <i class="bi bi-funnel-fill me-2"></i>
+                                        <span class="fw-semibold me-2">目前篩選條件：</span>
+
+                                        @if (currentFilters().courseEventId) {
+                                        <span class="badge bg-primary me-1 mb-1">
+                                            課程活動：活動 {{ currentFilters().courseEventId }}
+                                            <button type="button" class="btn-close btn-close-white ms-1"
+                                                (click)="onClearFilter('courseEventId')" aria-label="移除課程活動篩選"></button>
+                                        </span>
+                                        }
+
+                                        @if (currentFilters().learningType) {
+                                        <span class="badge bg-success me-1 mb-1">
+                                            學習方式：{{ currentFilters().learningType }}
+                                            <button type="button" class="btn-close btn-close-white ms-1"
+                                                (click)="onClearFilter('learningType')" aria-label="移除學習方式篩選"></button>
+                                        </span>
+                                        }
+
+                                        @if (currentFilters().skillType) {
+                                        <span class="badge bg-warning me-1 mb-1">
+                                            技能類型：{{ currentFilters().skillType }}
+                                            <button type="button" class="btn-close btn-close-white ms-1"
+                                                (click)="onClearFilter('skillType')" aria-label="移除技能類型篩選"></button>
+                                        </span>
+                                        }
+
+                                        @if (currentFilters().level) {
+                                        <span class="badge bg-info me-1 mb-1">
+                                            等級：{{ currentFilters().level }}
+                                            <button type="button" class="btn-close btn-close-white ms-1"
+                                                (click)="onClearFilter('level')" aria-label="移除等級篩選"></button>
+                                        </span>
+                                        }
+
+                                        @if (currentFilters().isActive !== undefined) {
+                                        <span class="badge bg-secondary me-1 mb-1">
+                                            狀態：{{ currentFilters().isActive ? '啟用' : '停用' }}
+                                            <button type="button" class="btn-close btn-close-white ms-1"
+                                                (click)="onClearFilter('isActive')" aria-label="移除狀態篩選"></button>
+                                        </span>
+                                        }
+                                    </div>
+
+                                    <button type="button" class="btn btn-outline-secondary btn-sm ms-2"
+                                        (click)="onClearAllFilters()">
+                                        <i class="bi bi-x-circle me-1"></i>
+                                        清除所有篩選
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        }
+                    </div>
+
+                    <div class="col-md-4">
+                        <label for="statusSelect" class="form-label">啟用狀態</label>
+                        <select id="statusSelect" class="form-select"
+                            [value]="currentFilters().isActive === true ? 'true' : currentFilters().isActive === false ? 'false' : ''"
+                            (change)="onFilterChange('isActive', $any($event.target).value)" [disabled]="loading()">
+                            <option value="">全部狀態</option>
+                            <option value="true">啟用</option>
+                            <option value="false">停用</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 篩選條件 -->
+                <div class="row">
+                    <div class="col-md-2">
+                        <label for="courseEventSelect" class="form-label">
+                            課程活動
+                            @if (currentFilters().courseEventId) {
+                            <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-danger"
+                                (click)="onClearFilter('courseEventId')" title="清除課程活動篩選">
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                            }
+                        </label>
+                        <select id="courseEventSelect" class="form-select"
+                            [value]="currentFilters().courseEventId?.toString() || ''"
+                            (change)="onFilterChange('courseEventId', $any($event.target).value || undefined)"
+                            [disabled]="loading()">
+                            <option value="">全部課程活動</option>
+                            <option value="1">課程活動 1</option>
+                            <option value="2">課程活動 2</option>
+                            <option value="3">課程活動 3</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="learningTypeSelect" class="form-label">
+                            學習方式
+                            @if (currentFilters().learningType) {
+                            <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-danger"
+                                (click)="onClearFilter('learningType')" title="清除學習方式篩選">
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                            }
+                        </label>
+                        <select id="learningTypeSelect" class="form-select"
+                            [value]="currentFilters().learningType || ''"
+                            (change)="onFilterChange('learningType', $any($event.target).value || undefined)"
+                            [disabled]="loading()">
+                            <option value="">全部方式</option>
+                            @for (option of learningTypeOptions; track option.value) {
+                            <option [value]="option.value">{{ option.label }}</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="skillTypeSelect" class="form-label">
+                            技能類型
+                            @if (currentFilters().skillType) {
+                            <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-danger"
+                                (click)="onClearFilter('skillType')" title="清除技能類型篩選">
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                            }
+                        </label>
+                        <select id="skillTypeSelect" class="form-select" [value]="currentFilters().skillType || ''"
+                            (change)="onFilterChange('skillType', $any($event.target).value || undefined)"
+                            [disabled]="loading()">
+                            <option value="">全部類型</option>
+                            @for (option of skillTypeOptions; track option.value) {
+                            <option [value]="option.value">{{ option.label }}</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="levelSelect" class="form-label">
+                            課程等級
+                            @if (currentFilters().level) {
+                            <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-danger"
+                                (click)="onClearFilter('level')" title="清除等級篩選">
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                            }
+                        </label>
+                        <select id="levelSelect" class="form-select" [value]="currentFilters().level || ''"
+                            (change)="onFilterChange('level', $any($event.target).value || undefined)"
+                            [disabled]="loading()">
+                            <option value="">全部等級</option>
+                            @for (option of levelOptions; track option.value) {
+                            <option [value]="option.value">{{ option.label }}</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="statusSelect" class="form-label">
+                            啟用狀態
+                            @if (currentFilters().isActive !== undefined) {
+                            <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-danger"
+                                (click)="onClearFilter('isActive')" title="清除狀態篩選">
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                            }
+                        </label>
+                        <select id="statusSelect" class="form-select"
+                            [value]="currentFilters().isActive === true ? 'true' : currentFilters().isActive === false ? 'false' : ''"
+                            (change)="onFilterChange('isActive', $any($event.target).value)" [disabled]="loading()">
+                            <option value="">全部狀態</option>
+                            <option value="true">啟用</option>
+                            <option value="false">停用</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 📊 統計資訊和操作按鈕 -->
+    <div class="row mb-3">
+        <div class="col-md-8">
+            <div class="d-flex align-items-center">
+                <span class="badge bg-primary me-2">
+                    總計 {{ totalRecords() }} 門課程
+                </span>
+                @if (hasActiveFilters()) {
+                <span class="badge bg-info me-2">
+                    <i class="bi bi-funnel-fill me-1"></i>
+                    已套用 {{ activeFiltersCount() }} 項篩選
+                </span>
+                }
+                @if (totalPages() > 1) {
+                <span class="text-muted small">
+                    第 {{ currentPage() }} 頁，共 {{ totalPages() }} 頁
+                </span>
+                }
+            </div>
+        </div>
+
+        <div class="col-md-4 text-end">
+            <div class="btn-group" role="group" aria-label="課程操作">
+                <button type="button" class="btn btn-success" (click)="onActionClick('create')" [disabled]="loading()">
+                    <i class="bi bi-plus-circle me-1"></i>
+                    新增課程
+                </button>
+                <button type="button" class="btn btn-outline-primary" (click)="onActionClick('export')"
+                    [disabled]="!hasData() || loading()">
+                    <i class="bi bi-download me-1"></i>
+                    匯出
+                </button>
+                <button type="button" class="btn btn-outline-secondary" (click)="onActionClick('refresh')"
+                    [disabled]="loading()">
+                    @if (loading()) {
+                    <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                    } @else {
+                    <i class="bi bi-arrow-clockwise me-1"></i>
+                    }
+                    重新整理
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 📋 課程列表 -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-list-ul me-2"></i>
+                        課程列表
+                    </h5>
+                </div>
+
+                <div class="card-body p-0">
+                    <!-- 載入狀態 -->
+                    @if (loading()) {
+                    <div class="text-center py-5" role="status" aria-live="polite">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">載入中...</span>
+                        </div>
+                        <p class="mt-2 text-muted">載入課程資料中，請稍候...</p>
+                    </div>
+                    } @else if (hasData()) {
+                    <!-- 課程表格 -->
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0" role="table" aria-label="課程列表">
+                            <thead class="table-light">
+                                <tr role="row">
+                                    <th scope="col" class="text-nowrap">
+                                        <button type="button"
+                                            class="btn btn-link p-0 text-decoration-none text-dark fw-bold"
+                                            (click)="onSort('courseName')"
+                                            [attr.aria-label]="getSortAriaLabel('courseName')">
+                                            課程名稱
+                                            <i [class]="getSortIcon('courseName')" aria-hidden="true"></i>
+                                        </button>
+                                    </th>
+                                    <th scope="col" class="text-nowrap">課程活動</th>
+                                    <th scope="col" class="text-nowrap">
+                                        <button type="button"
+                                            class="btn btn-link p-0 text-decoration-none text-dark fw-bold"
+                                            (click)="onSort('learningType')"
+                                            [attr.aria-label]="getSortAriaLabel('learningType')">
+                                            學習方式
+                                            <i [class]="getSortIcon('learningType')" aria-hidden="true"></i>
+                                        </button>
+                                    </th>
+                                    <th scope="col" class="text-nowrap">
+                                        <button type="button"
+                                            class="btn btn-link p-0 text-decoration-none text-dark fw-bold"
+                                            (click)="onSort('skillType')"
+                                            [attr.aria-label]="getSortAriaLabel('skillType')">
+                                            技能類型
+                                            <i [class]="getSortIcon('skillType')" aria-hidden="true"></i>
+                                        </button>
+                                    </th>
+                                    <th scope="col" class="text-nowrap">
+                                        <button type="button"
+                                            class="btn btn-link p-0 text-decoration-none text-dark fw-bold"
+                                            (click)="onSort('level')" [attr.aria-label]="getSortAriaLabel('level')">
+                                            等級
+                                            <i [class]="getSortIcon('level')" aria-hidden="true"></i>
+                                        </button>
+                                    </th>
+                                    <th scope="col" class="text-nowrap">
+                                        <button type="button"
+                                            class="btn btn-link p-0 text-decoration-none text-dark fw-bold"
+                                            (click)="onSort('hours')" [attr.aria-label]="getSortAriaLabel('hours')">
+                                            時數
+                                            <i [class]="getSortIcon('hours')" aria-hidden="true"></i>
+                                        </button>
+                                    </th>
+                                    <th scope="col" class="text-nowrap">
+                                        <button type="button"
+                                            class="btn btn-link p-0 text-decoration-none text-dark fw-bold"
+                                            (click)="onSort('isActive')"
+                                            [attr.aria-label]="getSortAriaLabel('isActive')">
+                                            狀態
+                                            <i [class]="getSortIcon('isActive')" aria-hidden="true"></i>
+                                        </button>
+                                    </th>
+                                    <th scope="col" class="text-nowrap">
+                                        <button type="button"
+                                            class="btn btn-link p-0 text-decoration-none text-dark fw-bold"
+                                            (click)="onSort('createTime')"
+                                            [attr.aria-label]="getSortAriaLabel('createTime')">
+                                            建立時間
+                                            <i [class]="getSortIcon('createTime')" aria-hidden="true"></i>
+                                        </button>
+                                    </th>
+                                    <th scope="col" class="text-center">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (course of courses(); track course.courseId) {
+                                <tr role="row" [attr.aria-rowindex]="$index + 1">
+                                    <!-- 課程名稱 -->
+                                    <td class="course-name-cell">
+                                        <div class="fw-semibold"
+                                            [innerHTML]="course.courseName | highlight:searchKeyword()"></div>
+                                        @if (course.remark) {
+                                        <small class="text-muted">{{ course.remark }}</small>
+                                        }
+                                    </td>
+
+                                    <!-- 課程活動 -->
+                                    <td>
+                                        @if (course.courseEventId) {
+                                        <span class="text-primary">{{ getCourseEventName(course.courseEventId) }}</span>
+                                        } @else {
+                                        <span class="text-muted">未指定</span>
+                                        }
+                                    </td>
+
+                                    <!-- 學習方式 -->
+                                    <td>
+                                        @if (course.learningType) {
+                                        <span class="badge"
+                                            [class]="'bg-' + getLearningTypeVariant(course.learningType)">
+                                            {{ course.learningType }}
+                                        </span>
+                                        } @else {
+                                        <span class="text-muted">-</span>
+                                        }
+                                    </td>
+
+                                    <!-- 技能類型 -->
+                                    <td>
+                                        @if (course.skillType) {
+                                        <span class="badge" [class]="'bg-' + getSkillTypeVariant(course.skillType)">
+                                            {{ course.skillType }}
+                                        </span>
+                                        } @else {
+                                        <span class="text-muted">-</span>
+                                        }
+                                    </td>
+
+                                    <!-- 課程等級 -->
+                                    <td>
+                                        @if (course.level) {
+                                        <span class="badge" [class]="'bg-' + getLevelVariant(course.level)">
+                                            {{ course.level }}
+                                        </span>
+                                        } @else {
+                                        <span class="text-muted">-</span>
+                                        }
+                                    </td>
+
+                                    <!-- 課程時數 -->
+                                    <td class="text-end">
+                                        @if (course.hours) {
+                                        <span class="fw-semibold">{{ course.hours }}</span>
+                                        <small class="text-muted ms-1">小時</small>
+                                        } @else {
+                                        <span class="text-muted">未設定</span>
+                                        }
+                                    </td>
+
+                                    <!-- 啟用狀態 -->
+                                    <td>
+                                        <span class="badge" [class]="course.isActive ? 'bg-success' : 'bg-secondary'">
+                                            {{ course.isActive ? '啟用' : '停用' }}
+                                        </span>
+                                    </td>
+
+                                    <!-- 建立時間 -->
+                                    <td>
+                                        @if (course.createTime) {
+                                        <div class="d-flex flex-column">
+                                            <span class="small">{{ formatDate(course.createTime) }}</span>
+                                            @if (course.createUser) {
+                                            <small class="text-muted">{{ course.createUser }}</small>
+                                            }
+                                        </div>
+                                        } @else {
+                                        <span class="text-muted">-</span>
+                                        }
+                                    </td>
+
+                                    <!-- 操作按鈕 -->
+                                    <td class="text-center">
+                                        <div class="btn-group btn-group-sm" role="group"
+                                            [attr.aria-label]="'課程 ' + course.courseName + ' 操作'">
+                                            <button type="button" class="btn btn-outline-primary"
+                                                (click)="onRowAction('view', course)"
+                                                [attr.aria-label]="'查看課程 ' + course.courseName">
+                                                <i class="bi bi-eye" aria-hidden="true"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-warning"
+                                                (click)="onRowAction('edit', course)"
+                                                [attr.aria-label]="'編輯課程 ' + course.courseName">
+                                                <i class="bi bi-pencil" aria-hidden="true"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-danger"
+                                                (click)="onRowAction('delete', course)"
+                                                [attr.aria-label]="'刪除課程 ' + course.courseName">
+                                                <i class="bi bi-trash" aria-hidden="true"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    } @else {
+                    <!-- 空狀態 -->
+                    <div class="text-center py-5">
+                        <i class="bi bi-inbox display-1 text-muted"></i>
+                        <h4 class="mt-3 text-muted">{{ getEmptyStateTitle() }}</h4>
+                        <p class="text-muted">{{ getEmptyStateMessage() }}</p>
+                        <button type="button" class="btn"
+                            [class]="hasActiveFilters() ? 'btn-outline-primary' : 'btn-primary'"
+                            (click)="onEmptyStateAction()">
+                            <i [class]="getEmptyStateActionIcon() + ' me-1'"></i>
+                            {{ getEmptyStateActionText() }}
+                        </button>
+                    </div>
+                    }
+                </div>
+
+                <!-- 🔢 分頁控制 -->
+                @if (hasData() && totalPages() > 1) {
+                <div class="card-footer">
+                    <nav aria-label="課程列表分頁導航">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center">
+                                    <label for="pageSizeSelect" class="form-label me-2 mb-0">每頁筆數:</label>
+                                    <select id="pageSizeSelect" class="form-select form-select-sm" style="width: auto;"
+                                        [value]="pageSize()" (change)="onPageSizeChange($event)" [disabled]="loading()">
+                                        <option value="10">10</option>
+                                        <option value="20">20</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                    </select>
+                                    <span class="text-muted ms-2 small">
+                                        顯示第 {{ (currentPage() - 1) * pageSize() + 1 }} - {{ this.Math.min(currentPage()
+                                        * pageSize(), totalRecords()) }} 筆，
+                                        共 {{ totalRecords() }} 筆
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <ul class="pagination pagination-sm justify-content-end mb-0">
+                                    <!-- 上一頁 -->
+                                    <li class="page-item" [class.disabled]="!hasPrevious() || loading()">
+                                        <button type="button" class="page-link" (click)="onPreviousPage()"
+                                            [disabled]="!hasPrevious() || loading()" aria-label="上一頁">
+                                            <i class="bi bi-chevron-left" aria-hidden="true"></i>
+                                        </button>
+                                    </li>
+
+                                    <!-- 頁碼 -->
+                                    @for (page of getVisiblePages(); track page) {
+                                    <li class="page-item" [class.active]="page === currentPage()">
+                                        @if (page === currentPage()) {
+                                        <span class="page-link" [attr.aria-current]="'page'"
+                                            [attr.aria-label]="'目前頁面，第 ' + page + ' 頁'">
+                                            {{ page }}
+                                        </span>
+                                        } @else {
+                                        <button type="button" class="page-link" (click)="onPageChange(page)"
+                                            [disabled]="loading()" [attr.aria-label]="'前往第 ' + page + ' 頁'">
+                                            {{ page }}
+                                        </button>
+                                        }
+                                    </li>
+                                    }
+
+                                    <!-- 下一頁 -->
+                                    <li class="page-item" [class.disabled]="!hasNext() || loading()">
+                                        <button type="button" class="page-link" (click)="onNextPage()"
+                                            [disabled]="!hasNext() || loading()" aria-label="下一頁">
+                                            <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </nav>
+                </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- 🔄 錯誤訊息 -->
+    @if (errorMessage()) {
+    <div class="alert alert-danger mt-3" role="alert">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        <strong>載入失敗：</strong>{{ errorMessage() }}
+        <button type="button" class="btn btn-outline-danger btn-sm ms-2" (click)="onRetry()">
+            <i class="bi bi-arrow-clockwise me-1"></i>
+            重試
+        </button>
+    </div>
+    }
+
+    <!-- 📝 確認對話框 -->
+    <div class="modal fade" #confirmationModal tabindex="-1" aria-labelledby="confirmationModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="confirmationModalLabel">{{ confirmationTitle() }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    @if (confirmationVariant() === 'danger') {
+                    <i class="bi bi-exclamation-triangle-fill text-danger display-4 mb-3"></i>
+                    } @else if (confirmationVariant() === 'warning') {
+                    <i class="bi bi-exclamation-circle-fill text-warning display-4 mb-3"></i>
+                    } @else {
+                    <i class="bi bi-info-circle-fill text-info display-4 mb-3"></i>
+                    }
+                    <p class="mb-0">{{ confirmationMessage() }}</p>
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <button type="button" class="btn btn-secondary" (click)="onCancelAction()"
+                        [disabled]="confirmationLoading()">
+                        {{ confirmationCancelText() }}
+                    </button>
+                    <button type="button" class="btn"
+                        [class]="confirmationVariant() === 'danger' ? 'btn-danger' : 'btn-primary'"
+                        (click)="onConfirmAction()" [disabled]="confirmationLoading()">
+                        @if (confirmationLoading()) {
+                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                        }
+                        {{ confirmationConfirmText() }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
