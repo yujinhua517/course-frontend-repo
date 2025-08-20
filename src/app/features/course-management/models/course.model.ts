@@ -1,60 +1,61 @@
 import {
     BaseSearchParams,
-    ApiResponse,
-    PagerDto,
-    ServiceListResponse
+    ServiceListResponse,
+    QueryOptions // 如果你也想跟其他模組一樣提供 UI QueryOptions
 } from '../../../models/common.model';
 
-/* =========================================================
- * 1) 前端 View/Domain Model（畫面層：camelCase）
- *    - 後端 BigDecimal → 前端 number
- *    - LocalDateTime → ISO string
- * ========================================================= */
+/* ===================== 1) View/Domain Model ===================== */
 
 export interface Course {
     courseId: number;
     courseEventId: number;
     courseName: string;
-    learningType?: string;
-    skillType?: string;
-    level?: string;
-    hours?: number;
+    learningType?: LearningType;
+    skillType?: SkillType;
+    level?: Level;
+    hours?: number;       // 後端 BigDecimal → 前端 number
     isActive: boolean;
     remark?: string;
 
-    createTime: string;
-    createUser: string;
+    // 建議與 CourseEvent 一致，系統欄位改為可選（由後端產生）
+    createTime?: string;  // ISO LocalDateTime
+    createUser?: string;
     updateTime?: string;
     updateUser?: string;
 }
 
 /** 建立用（移除 id 與系統欄位） */
-export type CourseCreateDto = Omit<
-    Course,
-    'courseId' | 'createTime' | 'createUser' | 'updateTime' | 'updateUser'
->;
+export interface CourseCreateDto {
+    courseEventId: number;
+    courseName: string;
+    learningType?: LearningType;
+    skillType?: SkillType;
+    level?: Level;
+    hours?: number;
+    isActive: boolean;
+    remark?: string;
+}
 
 /** 更新用（允許部分更新 + 需要 id） */
-export type CourseUpdateDto = Partial<CourseCreateDto> & { courseId: number };
+export interface CourseUpdateDto extends CourseCreateDto {
+    courseId: number;
+}
 
-/* =========================================================
- * 2) 查詢參數（對應 POST /api/courses/query 的 CourseVo）
- *    - 直接沿用 VO 支援的欄位（hoursFrom/hoursTo）
- * ========================================================= */
+/* ===================== 2) 查詢參數（對應 VO） ===================== */
 
 export interface CourseSearchParams extends BaseSearchParams {
     courseId?: number;
     courseEventId?: number;
     courseName?: string;
-    learningType?: string;
-    skillType?: string;
-    level?: string;
+    learningType?: LearningType;
+    skillType?: SkillType;
+    level?: Level;
     hours?: number;
     isActive?: boolean;
     remark?: string;
     createUser?: string;
     updateUser?: string;
-    createTime?: string; // 若需要以時間查詢，可與後端確認是否啟用
+    createTime?: string;
     updateTime?: string;
 
     // 區間
@@ -63,52 +64,39 @@ export interface CourseSearchParams extends BaseSearchParams {
 }
 
 /** 列表回應（/query 回傳 PagerDto<CourseDto>） */
-export interface CourseListResponse extends ServiceListResponse<Course> { }
+export type CourseListResponse = ServiceListResponse<Course>;
 
-/* =========================================================
- * 3) 與後端交換的 Server 型別（snake_case）
- *    - 這些是你「真的送/收」的 JSON 欄位
- * ========================================================= */
+/* ===================== 3) （可選）UI Filters + QueryOptions ===================== */
 
-export interface CourseDtoServer {
-    course_id: number;
-    course_event_id: number;
-    course_name: string;
-    learning_type?: string;
-    skill_type?: string;
-    level?: string;
-    hours?: number;           // BigDecimal 已序列化為數字
-    is_active: boolean;
-    remark?: string;
-    create_time?: string;     // ISO
-    create_user?: string;
-    update_time?: string;
-    update_user?: string;
+export interface CourseFilters {
+    courseEventId?: number;
+    learningType?: LearningType;
+    skillType?: SkillType;
+    level?: Level;
+    isActive?: boolean;
+    hoursFrom?: number;
+    hoursTo?: number;
 }
+export type CourseQueryOptions = QueryOptions<Course, CourseFilters>;
 
-/** 後端 VO：/create /update /delete /query 都吃 VO 當 body */
-export interface CourseVoServer {
-    // PageBean 欄位（若需要可補：page, page_size, sort_by, sort_direction ...）
-    course_id?: number;
-    course_event_id?: number;
-    course_name?: string;
-    learning_type?: string;
-    skill_type?: string;
-    level?: string;
-    hours?: number;
-    is_active?: boolean;
-    remark?: string;
-    create_user?: string;
-    update_user?: string;
-    create_time?: string;
-    update_time?: string;
+/* ===================== 4) 列舉型欄位：常數 + 型別 ===================== */
 
-    // 區間
-    hours_from?: number;
-    hours_to?: number;
-}
+export const LEARNING_TYPE_OPTIONS = [
+    { value: '實體', label: '實體' },
+    { value: '線上', label: '線上' },
+    { value: '混合', label: '混合' }
+] as const;
+export type LearningType = typeof LEARNING_TYPE_OPTIONS[number]['value'];
 
-/* =========================================================
- * 4) 重新匯出共用型別
- * ========================================================= */
-export type { ApiResponse, PagerDto, ServiceListResponse } from '../../../models/common.model';
+export const SKILL_TYPE_OPTIONS = [
+    { value: '軟體力', label: '軟體力' },
+    { value: '數據力', label: '數據力' },
+    { value: '雲', label: '雲' }
+] as const;
+export type SkillType = typeof SKILL_TYPE_OPTIONS[number]['value'];
+
+export const LEVEL_OPTIONS = [
+    { value: '基礎', label: '基礎' },
+    { value: '進階', label: '進階' }
+] as const;
+export type Level = typeof LEVEL_OPTIONS[number]['value'];

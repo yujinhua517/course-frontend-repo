@@ -143,7 +143,10 @@ export class LoginService {
         description: 'course event read'
       },
       {
+<<<<<<< HEAD
         id: '2',
+=======
+>>>>>>> refactory-query
         name: PermissionName.EMPLOYEE_READ,
         resource: 'employee',
         action: 'read',
@@ -246,7 +249,10 @@ export class LoginService {
           description: 'course event read'
         },
         {
+<<<<<<< HEAD
           id: '2',
+=======
+>>>>>>> refactory-query
           name: PermissionName.EMPLOYEE_READ,
           resource: 'employee',
           action: 'read',
