@@ -201,3 +201,63 @@ export class FilterUtil {
         return { ...existing, ...FilterUtil.cleanFilters(updates) };
     }
 }
+
+/**
+ * 通用查詢參數轉換器
+ * 負責將前端查詢參數轉換為符合後端 API 格式的請求參數
+ */
+export class QueryTransformer {
+    /**
+     * 轉換為統一的 API 請求參數格式
+     */
+    static toApiParams<T extends BaseSearchParams>(
+        params: T,
+        columnMapping?: Record<string, string>
+    ): Record<string, any> {
+        const baseQuery = QueryParamsBuilder.buildBaseQuery(params);
+
+        // 映射排序欄位（如果有提供映射表）
+        const sortColumn = columnMapping && params.sortColumn
+            ? columnMapping[params.sortColumn] || params.sortColumn
+            : params.sortColumn;
+
+        return {
+            ...baseQuery,
+            ...(sortColumn && { sortColumn }),
+            ...(params.keyword && { keyword: params.keyword }),
+            ...(params.isActive !== undefined && { isActive: params.isActive }),
+        };
+    }
+
+    /**
+     * 適配後端回應為前端格式
+     * 注意：攔截器已經處理了 snake_case -> camelCase 轉換
+     */
+    static adaptResponse<T>(
+        backendResponse: any,
+        requestParams: BaseSearchParams
+    ): any {
+        if (backendResponse.code !== 1000) {
+            throw new Error(backendResponse.message || '查詢失敗');
+        }
+
+        const data = backendResponse.data;
+
+        // 攔截器已經轉換了欄位名稱，直接使用即可
+        // 只需要計算前端 UI 需要的額外欄位
+        const firstIndex = data.firstIndexInPage || 1;
+        const lastIndex = data.lastIndexInPage || PAGINATION_DEFAULTS.PAGE_SIZE;
+        const pageSize = lastIndex - firstIndex + 1;
+        const page = PaginationUtil.calculatePage(firstIndex, pageSize);
+
+        return {
+            ...data, // 包含 dataList, totalRecords, firstIndexInPage, lastIndexInPage 等
+            // 計算額外分頁資訊供 UI 使用
+            page: page,
+            pageSize: pageSize,
+            totalPages: PaginationUtil.calculateTotalPages(data.totalRecords || 0, pageSize),
+            hasNext: page < PaginationUtil.calculateTotalPages(data.totalRecords || 0, pageSize),
+            hasPrevious: page > 1
+        };
+    }
+}
