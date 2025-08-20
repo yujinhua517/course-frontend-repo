@@ -16,7 +16,7 @@ import {
     ServiceListResponse,
     PAGINATION_DEFAULTS
 } from '../../models/common.model';
-import { PaginationUtil, QueryParamsBuilder } from '../utils/query.util';
+import { PaginationUtil, QueryParamsBuilder, QueryTransformer } from '../utils/query.util';
 import { HttpErrorHandlerService } from '../services/http-error-handler.service';
 /**
  * 排序欄位映射函數類型
@@ -103,60 +103,41 @@ export abstract class BaseQueryService<T, TSearchParams extends BaseSearchParams
         return this.http.post<ApiResponse<PagerDto<T>>>(`${this.apiUrl}/query`, apiParams)
             .pipe(
                 map(response => this.adaptApiResponse(response, params)),
-                catchError(this.httpErrorHandler.handleError('getPagedData', this.getEmptyResponse()))
+                catchError(this.httpErrorHandler.handleError('分頁資料查詢', this.getEmptyResponse()))
             );
     }
 
     /**
-     * 建構 API 請求參數
+     * 建構 API 請求參數 - 使用 QueryParamsBuilder 簡化
      */
     protected buildApiParams(params?: TSearchParams): BaseQueryDto & Record<string, any> {
-        const mappedSortColumn = this.mapSortColumn(params?.sortColumn);
+        // 處理排序欄位映射
+        const processedParams = {
+            ...params,
+            sortColumn: this.mapSortColumn(params?.sortColumn) || this.defaultSortColumn,
+            sortDirection: params?.sortDirection || 'asc'
+        };
 
-        const apiParams: BaseQueryDto & Record<string, any> = {
-            pageable: params?.pageable ?? true,
-            firstIndexInPage: params?.firstIndexInPage,
-            lastIndexInPage: params?.lastIndexInPage,
-            sortColumn: mappedSortColumn || this.defaultSortColumn,
-            sortDirection: params?.sortDirection || 'asc',
+        // 使用 QueryParamsBuilder 建構基礎參數
+        const baseQuery = QueryParamsBuilder.buildBaseQuery(processedParams);
+        
+        // 合併自訂參數
+        return {
+            ...baseQuery,
             ...(params?.isActive !== undefined && { isActive: params.isActive }),
             ...this.buildCustomApiParams(params)
         };
-
-        return apiParams;
     }
 
     /**
-     * 適配 API 回應
+     * 適配 API 回應 - 使用 QueryTransformer 簡化
      */
     protected adaptApiResponse(
         response: ApiResponse<PagerDto<T>>,
         requestParams?: TSearchParams
     ): ServiceListResponse<T> {
-        if (response.code !== 1000) {
-            throw new Error(response.message || '查詢失敗');
-        }
-
-        const backendData = response.data;
-        if (!backendData) {
-            throw new Error('API 回應資料為空');
-        }
-
-        // 計算前端 UI 需要的 page/pageSize（為了方便顯示）
-        // 注意：攔截器已經將後端的 snake_case 欄位轉換為 camelCase
-        const firstIndex = backendData.firstIndexInPage || requestParams?.firstIndexInPage || 1;
-        const lastIndex = backendData.lastIndexInPage || requestParams?.lastIndexInPage || PAGINATION_DEFAULTS.PAGE_SIZE;
-        const pageSize = lastIndex - firstIndex + 1;
-        const page = PaginationUtil.calculatePage(firstIndex, pageSize);
-
-        const adaptedData: PagerDto<T> = {
-            ...backendData,
-            page,
-            pageSize,
-            totalPages: PaginationUtil.calculateTotalPages(backendData.totalRecords || 0, pageSize),
-            hasNext: page < PaginationUtil.calculateTotalPages(backendData.totalRecords || 0, pageSize),
-            hasPrevious: page > 1
-        };
+        // 使用 QueryTransformer 處理回應適配
+        const adaptedData = QueryTransformer.adaptResponse(response, requestParams || {});
 
         return {
             code: 200,
@@ -204,7 +185,7 @@ export abstract class BaseQueryService<T, TSearchParams extends BaseSearchParams
      */
     protected getEmptyResponse(): ServiceListResponse<T> {
         return {
-            code: 500,
+            code: -1,
             message: '查詢失敗',
             data: {
                 dataList: [],
@@ -219,7 +200,7 @@ export abstract class BaseQueryService<T, TSearchParams extends BaseSearchParams
     }
 
     /**
-     * 建構查詢參數的輔助方法
+     * 建構查詢參數的輔助方法 - 直接使用 QueryParamsBuilder
      */
     protected buildSearchParams(
         baseParams: TSearchParams,
@@ -229,7 +210,7 @@ export abstract class BaseQueryService<T, TSearchParams extends BaseSearchParams
     }
 
     /**
-     * 重設到第一頁的輔助方法
+     * 重設到第一頁的輔助方法 - 直接使用 QueryParamsBuilder
      */
     protected resetToFirstPage(params: TSearchParams): TSearchParams {
         return QueryParamsBuilder.resetToFirstPage(params);
