@@ -1,483 +1,332 @@
-import { Component, signal, computed, inject, ViewChild, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Component, inject, signal, computed, effect, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { finalize } from 'rxjs/operators';
 
-import { Course, CourseFilters, LEARNING_TYPE_OPTIONS, SKILL_TYPE_OPTIONS, LEVEL_OPTIONS } from '../models/course.model';
+import { UserStore } from '../../../core/auth/user.store';
+import type { User, Permission } from '../../../models/user.model';
+import { SearchFilterComponent, SearchFilterConfig } from '../../../shared/components/search-filter/search-filter.component';
+
 import { CourseService } from '../services/course.service';
 import { GlobalMessageService } from '../../../core/message/global-message.service';
 
-// 共用元件 imports
-import { TableHeaderComponent } from '../../../shared/components/table-header/table-header.component';
-import { TableBodyComponent } from '../../../shared/components/table-body/table-body.component';
-import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
-import { ActionButtonGroupComponent } from '../../../shared/components/action-buttons/action-button-group.component';
-import { SearchFilterComponent } from '../../../shared/components/search-filter/search-filter.component';
-import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
-import { LoadingStateComponent } from '../../../shared/components/loading-state/loading-state.component';
-import { ErrorMessageComponent } from '../../../shared/components/error-message/error-message.component';
-import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
-import { ConfirmationModalComponent } from '../../../shared/components/confirmation-modal/confirmation-modal.component';
-import { HighlightPipe } from '../../../shared/pipes/highlight.pipe';
+import { Course, CourseSearchParams, LEARNING_TYPE_OPTIONS, SKILL_TYPE_OPTIONS, LEVEL_OPTIONS } from '../models/course.model';
+import { ServiceListResponse } from '../../../models/common.model';
+import { PaginationUtil, QueryParamsBuilder } from '../../../core/utils/query.util';
 
 @Component({
     selector: 'app-course-list',
+    standalone: true,
+    imports: [CommonModule, FormsModule, ReactiveFormsModule, SearchFilterComponent],
     templateUrl: './course-list.component.html',
     styleUrls: ['./course-list.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [
-        CommonModule,
-        FormsModule,
-        TableHeaderComponent,
-        TableBodyComponent,
-        StatusBadgeComponent,
-        ActionButtonGroupComponent,
-        SearchFilterComponent,
-        PaginationComponent,
-        LoadingStateComponent,
-        ErrorMessageComponent,
-        EmptyStateComponent,
-        ConfirmationModalComponent,
-        HighlightPipe
-    ]
 })
-export class CourseListComponent {
-    // 🎯 Services
-    readonly courseService = inject(CourseService); // ✅ 改為 public，讓 template 可以存取
-    private readonly destroyRef = inject(DestroyRef);
+export class CourseListComponent implements OnInit {
+    // ===== DI =====
+    private readonly courseService = inject(CourseService);
     private readonly messageService = inject(GlobalMessageService);
+    private readonly userStore = inject(UserStore);
 
-    // 📊 直接使用 Service 的 signals（避免重複）
-    readonly courses = this.courseService.courses;
-    readonly loading = this.courseService.loading;
-    readonly pagination = this.courseService.pagination;
-    readonly totalRecords = this.courseService.totalRecords;
-    readonly currentPage = this.courseService.currentPage;
-    readonly totalPages = this.courseService.totalPages;
-    readonly pageSize = this.courseService.pageSize;
-    readonly hasNext = this.courseService.hasNext;
-    readonly hasPrevious = this.courseService.hasPrevious;
+    // ===== 常數（專案 API 成功碼）=====
+    private static readonly API_SUCCESS = 1000;
 
-    // 🎨 Component 特有的 UI 狀態
-    readonly searchKeyword = signal<string>('');
-    readonly errorMessage = signal<string>('');
-    readonly selectedCourse = signal<Course | null>(null);
+    // ===== 本地狀態 signals =====
+    readonly searchKeyword = signal<string>(''); // 搜尋框文字。
+    readonly currentSearchParams = signal<CourseSearchParams>({}); // 目前查詢參數（例：排序、篩選、分頁）。
+    readonly selectedCourses = signal<Set<number>>(new Set()); // 被勾選的課程 id 集合。
+    readonly isInitialized = signal<boolean>(false); // 是否已完成初始化（避免一開始就亂觸發搜尋）。
 
-    // ✅ 多重篩選狀態管理
-    readonly currentFilters = signal<CourseFilters>({});
+    // 資料 & 載入狀態
+    readonly coursesData = signal<Course[]>([]); // 畫面要顯示的課程陣列。
+    readonly loadingState = signal<boolean>(false); // 是否載入中。
 
-    // 確認對話框狀態
-    readonly confirmationTitle = signal<string>('');
-    readonly confirmationMessage = signal<string>('');
-    readonly confirmationVariant = signal<'danger' | 'warning' | 'info'>('warning');
-    readonly confirmationLoading = signal<boolean>(false);
+    // 分頁顯示資訊（全部由 API 回應推導）
+    readonly paginationInfo = signal<{
+        totalRecords: number;
+        currentPage: number;
+        pageSize: number;
+        totalPages: number;
+        hasNext: boolean;
+        hasPrevious: boolean;
+    }>({
+        totalRecords: 0,
+        currentPage: 1,
+        pageSize: 10,
+        totalPages: 0,
+        hasNext: false,
+        hasPrevious: false,
+    });
 
-    // 🧮 Component 特有的計算屬性
+    // ===== computed: 從狀態「算出來」的值 =====
+    readonly courses = computed(() => this.coursesData());
+    readonly loading = computed(() => this.loadingState());
+    readonly totalRecords = computed(() => this.paginationInfo().totalRecords);
+    readonly currentPage = computed(() => this.paginationInfo().currentPage);
+    readonly pageSize = computed(() => this.paginationInfo().pageSize);
+    readonly totalPages = computed(() => this.paginationInfo().totalPages);
+    readonly hasNext = computed(() => this.paginationInfo().hasNext);
+    readonly hasPrevious = computed(() => this.paginationInfo().hasPrevious);
+
+    // 選取狀態
+    readonly hasSelectedCourses = computed(() => this.selectedCourses().size > 0);
+    readonly selectedCount = computed(() => this.selectedCourses().size);
+    readonly isEmpty = computed(() => this.courses().length === 0);
     readonly hasData = computed(() => this.courses().length > 0);
-    readonly confirmationConfirmText = computed(() =>
-        this.confirmationVariant() === 'danger' ? '刪除' : '確認'
-    );
-    readonly confirmationCancelText = computed(() => '取消');
 
-    // ✅ 篩選相關計算屬性
-    readonly hasActiveFilters = computed(() => {
-        const filters = this.currentFilters();
-        return !!(
-            filters.learningType ||
-            filters.skillType ||
-            filters.level ||
-            filters.isActive !== undefined ||
-            filters.courseEventId
-        );
+    // 權限（讀 userStore 即時計算）
+    readonly permissions = computed(() => {
+        const user = this.userStore.user() as User | null;
+        const has = (action: string) =>
+            (user?.permissions ?? []).some((p: Permission) => p.resource === 'course' && p.action === action);
+        return {
+            create: has('create'),
+            read: has('read'),
+            update: has('update'),
+            delete: has('delete'),
+        };
     });
 
-    readonly activeFiltersCount = computed(() => {
-        const filters = this.currentFilters();
-        let count = 0;
-        if (filters.learningType) count++;
-        if (filters.skillType) count++;
-        if (filters.level) count++;
-        if (filters.isActive !== undefined) count++;
-        if (filters.courseEventId) count++;
-        return count;
+    // 搜尋副作用：keyword 變更就觸發（初始化後才生效）
+    /**
+     * 每次 searchKeyword 改變，這段就會「自動」跑。
+     * 只有在初始化完成，且字數 ≥ 2 才發出搜尋。
+     */
+    private readonly searchEffect = effect(() => {
+        const keyword = this.searchKeyword().trim();
+        if (this.isInitialized() && keyword.length >= 2) {
+            this.performSearch(keyword);
+        }
     });
 
-    // ViewChild 參考
-    @ViewChild('confirmationModal') confirmationModal!: ConfirmationModalComponent;
-
-    // 私有變數
-    private pendingDeleteCourse: Course | null = null;
-
-    // 🎛️ 表格配置
-    readonly tableColumns = [
-        { key: 'courseName', label: '課程名稱', sortable: true },
-        { key: 'courseEventId', label: '課程活動', sortable: false },
-        { key: 'learningType', label: '學習方式', sortable: true },
-        { key: 'skillType', label: '技能類型', sortable: true },
-        { key: 'level', label: '等級', sortable: true },
-        { key: 'hours', label: '時數', sortable: true },
-        { key: 'isActive', label: '狀態', sortable: true },
-        { key: 'createTime', label: '建立時間', sortable: true },
-        { key: 'actions', label: '操作', sortable: false }
-    ];
-
-    // 🎛️ 操作按鈕配置
-    readonly actionButtons = [
-        { id: 'create', label: '新增課程', icon: 'bi-plus-circle', variant: 'primary' },
-        { id: 'export', label: '匯出', icon: 'bi-download', variant: 'outline-primary' },
-        { id: 'refresh', label: '重新整理', icon: 'bi-arrow-clockwise', variant: 'outline-secondary' }
-    ];
-
-    // 🎨 選項資料
-    readonly learningTypeOptions = LEARNING_TYPE_OPTIONS;
-    readonly skillTypeOptions = SKILL_TYPE_OPTIONS;
-    readonly levelOptions = LEVEL_OPTIONS;
-
-    ngOnInit() {
-        // ✅ 加入這個，確保頁面載入時會搜尋資料
+    // ================== 生命週期 ==================
+    /**
+     * 一進來就載入第一批列表資料。
+     * 然後打開 isInitialized，讓 effect 從此生效。
+     */
+    ngOnInit(): void {
         this.loadInitialData();
+        this.isInitialized.set(true);
     }
 
-    private loadInitialData() {
-        this.courseService.searchCourses({
-            pageable: true,
-            firstIndexInPage: 1,
-            lastIndexInPage: 10
-        }).subscribe({
-            next: (response) => {
-                console.log('✅ 資料載入成功:', response);
-                console.log('📊 初始頁面載入，總記錄數:', this.totalRecords());
-            },
-            error: (error) => console.error('❌ 資料載入失敗:', error)
+    // ================== 共用私有工具 ==================
+    private isApiSuccess<T>(res: ServiceListResponse<T>): boolean {
+        return res.code === CourseListComponent.API_SUCCESS;
+    }
+
+    /** 用 PaginationUtil 由 page/pageSize 轉成 first/lastIndex（1-based）並合併成查詢參數 */
+    private withPageRange(
+        base: CourseSearchParams,
+        page: number,
+        pageSize: number,
+    ): CourseSearchParams {
+        const { firstIndexInPage, lastIndexInPage } = PaginationUtil.toBackendPagination(
+            page,
+            pageSize,
+        );
+        return { ...base, firstIndexInPage, lastIndexInPage };
+    }
+
+    /** 合併查詢條件→重設第一頁→套 page/pageSize 範圍 */
+    private buildParams(updates: Partial<CourseSearchParams>): CourseSearchParams {
+        const merged = QueryParamsBuilder.mergeSearchParams(this.currentSearchParams(), updates);
+        const resetFirst = QueryParamsBuilder.resetToFirstPage(merged);
+        return this.withPageRange(resetFirst, 1, this.pageSize());
+    }
+
+
+    /** 把 API 回來的 dataList 與分頁數字，存到本地 signals。*/
+    private applyPagerResponse(res: ServiceListResponse<Course>) {
+        const d = res.data!;
+        this.coursesData.set(d.dataList);
+        this.paginationInfo.set({
+            totalRecords: d.totalRecords,
+            currentPage: d.page ?? 1,
+            pageSize: d.pageSize ?? 10,
+            totalPages: d.totalPages ?? 0,
+            hasNext: d.hasNext ?? false,
+            hasPrevious: d.hasPrevious ?? false,
         });
     }
 
-    // 🔄 基本事件處理（直接呼叫 Service）
-    onSearch(keyword: string) {
-        this.searchKeyword.set(keyword);
-        this.courseService.searchByKeyword(keyword).subscribe();
+    /** 把「第幾頁/每頁幾筆」換算成 API 需要的「第幾筆到第幾筆」（1-based）。*/
+    private setRangeByPage(page: number, pageSize: number, base: CourseSearchParams) {
+        const first = (page - 1) * pageSize + 1;
+        const last = page * pageSize;
+        return { ...base, firstIndexInPage: first, lastIndexInPage: last };
     }
 
-    // ❌ 移除舊的 onFilter 方法
-    // onFilter(filters: CourseFilters) {
-    //   this.courseService.filterCourses(filters).subscribe();
-    // }
+    /** 統一呼叫查詢 + finalize 關閉 loading + 成功即套用回應 */
+    private queryAndApply(params: CourseSearchParams, successMsg?: string, errorMsg?: string) {
+        //設定 loading 中、記住目前查詢參數。
+        this.loadingState.set(true);
+        this.currentSearchParams.set(params);
 
-    // ✅ 新的單一欄位篩選方法
-    onFilterChange(field: keyof CourseFilters, value: any) {
-        const filters = { ...this.currentFilters() };
-
-        // 處理不同類型的值
-        if (value === '' || value === undefined || value === null) {
-            delete filters[field]; // 清除該欄位的篩選
-        } else {
-            // 特殊處理 boolean 類型
-            if (field === 'isActive') {
-                if (value === 'true') {
-                    filters[field] = true;
-                } else if (value === 'false') {
-                    filters[field] = false;
-                } else {
-                    delete filters[field];
-                }
-            } else if (field === 'courseEventId') {
-                filters[field] = parseInt(value, 10);
-            } else {
-                filters[field] = value;
-            }
-        }
-
-        console.log(`🔍 更新篩選條件 ${field}:`, value, '→ 完整篩選:', filters);
-        this.currentFilters.set(filters);
-        this.courseService.filterCourses(filters).subscribe();
-    }
-
-    // ✅ 清除單一篩選條件
-    onClearFilter(field: keyof CourseFilters) {
-        this.onFilterChange(field, undefined);
-    }
-
-    // ✅ 清除所有篩選條件
-    onClearAllFilters() {
-        this.currentFilters.set({});
-        this.courseService.clearSearch().subscribe();
-    }
-
-    onSort(column: keyof Course) {
-        this.courseService.toggleSort(column).subscribe();
-    }
-
-    onPageChange(page: number) {
-        this.courseService.loadPage(page).subscribe();
-    }
-
-    onPageSizeChange(event: Event) {
-        const target = event.target as HTMLSelectElement;
-        const size = parseInt(target.value, 10);
-        this.courseService.loadPage(1, size).subscribe();
-    }
-
-    onNextPage() {
-        this.courseService.nextPage().subscribe();
-    }
-
-    onPreviousPage() {
-        this.courseService.previousPage().subscribe();
-    }
-
-    onRefresh() {
-        this.courseService.reload().subscribe();
-    }
-
-    onClearSearch() {
-        this.searchKeyword.set('');
-        this.currentFilters.set({}); // ✅ 同時清除篩選狀態
-        this.courseService.clearSearch().subscribe();
-    }
-
-    // 🎨 UI 樣式相關方法
-    getLearningTypeVariant(type: string): string {
-        const variants: Record<string, string> = {
-            '實體': 'primary',
-            '線上': 'success',
-            '混合': 'info'
-        };
-        return variants[type] || 'secondary';
-    }
-
-    getSkillTypeVariant(type: string): string {
-        const variants: Record<string, string> = {
-            '軟體力': 'purple',
-            '數據力': 'orange',
-            '雲': 'teal'
-        };
-        return variants[type] || 'secondary';
-    }
-
-    getLevelVariant(level: string): string {
-        const variants: Record<string, string> = {
-            '基礎': 'success',
-            '進階': 'danger'
-        };
-        return variants[level] || 'secondary';
-    }
-
-    getSortIcon(column: string): string {
-        const sort = this.courseService.getCurrentSort();
-        if (sort.column !== column) return 'bi bi-chevron-expand';
-        return sort.direction === 'asc' ? 'bi bi-chevron-up' : 'bi bi-chevron-down';
-    }
-
-    getSortAriaLabel(column: string): string {
-        const sort = this.courseService.getCurrentSort();
-        if (sort.column !== column) return `按 ${column} 排序`;
-        const direction = sort.direction === 'asc' ? '升序' : '降序';
-        return `目前按 ${column} ${direction}排序，點擊切換`;
-    }
-
-    getRowActions(course: Course) {
-        return [
-            { id: 'view', icon: 'bi-eye', tooltip: '查看', variant: 'outline-primary' },
-            { id: 'edit', icon: 'bi-pencil', tooltip: '編輯', variant: 'outline-warning' },
-            { id: 'delete', icon: 'bi-trash', tooltip: '刪除', variant: 'outline-danger' }
-        ];
-    }
-
-    // 🔧 輔助方法
-    formatDate(dateString: string): string {
-        if (!dateString) return '-';
-        return new Date(dateString).toLocaleDateString('zh-TW', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit'
-        });
-    }
-
-    getCourseEventName(eventId: number): string {
-        // 這裡可以從 service 或其他地方取得課程活動名稱
-        return `活動 ${eventId}`;
-    }
-
-    // ✅ 加入 parseInt 方法供 template 使用
-    parseInt(value: string): number {
-        return parseInt(value, 10);
-    }
-
-    // ✅ 加入 Math 物件供 template 使用
-    Math = Math;
-
-    getVisiblePages(): number[] {
-        const current = this.currentPage();
-        const total = this.totalPages();
-        const delta = 2; // 顯示當前頁前後各2頁
-
-        const range = [];
-        const rangeWithDots = [];
-
-        for (let i = Math.max(2, current - delta);
-            i <= Math.min(total - 1, current + delta);
-            i++) {
-            range.push(i);
-        }
-
-        if (current - delta > 2) {
-            rangeWithDots.push(1, -1); // -1 表示省略號
-        } else {
-            rangeWithDots.push(1);
-        }
-
-        rangeWithDots.push(...range);
-
-        if (current + delta < total - 1) {
-            rangeWithDots.push(-1, total); // -1 表示省略號
-        } else if (total > 1) {
-            rangeWithDots.push(total);
-        }
-
-        return rangeWithDots.filter(page => page !== -1); // 暫時移除省略號邏輯
-    }
-
-    // 🎯 操作事件處理
-    onActionClick(actionId: string) {
-        switch (actionId) {
-            case 'create':
-                this.onCreateCourse();
-                break;
-            case 'export':
-                this.onExportCourses();
-                break;
-            case 'refresh':
-                this.onRefresh();
-                break;
-        }
-    }
-
-    onRowAction(actionId: string, course: Course) {
-        switch (actionId) {
-            case 'view':
-                this.onViewCourse(course);
-                break;
-            case 'edit':
-                this.onEditCourse(course);
-                break;
-            case 'delete':
-                this.onDeleteCourse(course);
-                break;
-        }
-    }
-
-    // 💾 CRUD 操作（需要處理回應的）
-    onCreateCourse() {
-        // 導航到新增頁面或開啟對話框
-        console.log('新增課程');
-        this.messageService.info('導航到新增課程頁面');
-    }
-
-    onViewCourse(course: Course) {
-        console.log('查看課程:', course);
-        this.selectedCourse.set(course);
-        // 開啟查看對話框或導航到詳細頁面
-    }
-
-    onEditCourse(course: Course) {
-        console.log('編輯課程:', course);
-        this.selectedCourse.set(course);
-        // 開啟編輯對話框或導航到編輯頁面
-    }
-
-    onDeleteCourse(course: Course) {
-        this.pendingDeleteCourse = course;
-        this.confirmationTitle.set('確認刪除');
-        this.confirmationMessage.set(`確定要刪除課程「${course.courseName}」嗎？此操作無法復原。`);
-        this.confirmationVariant.set('danger');
-        this.confirmationModal.show();
-    }
-
-    onExportCourses() {
-        if (!this.hasData()) {
-            this.messageService.warning('沒有可匯出的資料');
-            return;
-        }
-        console.log('匯出課程');
-        this.messageService.info('開始匯出課程資料...');
-    }
-
-    // 🔄 確認對話框處理
-    onConfirmAction() {
-        if (this.pendingDeleteCourse) {
-            this.confirmationLoading.set(true);
-
-            this.courseService.deleteCourse(this.pendingDeleteCourse.courseId)
-                .pipe(takeUntilDestroyed(this.destroyRef))
-                .subscribe({
-                    next: (success) => {
-                        this.confirmationLoading.set(false);
-                        if (success) {
-                            this.messageService.success(`課程「${this.pendingDeleteCourse!.courseName}」刪除成功！`);
-                        } else {
-                            this.messageService.error('課程刪除失敗！');
-                        }
-                        this.pendingDeleteCourse = null;
-                    },
-                    error: (error) => {
-                        this.confirmationLoading.set(false);
-                        this.messageService.error('刪除時發生錯誤');
-                        console.error('刪除課程錯誤:', error);
+        //呼叫 CourseService.searchCourses 去後端拿資料。
+        this.courseService
+            .searchCourses(params)
+            //finalize：不管成功/失敗都把 loading 關掉。
+            .pipe(finalize(() => this.loadingState.set(false)))
+            .subscribe({
+                //成功就把資料丟進 applyPagerResponse，順便顯示成功訊息（如果有）。
+                next: (res) => {
+                    if (this.isApiSuccess(res) && res.data) {
+                        this.applyPagerResponse(res);
+                        if (successMsg) this.messageService.success(successMsg);
                     }
-                });
-        }
+                    //失敗就顯示錯誤訊息。
+                    else {
+                        this.messageService.error(errorMsg ?? '查詢失敗');
+                    }
+                },
+                error: () => this.messageService.error(errorMsg ?? '查詢失敗，請稍後再試'),
+            });
     }
 
-    onCancelAction() {
-        this.pendingDeleteCourse = null;
-        this.confirmationLoading.set(false);
+    // ================== 初始化 / 搜尋 ==================
+
+    /** 初始載入：預設排序 + 第一頁 + 10 筆 */
+    private loadInitialData(): void {
+        const base: CourseSearchParams = {
+            keyword: '',
+            pageable: true,
+            sortColumn: 'coursId',
+            sortDirection: 'asc',
+        };
+        const initial = this.setRangeByPage(1, this.paginationInfo().pageSize, base);
+        // 用統一方法 queryAndApply 發送與處理回應。
+        this.queryAndApply(initial, undefined, '課程資料載入失敗');
     }
 
-    // 🎯 空狀態處理
-    getEmptyStateTitle(): string {
-        return this.courseService.hasSearchParams() ? '沒有找到符合條件的課程' : '還沒有課程資料';
+    /** 關鍵字搜尋：重置為第一頁 */
+    private performSearch(keyword: string): void {
+        const base = { ...this.currentSearchParams(), keyword };
+        const params = this.setRangeByPage(1, this.pageSize(), base);
+        this.queryAndApply(params, undefined, '搜尋失敗');
     }
 
-    getEmptyStateMessage(): string {
-        return this.courseService.hasSearchParams()
-            ? '請調整搜尋條件或清除篩選後重試'
-            : '開始建立您的第一門課程吧！';
+    // ================== SearchFilterComponent 綁定 ==================
+
+    /** SearchFilter 設定 */
+    readonly searchFilterConfig = computed<SearchFilterConfig>(() => ({
+        searchPlaceholder: '請輸入課程名稱或關鍵字…',
+        searchLabel: '課程搜尋',
+        showPageSize: true,
+        pageSizeOptions: [10, 20, 50, 100],
+        showTotalCount: true,
+        totalCountLabel: '筆課程',
+        showClearButton: true,
+        filters: [
+            {
+                key: 'learningType',
+                label: '學習方式',
+                options: LEARNING_TYPE_OPTIONS.map((o) => ({ value: o.value, text: o.label })),
+            },
+            {
+                key: 'skillType',
+                label: '技能類型',
+                options: SKILL_TYPE_OPTIONS.map((o) => ({ value: o.value, text: o.label })),
+            },
+            {
+                key: 'level',
+                label: '課程等級',
+                options: LEVEL_OPTIONS.map((o) => ({ value: o.value, text: o.label })),
+            },
+            {
+                key: 'isActive',
+                label: '狀態',
+                options: [
+                    { value: true, text: '啟用' },
+                    { value: false, text: '停用' },
+                ],
+            },
+        ],
+    }));
+
+    /** currentSearchParams → SearchFilter 的顯示值 */
+    readonly currentFilterValues = computed(() => {
+        const p = this.currentSearchParams();
+        return {
+            learningType: p.learningType ?? '',
+            skillType: p.skillType ?? '',
+            level: p.level ?? '',
+            isActive: p.isActive ?? '',
+            courseEventId: p.courseEventId ?? '',
+        };
+    });
+
+    // ================== 事件處理 ==================
+
+    /** 搜尋框變更（effect 會自動觸發搜尋） */
+    onSearchChange(keyword: string): void {
+        this.searchKeyword.set(keyword);
     }
 
-    getEmptyStateActionText(): string {
-        return this.courseService.hasSearchParams() ? '清除篩選' : '新增課程';
+    /** 篩選變更（收斂型別，避免 any） */
+    // 把新的篩選條件加進 currentSearchParams，重置回第 1 頁，再查一次。
+    onFilterChange(event: {
+        key: string;
+        value: string | number | boolean | '' | null | undefined;
+    }): void {
+        const updates: Record<string, any> = {};
+        // 清空就給 undefined，讓 merge 後被 resetToFirstPage + clean 掉
+        updates[event.key] =
+            event.value === '' || event.value === null || event.value === undefined
+                ? undefined
+                : event.value;
+
+        const params = this.buildParams(updates);
+        this.queryAndApply(params, '篩選條件已套用', '篩選失敗');
     }
 
-    getEmptyStateActionIcon(): string {
-        return this.courseService.hasSearchParams() ? 'bi-arrow-clockwise' : 'bi-plus-circle';
+    /** 每頁筆數變更：重置第一頁並沿用其它條件 */
+    // 改每頁筆數 → 回到第 1 頁 → 查一次。
+    onPageSizeChange(pageSize: number): void {
+        // 同步顯示（避免 UI 間隙顯示舊 pageSize）
+        this.paginationInfo.set({ ...this.paginationInfo(), pageSize });
+
+        // 保留現有條件，只換 page/pageSize → first/lastIndex
+        const merged = QueryParamsBuilder.mergeSearchParams(this.currentSearchParams(), {});
+        const params = this.withPageRange(merged, 1, pageSize);
+
+        this.queryAndApply(params, `已調整為每頁 ${pageSize} 筆`, '分頁設定失敗');
     }
 
-    onEmptyStateAction() {
-        if (this.courseService.hasSearchParams()) {
-            this.onClearSearch();
-        } else {
-            this.onCreateCourse();
-        }
+    /** 清除搜尋條件（保留目前 pageSize） */
+    clearSearch(): void {
+        this.searchKeyword.set('');
+        this.selectedCourses.set(new Set());
+
+        const base: CourseSearchParams = {
+            keyword: '',
+            pageable: true,
+            sortColumn: 'courseName',
+            sortDirection: 'asc',
+        };
+        const params = this.setRangeByPage(1, this.pageSize(), base);
+        this.queryAndApply(params, '已清除所有搜尋條件', '清除搜尋失敗');
     }
 
-    // ✅ 加入便利方法供 template 使用
-    hasSearchParams(): boolean {
-        return this.courseService.hasSearchParams();
+    // ================== 選取功能 ==================
+
+    /** 切換單筆勾選。 */
+    toggleCourseSelection(courseId: number): void {
+        const set = new Set(this.selectedCourses());
+        set.has(courseId) ? set.delete(courseId) : set.add(courseId);
+        this.selectedCourses.set(set);
     }
 
-    // 🔄 錯誤處理
-    onRetry() {
-        this.errorMessage.set('');
-        this.courseService.reload().subscribe();
+    /** 這筆是否有被勾。 */
+    isCourseSelected(courseId: number): boolean {
+        return this.selectedCourses().has(courseId);
     }
 
-    onDismissError() {
-        this.errorMessage.set('');
-    }
-
-    // 🔧 表格操作
-    onColumnToggle(column: any) {
-        console.log('切換欄位顯示:', column);
-        // 實作欄位顯示/隱藏邏輯
+    /** 如果都勾了就全取消；否則把目前頁面所有 id 全放進去。 */
+    toggleSelectAll(): void {
+        const allIds = this.courses().map((c) => c.courseId);
+        const selected = this.selectedCourses();
+        this.selectedCourses.set(
+            selected.size === allIds.length ? new Set() : new Set(allIds),
+        );
     }
 }

@@ -96,7 +96,8 @@ export const SKILL_TYPE_OPTIONS = [
 export type SkillType = typeof SKILL_TYPE_OPTIONS[number]['value'];
 
 export const LEVEL_OPTIONS = [
-    { value: '基礎', label: '基礎' },
+    { value: '初階', label: '初階' },
+    { value: '中階', label: '中階' },
     { value: '進階', label: '進階' }
 ] as const;
 export type Level = typeof LEVEL_OPTIONS[number]['value'];

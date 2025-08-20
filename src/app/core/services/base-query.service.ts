@@ -88,7 +88,7 @@ export abstract class BaseQueryService<T, TSearchParams extends BaseSearchParams
         };
 
         return of({
-            code: 200,
+            code: 1000,
             message: '查詢成功',
             data: result
         }).pipe(delay(300));
@@ -120,7 +120,7 @@ export abstract class BaseQueryService<T, TSearchParams extends BaseSearchParams
 
         // 使用 QueryParamsBuilder 建構基礎參數
         const baseQuery = QueryParamsBuilder.buildBaseQuery(processedParams);
-        
+
         // 合併自訂參數
         return {
             ...baseQuery,
@@ -140,7 +140,7 @@ export abstract class BaseQueryService<T, TSearchParams extends BaseSearchParams
         const adaptedData = QueryTransformer.adaptResponse(response, requestParams || {});
 
         return {
-            code: 200,
+            code: 1000,
             message: '查詢成功',
             data: adaptedData
         };

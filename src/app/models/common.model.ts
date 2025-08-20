@@ -73,9 +73,9 @@ export const PAGINATION_DEFAULTS = {
 
 /** 🟢 模組預設排序欄位（前端自訂；值需對應後端白名單實際欄位名） */
 export const SORT_DEFAULTS = {
-    DEPARTMENT: 'deptCode' as const,
-    EMPLOYEE: 'empCode' as const,
-    JOB_ROLE: 'jobRoleCode' as const,
-    COURSE: 'courseName' as const,
-    COURSE_EVENT: 'activityTitle' as const,
+    DEPARTMENT: 'deptId' as const,
+    EMPLOYEE: 'empId' as const,
+    JOB_ROLE: 'jobRoleId' as const,
+    COURSE: 'courseId' as const,
+    COURSE_EVENT: 'courseEventId' as const,
 } as const;

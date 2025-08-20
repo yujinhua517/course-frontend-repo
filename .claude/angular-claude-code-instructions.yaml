@@ -1,0 +1,115 @@
+# .claude-code-instructions
+applyTo: "**"
+description: Angular 19+ Enterprise Project – Coding, Structure, and Naming Guidelines
+rules:
+  # ========================
+  # Project Overview
+  # ========================
+  - Use Angular 19+ with standalone components, signals, RxJS, SCSS (@use), Bootstrap 5.
+  - Tech stack: Angular 19+, TypeScript, ESLint, Prettier, pnpm.
+  - Build tools: Angular CLI / Vite.
+
+  # ========================
+  # Folder Structure
+  # ========================
+  - /src/app/core/: global services (HttpErrorHandlerService, DialogService, AuthService), guards, interceptors, utilities.
+  - /src/app/features/: feature-specific components, services, store, models, pipes, pages, routes.
+  - /src/app/shared/: stateless UI components, shared pipes, utils. Never put business logic here.
+  - /src/assets/: static assets (images, icons, fonts, i18n).
+  - /environments/: environment variables.
+
+  # ========================
+  # Build & Validation
+  # ========================
+  - Node 20.x, pnpm 9.x, Angular CLI 19/20.
+  - Install: `pnpm install`
+  - Dev: `pnpm start`
+  - Build: `pnpm build`
+  - Test: `pnpm test --watch=false`
+  - Lint/Format: `pnpm lint && pnpm format`
+  - CI check: `pnpm lint && pnpm test && pnpm build`
+
+  # ========================
+  # Coding Standards
+  # ========================
+  - Naming conventions:
+      * folders/files: kebab-case
+      * classes/types: PascalCase
+      * variables/functions: camelCase
+      * constants: UPPER_SNAKE_CASE
+  - Always separate into .ts / .html / .scss files. No inline template/style (except demos).
+  - Always reuse shared resources. No duplicates.
+  - Business logic must stay in services (core or features). Never in shared.
+  - All HTTP requests must use HttpErrorHandlerService and ApiResponse<T>.
+  - ApiResponse<T> format:
+      ```ts
+      export interface ApiResponse<T> { code: number; message: string; data?: T; }
+      ```
+  - Convert camelCase <-> snake_case with core/utils/object-case.util.ts.
+  - Services must return Observables, never Promises or callbacks.
+  - Prefer inject() for DI. Use constructor only for advanced cases.
+  - State management via signals. Do not subscribe directly in components.
+  - Every new feature must have matching `.spec.ts` test.
+
+  # ========================
+  # Styling
+  # ========================
+  - Precedence: Bootstrap 5 > src/styles > shared > component-local.
+  - Always use @use in SCSS. @import is prohibited.
+  - No inline styles or direct HTML overrides.
+  - New shared SCSS must be announced to team.
+
+  # ========================
+  # UI & Accessibility
+  # ========================
+  - All form fields must have <label>. Required fields use `<span class="text-danger">*</span>`.
+  - Error messages must be under field with role="alert".
+  - Follow WCAG 2.1 AA.
+  - Always use Angular NgOptimizedImage (`[ngSrc]`). Never plain `<img>`.
+
+  # ========================
+  # Routing & Data Flow
+  # ========================
+  - Use loadComponent() for feature routes. loadChildren() only for grouped lazy loads.
+  - API calls must use resource/httpResource with request()/loader().
+  - Service must contain one flag to toggle mock/API. Disable mock before PR.
+  - Sorting must support asc / desc / null (three-state).
+
+  # ========================
+  # Forms
+  # ========================
+  - Always use Reactive Form + FormBuilder. Avoid template-driven forms.
+  - initializeData() only sets defaults. Data fetch must be triggered by user.
+
+  # ========================
+  # Do & Don’t
+  # ========================
+  - ✅ signals, input()/output() ; ❌ @Input(), @Output()
+  - ✅ inject() ; ❌ unnecessary constructor
+  - ✅ loadComponent() ; ❌ overuse loadChildren()
+  - ✅ resource()/httpResource() ; ❌ component subscribe()
+  - ✅ @if/@for ; ❌ *ngIf/*ngFor
+  - ✅ NgOptimizedImage ; ❌ plain <img>
+  - ✅ Reactive Form ; ❌ template-driven form
+  - ✅ small focused components ; ❌ monolithic components
+  - ✅ three-file separation ; ❌ inline template/style
+  - ✅ manage assets in /assets ; ❌ scatter static files
+  - ✅ @use SCSS ; ❌ @import SCSS
+  - ✅ shared error handling ; ❌ custom handleError in each
+  - ✅ Observable + type safety ; ❌ Promise, callback, any
+
+  # ========================
+  # Review Checklist
+  # ========================
+  - Shared resources reused
+  - API response format correct, error handling unified
+  - Naming conventions consistent
+  - Style precedence correct
+  - Accessibility complete (label, placeholder, aria-*)
+  - Env vars and API paths correct
+  - Observable + type safety enforced
+  - Signals/resource/reactive flow used for state
+  - Search/sort logic correct
+  - .spec.ts tests exist
+  - No forbidden practices
+  - README/comments are clear
