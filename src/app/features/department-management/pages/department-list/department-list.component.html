@@ -45,7 +45,7 @@
     <!-- 資料表格 -->
     @if (!loading() && !error() && departments().length > 0) {
     <div class="table-container card">
-        <div class="table-responsive">
+        <div class="table-responsive" [class.fixed-height]="shouldUseFixedHeight()">
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <app-table-header [config]="tableHeaderConfig()" (sortChanged)="onTableSort($event)"

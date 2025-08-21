@@ -27,8 +27,80 @@
     </div>
     <!-- 搜尋與篩選區 -->
     <app-search-filter [config]="searchFilterConfig()" [searchKeyword]="searchKeyword()" [pageSize]="pageSize()"
-        [totalCount]="totalRecords()" [loading]="loading()" [filterValues]="currentFilterValues()"
-        (searchChanged)="onSearchChange($event)" (filterChanged)="onFilterChange($event)"
-        (pageSizeChanged)="onPageSizeChange($event)" (searchCleared)="clearSearch()">
+        [totalCount]="totalRecords()" [filterValues]="currentFilterValues()" (searchChanged)="onSearchChange($event)"
+        (filterChanged)="onFilterChange($event)" (pageSizeChanged)="onPageSizeChange($event)"
+        (searchCleared)="clearSearch()">
     </app-search-filter>
+
+    <!-- 載入狀態 -->
+    @if (loading()) {
+    <app-loading-state [config]="loadingConfig()"></app-loading-state>
+    }
+
+    <!-- 錯誤訊息 -->
+    @if (!loading() && error()) {
+    <app-error-message [config]="errorConfig()" (errorDismissed)="clearError()"></app-error-message>
+    }
+
+    <!-- 資料表格 -->
+    @if (!loading() && !error() && courses().length > 0) {
+    <div class="table-container card">
+        <div class="table-responsive" [class.fixed-height]="shouldUseFixedHeight()">
+            <table class="table table-hover mb-0" [class.has-select-column]="permissions().delete">
+                <thead class="table-light">
+                    <app-table-header [config]="tableHeaderConfig()" (sortChanged)="onTableSort($event)"
+                        (selectAllChanged)="onTableSelectAll($event)">
+                    </app-table-header>
+                </thead>
+                <tbody>
+                    <app-table-body [config]="tableBodyConfig()" [selectedItems]="selectedCourseItems()"
+                        (itemSelected)="onTableItemSelected($event)">
+                    </app-table-body>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    }
+
+    <!-- 模板定義 -->
+    <ng-template #idTemplate let-course>
+        <span [innerHTML]="course.courseId | highlight:searchKeyword()"></span>
+    </ng-template>
+
+    <ng-template #codeTemplate let-course>
+        <span [innerHTML]="course.courseName | highlight:searchKeyword()"></span>
+    </ng-template>
+
+    <ng-template #nameTemplate let-course>
+        <span [innerHTML]="course.learningType | highlight:searchKeyword()"></span>
+    </ng-template>
+
+    <ng-template #emailTemplate let-course>
+        <span [innerHTML]="course.skillType | highlight:searchKeyword()"></span>
+    </ng-template>
+
+    <ng-template #deptTemplate let-course>
+        <span [innerHTML]="(course.level || '未指定') | highlight:searchKeyword()"></span>
+    </ng-template>
+
+    <!-- <ng-template #statusTemplate let-course>
+        <app-status-badge [config]="getStatusConfig(course)" (statusToggled)="onToggleStatus(course)"
+            [ariaLabel]="'切換 ' + course.courseName + ' 的狀態'">
+        </app-status-badge>
+    </ng-template> -->
+
+    <ng-template #timeTemplate let-course>
+        {{ course.createTime | date:'yyyy/MM/dd HH:mm' }}
+    </ng-template>
+
+    <ng-template #actionsTemplate let-course>
+        <app-action-button-group [config]="getActionConfig(course)" (viewClicked)="onView(course)"
+            (editClicked)="onEdit(course)" (deleteClicked)="onDelete(course)">
+        </app-action-button-group>
+    </ng-template>
+
+    <!-- 空狀態 -->
+    @if (!loading() && !error() && courses().length === 0) {
+    <app-empty-state [config]="emptyStateConfig()" (actionClicked)="onEmptyStateAction($event)"></app-empty-state>
+    }
 </div>

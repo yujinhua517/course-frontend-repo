@@ -1,5 +1,5 @@
 @for (item of config().data; track getTrackByFn()(i, item); let i = $index) {
-<tr [class]="getRowClass(item)" (click)="onRowClick(item)">
+<tr [class]="getRowClass(item)" [class.no-select-column]="!config().showSelectColumn" (click)="onRowClick(item)">
     <!-- 選擇欄位 -->
     @if (config().showSelectColumn) {
     <td class="text-center" style="width: 5%;">

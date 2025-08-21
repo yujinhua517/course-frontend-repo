@@ -404,6 +404,9 @@ export class DepartmentListComponent implements OnInit {
         return selected.length > 0 && !this.isAllSelected();
     });
 
+    // 檢查是否需要固定高度 (數據行數 >= 10)
+    shouldUseFixedHeight = computed(() => this.departments().length >= 10);
+
     ngOnInit(): void {
         this.loadDepartments();
     }

@@ -306,6 +306,7 @@ export class CourseEventListComponent implements OnInit {
 
     // 錯誤狀態配置
     readonly errorConfig = computed<ErrorMessageConfig>(() => ({
+        show: !!this.error(),
         title: '載入失敗',
         message: this.error() || '無法載入課程活動資料，請稍後再試',
         showRetryButton: true,
@@ -366,6 +367,9 @@ export class CourseEventListComponent implements OnInit {
         const selected = this.selectedCourseEvents();
         return selected.length > 0 && !this.isAllSelected();
     });
+
+    // 檢查是否需要固定高度 (數據行數 >= 10)
+    readonly shouldUseFixedHeight = computed(() => this.courseEvents().length >= 10);
 
     ngOnInit(): void {
         this.loadAvailableYears();
@@ -641,6 +645,11 @@ export class CourseEventListComponent implements OnInit {
     onRetry(): void {
         this.courseEventStore.clearError();
         this.loadCourseEvents();
+    }
+
+    // wrapper for template to clear error
+    clearError(): void {
+        this.courseEventStore.clearError();
     }
 
     // 狀態配置

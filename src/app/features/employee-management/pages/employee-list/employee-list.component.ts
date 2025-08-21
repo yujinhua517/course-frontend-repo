@@ -304,7 +304,7 @@ export class EmployeeListComponent implements OnInit {
 
     // 錯誤訊息配置
     readonly errorConfig = computed<ErrorMessageConfig>(() => ({
-        show: true,
+        show: !!this.error(),
         message: this.error() || '',
         type: 'danger',
         dismissible: true,
@@ -415,6 +415,9 @@ export class EmployeeListComponent implements OnInit {
         const selected = this.selectedEmployees();
         return selected.length > 0 && !this.isAllSelected();
     });
+
+    // 檢查是否需要固定高度 (數據行數 >= 10)
+    shouldUseFixedHeight = computed(() => this.employees().length >= 10);
 
     ngOnInit(): void {
         //console.log('Employee List Component: ngOnInit called');

@@ -129,9 +129,125 @@
     }
 }
 
+// 動態高度表格樣式 (可選用) - 數據少時自適應，多時固定高度
+@mixin dynamic-height-table($max-rows: 10, $row-height: 49px, $header-height: 58px) {
+    .table-container {
+        .table-responsive {
+            // 預設自適應高度，當數據超過 max-rows 時會透過 JavaScript 切換為固定高度
+            max-height: calc($max-rows * $row-height + $header-height);
+            overflow-y: auto; // 允許垂直滾動
+            overflow-x: hidden; // 隱藏水平滾動條
+            border: 1px solid rgba($brand-gray, 0.1);
+            border-radius: 0.5rem;
+
+            // 自定義滾動條樣式
+            &::-webkit-scrollbar {
+                width: 8px;
+            }
+
+            &::-webkit-scrollbar-track {
+                background: rgba($brand-gray, 0.1);
+                border-radius: 4px;
+            }
+
+            &::-webkit-scrollbar-thumb {
+                background: rgba($brand-primary, 0.3);
+                border-radius: 4px;
+
+                &:hover {
+                    background: rgba($brand-primary, 0.5);
+                }
+            }
+
+            // 當數據行數 >= max-rows 時的固定高度樣式
+            &.fixed-height {
+                height: calc($max-rows * $row-height + $header-height);
+            }
+
+            .table {
+                // 確保表格使用固定佈局
+                table-layout: fixed !important;
+                width: 100% !important;
+                margin: 0;
+
+                thead {
+                    // 固定表頭
+                    position: sticky;
+                    top: 0;
+                    z-index: 10;
+                    background: $brand-primary;
+
+                    th {
+                        height: $header-height; // 固定表頭高度
+                        padding: 1rem 0.75rem;
+                        border-bottom: 2px solid rgba($brand-gray, 0.1);
+                        background: $brand-primary;
+                        color: $brand-bg;
+                    }
+                }
+
+                tbody {
+                    // 保持正常的表格布局，不使用 display: block
+                    tr {
+                        height: $row-height; // 固定每行高度
+                        min-height: $row-height;
+
+                        td {
+                            vertical-align: middle;
+                            padding: 0.5rem 0.75rem;
+                            border-bottom: 1px solid rgba($brand-gray, 0.05);
+                            box-sizing: border-box;
+                            overflow: hidden;
+                            text-overflow: ellipsis;
+                            white-space: nowrap;
+                        }
+
+                        &:hover {
+                            background-color: rgba($brand-primary, 0.02);
+                        }
+
+                        &.table-active {
+                            background-color: rgba($brand-primary, 0.05) !important;
+
+                            td {
+                                border-color: rgba($brand-primary, 0.1);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// 固定高度表格樣式 (向後相容)
+@mixin fixed-height-table($rows: 10, $row-height: 49px, $header-height: 58px) {
+    @include dynamic-height-table($rows, $row-height, $header-height);
+    
+    .table-container .table-responsive {
+        height: calc($rows * $row-height + $header-height) !important;
+    }
+}
+
 // 完整列表頁面樣式
 @mixin complete-list-page {
     @include page-container;
     @include page-header;
     @include table-container;
+}
+
+// 帶動態高度表格的完整列表頁面樣式 (推薦)
+@mixin complete-list-page-with-dynamic-table($max-rows: 10, $row-height: 49px, $header-height: 58px) {
+    @include page-container;
+    @include page-header;
+    @include table-container;
+    @include dynamic-height-table($max-rows, $row-height, $header-height);
+}
+
+// 帶固定高度表格的完整列表頁面樣式 (向後相容)
+@mixin complete-list-page-with-fixed-table($rows: 10, $row-height: 49px, $header-height: 58px) {
+    @include page-container;
+    @include page-header;
+    @include table-container;
+    @include fixed-height-table($rows, $row-height, $header-height);
 }

@@ -149,6 +149,7 @@ export class JobRoleListComponent implements OnInit {
     }));
 
     readonly errorConfig = computed<ErrorMessageConfig>(() => ({
+        show: !!this.error(),
         message: this.error() || '載入職務資料失敗',
         type: 'danger',
         title: '載入錯誤',
@@ -521,6 +522,9 @@ export class JobRoleListComponent implements OnInit {
         const selected = this.selectedJobRoles();
         return selected.length > 0 && !this.isAllSelected();
     }
+
+    // 檢查是否需要固定高度 (數據行數 >= 10)
+    shouldUseFixedHeight = computed(() => this.jobRoles().length >= 10);
 
     // 清除選擇
     clearSelection(): void {

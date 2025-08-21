@@ -29,7 +29,7 @@ export class CourseService extends BaseQueryService<Course, CourseSearchParams> 
     // BaseQueryService 要求實作的屬性
     protected readonly apiUrl = `${environment.apiBaseUrl}/courses`;
     protected readonly useMockData = false; // 開發階段使用模擬資料，正式環境改為 false
-    protected readonly defaultSortColumn = 'courseId';
+    protected readonly defaultSortColumn = 'courseId'; // 在沒有傳入 sortColumn 時會自動生效。
     protected readonly mockData = MOCK_COURSES;
 
     // 本地狀態管理
