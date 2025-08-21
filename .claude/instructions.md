@@ -54,21 +54,31 @@ pnpm lint && pnpm test && pnpm build
 - **Always generate**: Corresponding `.spec.ts` test files
 
 ### Angular 19+ Modern Patterns
+
+**Component Structure (standalone by default):**
 ```typescript
-// ✅ CORRECT: Use signals and inject()
+// ✅ CORRECT: Angular 19+ standalone component
 @Component({
   selector: 'app-user-profile',
-  standalone: true,
+  standalone: true, // Now default, can be omitted
   templateUrl: './user-profile.component.html',
   styleUrl: './user-profile.component.scss'
 })
 export class UserProfileComponent {
   private readonly userService = inject(UserService);
-  readonly user = signal<User | null>(null);
-  readonly isLoading = signal(false);
   
+  // Modern signal-based state
   readonly userName = input<string>();
   readonly userSelected = output<User>();
+  
+  // Use resource for data fetching
+  readonly userResource = resource({
+    request: () => ({ id: this.userName() }),
+    loader: ({ request }) => this.userService.getUser(request.id)
+  });
+  
+  readonly user = computed(() => this.userResource.value());
+  readonly isLoading = computed(() => this.userResource.isLoading());
 }
 
 // ❌ WRONG: Old patterns
@@ -81,14 +91,41 @@ export class UserProfileComponent {
 ```
 
 ### Template Syntax
+
+**New Control Flow (Angular 17+, stable in 19):**
 ```html
 <!-- ✅ CORRECT: New control flow -->
-@if (user()) {
+@if (user(); as currentUser) {
   <div class="user-profile">
+    <h2>{{ currentUser.name }}</h2>
+    
     @for (item of items(); track item.id) {
-      <div>{{ item.name }}</div>
+      <div class="item">{{ item.name }}</div>
+    } @empty {
+      <p>No items available</p>
+    }
+    
+    @switch (user().status) {
+      @case ('active') {
+        <span class="badge badge-success">Active</span>
+      }
+      @case ('inactive') {
+        <span class="badge badge-warning">Inactive</span>
+      }
+      @default {
+        <span class="badge badge-secondary">Unknown</span>
+      }
     }
   </div>
+}
+
+<!-- @defer for lazy loading -->
+@defer (when shouldLoadChart()) {
+  <app-expensive-chart [data]="chartData()" />
+} @placeholder {
+  <div class="loading-placeholder">Chart will load when needed</div>
+} @loading {
+  <div class="spinner">Loading chart...</div>
 }
 
 <!-- ❌ WRONG: Old structural directives -->
@@ -100,8 +137,51 @@ export class UserProfileComponent {
 ```
 
 ### HTTP and Error Handling
+
+**Modern Approach - httpResource() (Angular 19.2+):**
 ```typescript
-// ✅ CORRECT: Use HttpErrorHandlerService and ApiResponse<T>
+// ✅ BEST: Use httpResource for reactive HTTP calls
+import { httpResource } from '@angular/common/http';
+
+@Component({...})
+export class UserListComponent {
+  private readonly query = signal('');
+  
+  // httpResource automatically handles loading, error, and data states
+  readonly usersResource = httpResource<ApiResponse<User[]>>(() => 
+    `/api/users?search=${this.query()}`
+  );
+  
+  readonly users = computed(() => this.usersResource.value()?.data ?? []);
+  readonly isLoading = computed(() => this.usersResource.isLoading());
+  readonly error = computed(() => this.usersResource.error());
+}
+```
+
+**Alternative - resource() API:**
+```typescript
+// ✅ GOOD: Use resource() for custom loaders
+export class UserService {
+  private readonly http = inject(HttpClient);
+  private readonly errorHandler = inject(HttpErrorHandlerService);
+  
+  createUsersResource(searchQuery: Signal<string>) {
+    return resource({
+      request: () => ({ query: searchQuery() }),
+      loader: async ({ request }) => {
+        const response = await this.http.get<ApiResponse<User[]>>(
+          `/api/users?search=${request.query}`
+        ).pipe(catchError(this.errorHandler.handleError)).toPromise();
+        return response;
+      }
+    });
+  }
+}
+```
+
+**Legacy Approach (avoid for new code):**
+```typescript
+// ❌ OLD: Direct Observable subscriptions
 export interface ApiResponse<T> {
   code: number;
   message: string;
@@ -120,27 +200,50 @@ export class UserService {
 }
 ```
 
-### State Management
+### State Management with linkedSignal
+
+**linkedSignal for Complex State Synchronization:**
+linkedSignal 創建可寫入的 signal，會根據源 signal 的變化自動更新
+
 ```typescript
-// ✅ CORRECT: Use resource() for data fetching
-export class UserListComponent {
-  private readonly userService = inject(UserService);
+// ✅ CORRECT: Use linkedSignal for dependent writable signals
+export class ProductSelectorComponent {
+  // Source data
+  readonly availableProducts = signal<Product[]>([]);
   
-  readonly usersResource = resource({
-    request: () => ({}),
-    loader: () => this.userService.getUsers()
+  // linkedSignal preserves selection when available products change
+  readonly selectedProduct = linkedSignal<Product | null>({
+    source: this.availableProducts,
+    computation: (newProducts, previous) => {
+      // Try to preserve previous selection if it still exists
+      const previousProduct = previous?.value;
+      if (previousProduct && newProducts.find(p => p.id === previousProduct.id)) {
+        return previousProduct;
+      }
+      // Otherwise, select first product or null
+      return newProducts[0] ?? null;
+    }
   });
   
-  readonly users = computed(() => this.usersResource.value()?.data ?? []);
+  // Manual selection update
+  selectProduct(product: Product) {
+    this.selectedProduct.set(product);
+  }
 }
 
-// ❌ WRONG: Direct subscription in component
-export class UserListComponent implements OnInit {
-  users: User[] = [];
+// ❌ WRONG: Complex manual synchronization
+export class ProductSelectorComponent {
+  readonly availableProducts = signal<Product[]>([]);
+  readonly selectedProduct = signal<Product | null>(null);
   
-  ngOnInit() {
-    this.userService.getUsers().subscribe(response => {
-      this.users = response.data || [];
+  // Manual effect for synchronization (complex and error-prone)
+  constructor() {
+    effect(() => {
+      const products = this.availableProducts();
+      const selected = this.selectedProduct();
+      if (selected && !products.find(p => p.id === selected.id)) {
+        this.selectedProduct.set(products[0] ?? null);
+      }
     });
   }
 }
@@ -226,16 +329,24 @@ export const routes: Routes = [
 - Mock external dependencies
 
 ## Strict Prohibitions
-- ❌ `@Input()`, `@Output()`, `@ViewChild()` (use modern equivalents)
-- ❌ `*ngIf`, `*ngFor` (use `@if`, `@for`)
-- ❌ Constructor injection without decorators (use `inject()`)
-- ❌ Direct component subscriptions (use `resource()`, signals)
-- ❌ Inline templates/styles (except demos)
-- ❌ `@import` in SCSS (use `@use`)
-- ❌ Plain `<img>` tags (use `NgOptimizedImage`)
-- ❌ Template-driven forms (use Reactive Forms)
-- ❌ Business logic in shared components
-- ❌ Promises or callbacks (use Observables)
+
+### ❌ Deprecated/Legacy Patterns (Angular 19+)
+- **Component decorators**: `@Input()`, `@Output()`, `@ViewChild()` (use signal equivalents)
+- **Old control flow**: `*ngIf`, `*ngFor`, `*ngSwitch` (use `@if`, `@for`, `@switch`)
+- **Constructor injection**: without decorators (use `inject()`)
+- **Direct subscriptions**: in components (use `resource()`, `httpResource()`, signals)
+- **Inline templates/styles**: except for demos (use separate files)
+- **SCSS imports**: `@import` (use `@use`)
+- **Unoptimized images**: plain `<img>` (use `NgOptimizedImage`)
+- **Template-driven forms**: except legacy (use Reactive Forms)
+- **Business logic**: in shared components (use services)
+- **Promises/callbacks**: use Observables and signals
+- **Manual subscriptions**: use `toSignal()` or `resource()` instead
+
+### ⚠️ Experimental Features (use with caution)
+- `effect()` for side effects (prefer `linkedSignal` or `computed`)
+- `resource()` and `httpResource()` APIs (experimental but recommended)
+- Incremental hydration features
 
 ## Code Generation Instructions
 When generating code:
@@ -269,22 +380,26 @@ When generating code:
 
 ## Quality Checklist
 Before completing any task, verify:
-- [ ] Uses Angular 19+ modern syntax (signals, inject(), @if/@for)
+- [ ] Uses Angular 19+ modern syntax (signals, inject(), @if/@for, standalone components)
+- [ ] Uses `httpResource()` or `resource()` for data fetching (not manual subscriptions)
+- [ ] Implements `linkedSignal()` for complex state dependencies when needed
 - [ ] Follows naming conventions (kebab-case files, PascalCase classes)
 - [ ] Separates .ts/.html/.scss files
 - [ ] Includes comprehensive .spec.ts tests
-- [ ] Uses NgOptimizedImage for images
-- [ ] Implements proper error handling
-- [ ] Follows accessibility guidelines
-- [ ] Uses @use instead of @import in SCSS
-- [ ] No direct subscriptions in components
-- [ ] Proper TypeScript typing throughout
+- [ ] Uses `NgOptimizedImage` for images with proper dimensions
+- [ ] Implements proper error handling with signals
+- [ ] Follows accessibility guidelines (labels, ARIA, semantic HTML)
+- [ ] Uses `@use` instead of `@import` in SCSS
+- [ ] Includes `@defer` blocks for performance optimization when applicable
+- [ ] Proper TypeScript strict typing throughout
+- [ ] No deprecated Angular patterns (`*ngIf`, `@Input()`, constructor DI)
 
 ## Example Output Format
 When creating components, provide:
-1. **Component TypeScript file** with signals and inject()
-2. **Template file** with modern Angular syntax
-3. **SCSS file** with @use imports
-4. **Test file** with proper test coverage
+1. **Component TypeScript file** with signals, inject(), and resource()/httpResource()
+2. **Template file** with modern `@if/@for` syntax and `@defer` blocks
+3. **SCSS file** with `@use` imports and proper nesting
+4. **Test file** with signal-based testing patterns
 5. **Integration instructions** for the feature
-6. **Type definitions** if custom interfaces needed
+6. **Type definitions** for APIs and interfaces
+7. **Performance considerations** using Angular 19+ features

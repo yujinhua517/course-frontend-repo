@@ -1,9 +1,9 @@
 <!-- course-list.component.html -->
-<div class="course-list-container">
+<div class="course-list-container" role="main" aria-labelledby="page-title">
     <!-- 頁面標題與操作區 -->
     <div class="page-header d-flex justify-content-between align-items-center mb-4">
-        <h2 class="page-title fw-bold mb-0">
-            <i class="bi bi-building me-2 text-primary"></i>
+        <h2 id="page-title" class="page-title fw-bold mb-0">
+            <i class="bi bi-building me-2 text-primary" aria-hidden="true"></i>
             課程主檔管理
         </h2>
         <div class="header-actions d-flex gap-2">
@@ -26,40 +26,115 @@
         </div>
     </div>
     <!-- 搜尋與篩選區 -->
-    <app-search-filter [config]="searchFilterConfig()" [searchKeyword]="searchKeyword()" [pageSize]="pageSize()"
-        [totalCount]="totalRecords()" [filterValues]="currentFilterValues()" (searchChanged)="onSearchChange($event)"
-        (filterChanged)="onFilterChange($event)" (pageSizeChanged)="onPageSizeChange($event)"
-        (searchCleared)="clearSearch()">
-    </app-search-filter>
+    <section aria-label="搜尋和篩選控制項" class="search-filter-section">
+        <app-search-filter [config]="searchFilterConfig()" [searchKeyword]="searchKeyword()" [pageSize]="pageSize()"
+            [totalCount]="totalRecords()" [filterValues]="currentFilterValues()"
+            (searchChanged)="onSearchChange($event)" (filterChanged)="onFilterChange($event)"
+            (pageSizeChanged)="onPageSizeChange($event)" (searchCleared)="clearSearch()">
+        </app-search-filter>
+    </section>
 
-    <!-- 載入狀態 -->
-    @if (loading()) {
-    <app-loading-state [config]="loadingConfig()"></app-loading-state>
+    <!-- 主要內容區域 with @switch optimization -->
+    @switch (getContentState()) {
+    @case ('loading') {
+    <section aria-live="polite" aria-label="載入狀態">
+        <app-loading-state [config]="loadingConfig()"></app-loading-state>
+    </section>
     }
-
-    <!-- 錯誤訊息 -->
-    @if (!loading() && error()) {
-    <app-error-message [config]="errorConfig()" (errorDismissed)="clearError()"></app-error-message>
+    @case ('error') {
+    <section role="alert" aria-label="錯誤訊息">
+        <app-error-message [config]="errorConfig()" (errorDismissed)="clearError()"></app-error-message>
+    </section>
     }
-
-    <!-- 資料表格 -->
-    @if (!loading() && !error() && courses().length > 0) {
-    <div class="table-container card">
-        <div class="table-responsive" [class.fixed-height]="shouldUseFixedHeight()">
-            <table class="table table-hover mb-0" [class.has-select-column]="permissions().delete">
-                <thead class="table-light">
-                    <app-table-header [config]="tableHeaderConfig()" (sortChanged)="onTableSort($event)"
-                        (selectAllChanged)="onTableSelectAll($event)">
-                    </app-table-header>
-                </thead>
-                <tbody>
-                    <app-table-body [config]="tableBodyConfig()" [selectedItems]="selectedCourseItems()"
-                        (itemSelected)="onTableItemSelected($event)">
-                    </app-table-body>
-                </tbody>
-            </table>
+    @case ('data') {
+    <!-- 資料表格 with @defer optimization -->
+    <section aria-label="課程資料表格" class="data-table-section">
+        <div class="table-container card">
+            <div class="table-responsive" [class.fixed-height]="shouldUseFixedHeight()">
+                <table class="table table-hover mb-0" [class.has-select-column]="permissions().delete" role="table"
+                    aria-label="課程清單" [attr.aria-rowcount]="totalRecords()" [attr.aria-colcount]="8">
+                    <thead class="table-light">
+                        @defer (when courses().length > 0) {
+                        <app-table-header [config]="tableHeaderConfig()" (sortChanged)="onTableSort($event)"
+                            (selectAllChanged)="onTableSelectAll($event)">
+                        </app-table-header>
+                        } @placeholder {
+                        <tr>
+                            <th class="placeholder-glow">
+                                <span class="placeholder col-12"></span>
+                            </th>
+                        </tr>
+                        } @loading {
+                        <tr>
+                            <th class="text-center py-3">
+                                <div class="spinner-border spinner-border-sm" role="status">
+                                    <span class="visually-hidden">Loading table header...</span>
+                                </div>
+                            </th>
+                        </tr>
+                        }
+                    </thead>
+                    <tbody>
+                        @defer (when courses().length > 0) {
+                        <app-table-body [config]="tableBodyConfig()" [selectedItems]="selectedCourseItems()"
+                            (itemSelected)="onTableItemSelected($event)">
+                        </app-table-body>
+                        } @placeholder {
+                        @for (placeholder of [1,2,3,4,5]; track trackByIndex($index, placeholder)) {
+                        <tr class="placeholder-glow">
+                            <td><span class="placeholder col-2"></span></td>
+                            <td><span class="placeholder col-4"></span></td>
+                            <td><span class="placeholder col-3"></span></td>
+                            <td><span class="placeholder col-2"></span></td>
+                            <td><span class="placeholder col-2"></span></td>
+                            <td><span class="placeholder col-1"></span></td>
+                            <td><span class="placeholder col-3"></span></td>
+                            <td><span class="placeholder col-2"></span></td>
+                        </tr>
+                        } @empty {
+                        <tr>
+                            <td colspan="8" class="text-center py-4 text-muted">
+                                <i class="bi bi-info-circle me-2"></i>
+                                暫時無法載入佔位資料
+                            </td>
+                        </tr>
+                        }
+                        }
+                        @loading {
+                        <tr>
+                            <td colspan="8" class="text-center py-4">
+                                <div class="d-flex justify-content-center align-items-center">
+                                    <div class="spinner-border spinner-border-sm me-2" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <span class="text-muted">正在載入課程資料...</span>
+                                </div>
+                            </td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </div>
+    </section>
+    }
+    @case ('empty') {
+    <!-- 空狀態 -->
+    <section aria-label="空狀態" class="empty-state-section">
+        <app-empty-state [config]="emptyStateConfig()" (actionClicked)="onEmptyStateAction($event)"></app-empty-state>
+    </section>
+    }
+    @default {
+    <!-- 預設狀態 - 初始化中 -->
+    <section aria-live="polite" aria-label="系統初始化" class="initialization-section">
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">系統初始化中...</span>
+            </div>
+            <p class="mt-2 text-muted" role="status">系統初始化中，請稍候...</p>
+        </div>
+    </section>
+    }
     }
 
     <!-- 模板定義 -->
@@ -67,19 +142,19 @@
         <span [innerHTML]="course.courseId | highlight:searchKeyword()"></span>
     </ng-template>
 
-    <ng-template #codeTemplate let-course>
+    <ng-template #nameTemplate let-course>
         <span [innerHTML]="course.courseName | highlight:searchKeyword()"></span>
     </ng-template>
 
-    <ng-template #nameTemplate let-course>
+    <ng-template #learningTypeTemplate let-course>
         <span [innerHTML]="course.learningType | highlight:searchKeyword()"></span>
     </ng-template>
 
-    <ng-template #emailTemplate let-course>
+    <ng-template #skillTypeTemplate let-course>
         <span [innerHTML]="course.skillType | highlight:searchKeyword()"></span>
     </ng-template>
 
-    <ng-template #deptTemplate let-course>
+    <ng-template #levelTemplate let-course>
         <span [innerHTML]="(course.level || '未指定') | highlight:searchKeyword()"></span>
     </ng-template>
 
@@ -94,13 +169,23 @@
     </ng-template>
 
     <ng-template #actionsTemplate let-course>
+        @defer (on viewport) {
         <app-action-button-group [config]="getActionConfig(course)" (viewClicked)="onView(course)"
             (editClicked)="onEdit(course)" (deleteClicked)="onDelete(course)">
         </app-action-button-group>
+        } @placeholder {
+        <div class="btn-group btn-group-sm placeholder-glow" role="group">
+            <span class="placeholder btn btn-sm col-3"></span>
+            <span class="placeholder btn btn-sm col-3"></span>
+            <span class="placeholder btn btn-sm col-3"></span>
+        </div>
+        } @loading {
+        <div class="btn-group btn-group-sm" role="group">
+            <div class="spinner-border spinner-border-sm" role="status">
+                <span class="visually-hidden">Loading actions...</span>
+            </div>
+        </div>
+        }
     </ng-template>
 
-    <!-- 空狀態 -->
-    @if (!loading() && !error() && courses().length === 0) {
-    <app-empty-state [config]="emptyStateConfig()" (actionClicked)="onEmptyStateAction($event)"></app-empty-state>
-    }
 </div>

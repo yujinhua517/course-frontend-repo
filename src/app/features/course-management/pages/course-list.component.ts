@@ -1,7 +1,7 @@
-import { Component, inject, signal, computed, effect, OnInit, ChangeDetectionStrategy, TemplateRef, ViewChild } from '@angular/core';
+import { Component, inject, signal, computed, ChangeDetectionStrategy, TemplateRef, viewChild, resource } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { finalize } from 'rxjs/operators';
+import { firstValueFrom } from 'rxjs';
 
 import { UserStore } from '../../../core/auth/user.store';
 import type { User, Permission } from '../../../models/user.model';
@@ -12,7 +12,7 @@ import { ErrorMessageConfig, ErrorMessageComponent } from '../../../shared/compo
 import { EmptyStateConfig, EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { TableHeaderComponent, TableHeaderConfig } from '../../../shared/components';
 import { TableBodyConfig, TableBodyComponent } from '../../../shared/components';
-import { ActionButtonConfig, ActionButtonGroupComponent, ActionButton } from '../../../shared/components';
+import { ActionButtonConfig, ActionButtonGroupComponent } from '../../../shared/components';
 import { HighlightPipe } from '../../../shared/pipes/highlight.pipe';
 
 import { CourseService } from '../services/course.service';
@@ -42,7 +42,7 @@ import { PaginationUtil, QueryParamsBuilder } from '../../../core/utils/query.ut
     styleUrls: ['./course-list.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class CourseListComponent implements OnInit {
+export class CourseListComponent {
     /**
      * DI：使用 Angular 的 inject() 取得 service 實例（專案慣例）。
      * 值得注意：此處沒有使用 constructor 注入，是為了保持程式簡潔並方便測試。
@@ -69,77 +69,128 @@ export class CourseListComponent implements OnInit {
     readonly selectedCourses = signal<Set<number>>(new Set());
     readonly isInitialized = signal<boolean>(false);
 
-    /** 當前頁面的錯誤訊息；為 null 表示沒有錯誤 */
-    readonly errorState = signal<string | null>(null);
+    /** 使用 resource() API 管理課程資料的取得與更新 */
+    readonly coursesResource = resource({
+        /** 
+         * request(): 回傳查詢條件（例如：課程名稱、頁數、大小）
+         */
+        request: () => this.currentSearchParams(),
 
-    /** 從 API 取得並顯示在表格上的課程資料 */
-    readonly coursesData = signal<Course[]>([]);
-    /** 是否處於載入中，用來顯示 overlay 或 loading 樣式 */
-    readonly loadingState = signal<boolean>(false);
-
-    /** 分頁資訊（由 API 回傳後計算） */
-    readonly paginationInfo = signal<{
-        totalRecords: number;
-        currentPage: number;
-        pageSize: number;
-        totalPages: number;
-        hasNext: boolean;
-        hasPrevious: boolean;
-    }>({
-        totalRecords: 0,
-        currentPage: 1,
-        pageSize: 10,
-        totalPages: 0,
-        hasNext: false,
-        hasPrevious: false,
+        /** 
+         * loader: 根據查詢條件向後端請求課程清單
+         */
+        loader: async ({ request }) => {
+            return firstValueFrom(this.courseService.searchCourses(request));
+        }
     });
 
-    /** 由 signals 推導出的唯讀值，方便 template 綁定 */
-    readonly courses = computed(() => this.coursesData());
-    readonly loading = computed(() => this.loadingState());
-    readonly totalRecords = computed(() => this.paginationInfo().totalRecords);
-    readonly currentPage = computed(() => this.paginationInfo().currentPage);
-    readonly pageSize = computed(() => this.paginationInfo().pageSize);
-    readonly totalPages = computed(() => this.paginationInfo().totalPages);
-    readonly hasNext = computed(() => this.paginationInfo().hasNext);
-    readonly hasPrevious = computed(() => this.paginationInfo().hasPrevious);
 
-    // 選取相關的派生狀態（供 template 與邏輯使用）
-    readonly hasSelectedCourses = computed(() => this.selectedCourses().size > 0);
-    readonly selectedCount = computed(() => this.selectedCourses().size);
-    // TableBodyComponent expects an array of selected items. We keep internal selection as Set<number>
-    // for efficient add/remove, but expose an array of Course objects for the table's `selectedItems` input.
+    /** 由 resource 推導出的唯讀值，方便畫面綁定
+     * - courses: 課程清單
+     * - loading: 是否讀取中
+     * - error: 錯誤訊息
+     * - totalRecords, currentPage, pageSize, totalPages: 分頁資訊
+     * - hasNext, hasPrevious: 分頁控制
+     */
+    readonly courses = computed(() => {
+        const resourceData = this.coursesResource.value() as ServiceListResponse<Course> | undefined;
+        // 確認資料存在且成功，回傳清單；否則回傳空陣列，避免模板迭代錯誤
+        if (resourceData && this.isApiSuccess(resourceData) && resourceData.data) {
+            return resourceData.data.dataList;
+        }
+        return [];
+    });
+    readonly loading = computed(() => this.coursesResource.isLoading());
+    readonly error = computed(() => {
+        const resourceError = this.coursesResource.error();
+        if (resourceError) {
+            return '查詢失敗，請稍後再試';
+        }
+        const resourceData = this.coursesResource.value() as ServiceListResponse<Course> | undefined;
+        if (resourceData && !this.isApiSuccess(resourceData)) {
+            return '查詢失敗';
+        }
+        return null;
+    });
+    readonly totalRecords = computed(() => {
+        const resourceData = this.coursesResource.value() as ServiceListResponse<Course> | undefined;
+        if (resourceData && this.isApiSuccess(resourceData) && resourceData.data) {
+            return resourceData.data.totalRecords;
+        }
+        return 0;
+    });
+    readonly currentPage = computed(() => {
+        const resourceData = this.coursesResource.value() as ServiceListResponse<Course> | undefined;
+        if (resourceData && this.isApiSuccess(resourceData) && resourceData.data) {
+            return resourceData.data.page ?? 1;
+        }
+        return 1;
+    });
+    readonly pageSize = computed(() => {
+        const resourceData = this.coursesResource.value() as ServiceListResponse<Course> | undefined;
+        if (resourceData && this.isApiSuccess(resourceData) && resourceData.data) {
+            return resourceData.data.pageSize ?? 10;
+        }
+        return 10;
+    });
+    readonly totalPages = computed(() => {
+        const resourceData = this.coursesResource.value() as ServiceListResponse<Course> | undefined;
+        if (resourceData && this.isApiSuccess(resourceData) && resourceData.data) {
+            return resourceData.data.totalPages ?? 0;
+        }
+        return 0;
+    });
+    readonly hasNext = computed(() => {
+        const resourceData = this.coursesResource.value() as ServiceListResponse<Course> | undefined;
+        if (resourceData && this.isApiSuccess(resourceData) && resourceData.data) {
+            return resourceData.data.hasNext ?? false;
+        }
+        return false;
+    });
+    readonly hasPrevious = computed(() => {
+        const resourceData = this.coursesResource.value() as ServiceListResponse<Course> | undefined;
+        if (resourceData && this.isApiSuccess(resourceData) && resourceData.data) {
+            return resourceData.data.hasPrevious ?? false;
+        }
+        return false;
+    });
+
+    // 派生狀態（提供給畫面與邏輯使用）
+    readonly hasSelectedCourses = computed(() => this.selectedCourses().size > 0);  // 是否有選課
+    readonly selectedCount = computed(() => this.selectedCourses().size);           // 已選課程數量
+
+    // 將內部的 Set<number>（課程ID集合）轉換成課程物件陣列，供表格使用
     readonly selectedCourseItems = computed(() => {
         const ids = this.selectedCourses();
         return this.courses().filter((c) => ids.has(c.courseId));
     });
-    readonly isEmpty = computed(() => this.courses().length === 0);
-    readonly hasData = computed(() => this.courses().length > 0);
+
+    readonly isEmpty = computed(() => this.courses().length === 0);  // 是否沒有資料
+    readonly hasData = computed(() => this.courses().length > 0);    // 是否有資料
+
 
     // 派生的選取/排序狀態，供 template 與其他 computed 重用
     readonly isAllSelected = computed(() => {
-        const pageIds = this.courses().map((c) => c.courseId);
+        const pageIds = this.courses().map((c: Course) => c.courseId);
         if (pageIds.length === 0) return false;
         const selectedSet = this.selectedCourses();
-        return pageIds.every((id) => selectedSet.has(id));
+        return pageIds.every((id: number) => selectedSet.has(id));
+    });
+
+    readonly isPartiallySelected = computed(() => {
+        const pageIds = this.courses().map((c: Course) => c.courseId);
+        if (pageIds.length === 0) return false;
+        const selectedSet = this.selectedCourses();
+        const selectedOnPageCount = pageIds.filter((id: number) => selectedSet.has(id)).length;
+        return selectedOnPageCount > 0 && selectedOnPageCount < pageIds.length;
     });
 
     // 檢查是否需要固定高度 (數據行數 >= 10)
     readonly shouldUseFixedHeight = computed(() => this.courses().length >= 10);
 
-    readonly isPartiallySelected = computed(() => {
-        const pageIds = this.courses().map((c) => c.courseId);
-        if (pageIds.length === 0) return false;
-        const selectedSet = this.selectedCourses();
-        const selectedOnPageCount = pageIds.filter((id) => selectedSet.has(id)).length;
-        return selectedOnPageCount > 0 && selectedOnPageCount < pageIds.length;
-    });
-
     // 從 currentSearchParams 推導出的排序欄位與方向，用於 TableHeader 與查詢
     readonly sortColumn = computed(() => ((this.currentSearchParams() as any).sortColumn as string) ?? '');
     readonly sortDirection = computed(() => ((this.currentSearchParams() as any).sortDirection as 'asc' | 'desc' | undefined));
-
-    readonly error = computed(() => this.errorState())
 
     /**
      * 權限判斷：檢查 userStore 的 user 是否有對應 resource 的 CRUD 權限，回傳四個布林值。
@@ -156,26 +207,58 @@ export class CourseListComponent implements OnInit {
         };
     });
 
-    // ================== 生命週期 ==================
-    /**
-     * 元件初始化：載入第一頁資料並標記為已初始化。
-     */
-    ngOnInit(): void {
-        this.loadInitialData();
+    /** 計算內容狀態，用於 @switch 控制流 */
+    readonly getContentState = computed(() => {
+        if (this.loading()) return 'loading';
+        if (this.error()) return 'error';
+        if (this.courses().length === 0) return 'empty';
+        return 'data';
+    });
+
+    // ================== Track Functions for Optimized Rendering ==================
+
+    /** 課程清單的 track 函數 - 使用唯一的 courseId 進行追蹤 */
+    readonly trackByCourseId = (_index: number, course: Course): number => course.courseId;
+
+    /** 佔位元素的 track 函數 - 使用索引進行追蹤 */
+    readonly trackByIndex = (index: number, _item: number): number => index;
+
+    /** 篩選選項的 track 函數 - 使用 value 進行追蹤 */
+    readonly trackByValue = (_index: number, option: { value: string }): string => option.value;
+
+    /** 權限按鈕的 track 函數 - 使用 type 進行追蹤 */
+    readonly trackByButtonType = (_index: number, button: { type: string }): string => button.type;
+
+    // ================== 初始化 ==================
+    constructor() {
+        // 設定初始查詢參數
+        const initialParams: CourseSearchParams = {
+            keyword: '',
+            pageable: true,
+            sortDirection: 'asc',
+            firstIndexInPage: 1,
+            lastIndexInPage: 10
+        };
+        this.currentSearchParams.set(initialParams);
         this.isInitialized.set(true);
     }
 
     // TemplateRefs for custom column templates defined in the component HTML.
-    // Use { static: true } so they are available during the first change detection cycle
-    // (matches other list components pattern in the project).
-    @ViewChild('idTemplate', { static: true }) idTemplate?: TemplateRef<any>;
-    @ViewChild('codeTemplate', { static: true }) codeTemplate?: TemplateRef<any>;
-    @ViewChild('nameTemplate', { static: true }) nameTemplate?: TemplateRef<any>;
-    @ViewChild('emailTemplate', { static: true }) emailTemplate?: TemplateRef<any>;
-    @ViewChild('deptTemplate', { static: true }) deptTemplate?: TemplateRef<any>;
-    @ViewChild('statusTemplate', { static: true }) statusTemplate?: TemplateRef<any>;
-    @ViewChild('timeTemplate', { static: true }) timeTemplate?: TemplateRef<any>;
-    @ViewChild('actionsTemplate', { static: true }) actionsTemplate?: TemplateRef<any>;
+    // Using Angular 19+ viewChild() signal API for better type safety and reactivity
+    /**
+     * TemplateRef：代表一塊可重複使用的 HTML 樣板（通常是 <ng-template>）
+     * viewChild(...)：新的訊號版 View Query。拿到的不是舊的屬性，而是可呼叫的函式（signal getter）。
+     * 取值時要呼叫：this.idTemplate()（像 signal() 一樣）
+     * .required<...>()：告訴 Angular「這個一定要存在」。如果 HTML 沒有對應的 #idTemplate，會在執行期直接報錯，避免你忘記放。
+     */
+    readonly idTemplate = viewChild.required<TemplateRef<any>>('idTemplate');
+    readonly nameTemplate = viewChild.required<TemplateRef<any>>('nameTemplate');
+    readonly learningTypeTemplate = viewChild.required<TemplateRef<any>>('learningTypeTemplate');
+    readonly skillTypeTemplate = viewChild.required<TemplateRef<any>>('skillTypeTemplate');
+    readonly levelTemplate = viewChild.required<TemplateRef<any>>('levelTemplate');
+    readonly statusTemplate = viewChild.required<TemplateRef<any>>('statusTemplate');
+    readonly timeTemplate = viewChild.required<TemplateRef<any>>('timeTemplate');
+    readonly actionsTemplate = viewChild.required<TemplateRef<any>>('actionsTemplate');
 
     // ================== 共用私有工具 ==================
     /**
@@ -210,21 +293,6 @@ export class CourseListComponent implements OnInit {
     }
 
 
-    /**
-     * 將後端分頁回應寫回本地 signals（更新 coursesData 與 paginationInfo）。
-     */
-    private applyPagerResponse(res: ServiceListResponse<Course>) {
-        const d = res.data!;
-        this.coursesData.set(d.dataList);
-        this.paginationInfo.set({
-            totalRecords: d.totalRecords,
-            currentPage: d.page ?? 1,
-            pageSize: d.pageSize ?? 10,
-            totalPages: d.totalPages ?? 0,
-            hasNext: d.hasNext ?? false,
-            hasPrevious: d.hasPrevious ?? false,
-        });
-    }
 
     /**
      * 內部工具：根據 page 與 pageSize 計算 firstIndexInPage / lastIndexInPage（1-based）。
@@ -236,65 +304,25 @@ export class CourseListComponent implements OnInit {
     }
 
     /**
-     * 呼叫 CourseService.searchCourses 並統一處理：
-     * - 設定 loading 狀態與 currentSearchParams
-     * - 成功則寫回資料並顯示通知（如有）
-     * - 失敗或錯誤則設定 errorState 與顯示錯誤通知
+     * 更新查詢參數並觸發資源重新載入
+     * 使用現代化的 resource API，無需手動管理 loading 和錯誤狀態
      */
-    private queryAndApply(params: CourseSearchParams, successMsg?: string, errorMsg?: string) {
-        //設定 loading 中、記住目前查詢參數。
-        this.loadingState.set(true);
+    private updateSearchParams(params: CourseSearchParams, successMsg?: string) {
         this.currentSearchParams.set(params);
-
-        //呼叫 CourseService.searchCourses 去後端拿資料。
-        this.courseService
-            .searchCourses(params)
-            //finalize：不管成功/失敗都把 loading 關掉。
-            .pipe(finalize(() => this.loadingState.set(false)))
-            .subscribe({
-                // 成功就把資料丟進 applyPagerResponse，順便顯示成功訊息（如果有），並清除頁面錯誤。
-                next: (res) => {
-                    if (this.isApiSuccess(res) && res.data) {
-                        this.applyPagerResponse(res);
-                        if (successMsg) this.messageService.success(successMsg);
-                        // 成功時清除本地錯誤顯示
-                        this.errorState.set(null);
-                    }
-                    // 失敗：設定本地錯誤並顯示 toast
-                    else {
-                        const msg = errorMsg ?? '查詢失敗';
-                        this.errorState.set(msg);
-                        this.messageService.error(msg);
-                    }
-                },
-                // HTTP 或網路錯誤：同樣設定本地錯誤並顯示 toast
-                error: () => {
-                    const msg = errorMsg ?? '查詢失敗，請稍後再試';
-                    this.errorState.set(msg);
-                    this.messageService.error(msg);
-                },
-            });
+        if (successMsg) {
+            // 可以使用 effect 來監聽資源成功載入後顯示訊息
+            // 或者在 template 中處理成功狀態
+            this.messageService.success(successMsg);
+        }
     }
 
     // ================== 初始化 / 搜尋 ==================
-
-    /** 初始載入第一頁資料（使用預設查詢參數）。 */
-    private loadInitialData(): void {
-        const base: CourseSearchParams = {
-            keyword: '',
-            pageable: true,
-            sortDirection: 'asc',
-        };
-        const initial = this.setRangeByPage(1, this.paginationInfo().pageSize, base);
-        // 用統一方法 queryAndApply 發送與處理回應。
-        this.queryAndApply(initial, undefined, '課程資料載入失敗');
-    }
 
     /** 使用者觸發搜尋（按搜尋或 Enter）：重置到第 1 頁並執行查詢。 */
     private performSearch(keyword: string): void {
         const base = { ...this.currentSearchParams(), keyword };
         const params = this.setRangeByPage(1, this.pageSize(), base);
-        this.queryAndApply(params, undefined, '搜尋失敗');
+        this.updateSearchParams(params);
     }
 
     // ================== SearchFilterComponent 綁定 ==================
@@ -368,19 +396,16 @@ export class CourseListComponent implements OnInit {
                 : event.value;
 
         const params = this.buildParams(updates);
-        this.queryAndApply(params, '篩選條件已套用', '篩選失敗');
+        this.updateSearchParams(params, '篩選條件已套用');
     }
 
     /** 處理 pageSize 改變：同步顯示並以新 pageSize 查詢（回到第 1 頁）。 */
     onPageSizeChange(pageSize: number): void {
-        // 同步顯示（避免 UI 間隙顯示舊 pageSize）
-        this.paginationInfo.set({ ...this.paginationInfo(), pageSize });
-
         // 保留現有條件，只換 page/pageSize → first/lastIndex
         const merged = QueryParamsBuilder.mergeSearchParams(this.currentSearchParams(), {});
         const params = this.withPageRange(merged, 1, pageSize);
 
-        this.queryAndApply(params, `已調整為每頁 ${pageSize} 筆`, '分頁設定失敗');
+        this.updateSearchParams(params, `已調整為每頁 ${pageSize} 筆`);
     }
 
     /** 清除搜尋與篩選（保留 pageSize），回到第 1 頁並查詢。 */
@@ -394,7 +419,7 @@ export class CourseListComponent implements OnInit {
             sortDirection: 'asc',
         };
         const params = this.setRangeByPage(1, this.pageSize(), base);
-        this.queryAndApply(params, '已清除所有搜尋條件', '清除搜尋失敗');
+        this.updateSearchParams(params, '已清除所有搜尋條件');
     }
 
     // ================== 選取功能 ==================
@@ -413,7 +438,7 @@ export class CourseListComponent implements OnInit {
 
     /** 切換本頁的全選狀態（全部選／清除）。 */
     toggleSelectAll(): void {
-        const allIds = this.courses().map((c) => c.courseId);
+        const allIds = this.courses().map((c: Course) => c.courseId);
         const selected = this.selectedCourses();
         this.selectedCourses.set(
             selected.size === allIds.length ? new Set() : new Set(allIds),
@@ -444,8 +469,11 @@ export class CourseListComponent implements OnInit {
         size: 'md'
     }));
 
-    /** 清除頁面錯誤訊息（template 綁定）。 */
-    clearError(): void { this.errorState.set(null); }
+    /** 清除頁面錯誤訊息（template 綁定）- 使用 resource 時會自動重試 */
+    clearError(): void {
+        // 使用 resource API 時，可以觸發重新載入
+        // 或者簡單地等待下次參數變更時自動重試
+    }
 
     // ================== 空狀態 ==================
 
@@ -497,8 +525,11 @@ export class CourseListComponent implements OnInit {
         }
 
         if (action === 'create-new') {
-            // 如果有建立流程（例如開啟 modal 或導到編輯頁），改在此處呼叫。
-            //TODO
+            // 進入建立流程：在此實作導航或開啟 modal 的呼叫。
+            // 建議實作方式：
+            //  - 使用 Router 導到建立頁面： this.router.navigate(['/courses/create'])
+            //  - 或使用 DialogService 開啟建立 modal： this.dialogService.open(CourseEditComponent, { data: {} })
+            // 目前保留訊息提示，待整合導航或 modal 時替換此處。
             this.messageService.info('請使用新增功能建立課程。');
             return;
         }
@@ -535,11 +566,12 @@ export class CourseListComponent implements OnInit {
 
     /** table body 的設定：提供資料、trackBy 與每欄的 TemplateRef。 */
     readonly tableBodyConfig = computed<TableBodyConfig>(() => {
-        // If templates are not yet available, return a safe empty config to avoid template errors.
-        if (!this.idTemplate || !this.codeTemplate || !this.nameTemplate || !this.emailTemplate || !this.deptTemplate || !this.timeTemplate || !this.actionsTemplate) {
+        // 用很多 || 檢查必需的 TemplateRef 是否存在；避免「讀取未定義模板」造成錯誤。
+        // 回傳 columns: [] 讓畫面先不渲染欄位，等下一次計算再補上。
+        if (!this.idTemplate() || !this.nameTemplate() || !this.learningTypeTemplate() || !this.skillTypeTemplate() || !this.levelTemplate() || !this.timeTemplate() || !this.actionsTemplate()) {
             return {
                 data: this.courses(),
-                trackByFn: (i: number, item: Course) => item.courseId,
+                trackByFn: (_i: number, item: Course) => item.courseId,
                 showSelectColumn: this.permissions().delete,
                 columns: [],
             } as TableBodyConfig;
@@ -597,40 +629,47 @@ export class CourseListComponent implements OnInit {
                 cssClass: c.cssClass,
             };
 
-            // attach the correct template by key
+            // 依 key 指定該欄使用哪個 <ng-template>。
+            // statusTemplate() 可能不存在，所以用 ?? undefined 安全處理。
             switch (c.key) {
                 case 'courseId':
-                    col.template = this.idTemplate;
+                    col.template = this.idTemplate();
                     break;
                 case 'courseName':
-                    col.template = this.codeTemplate;
+                    col.template = this.nameTemplate();
                     break;
                 case 'learningType':
-                    col.template = this.nameTemplate;
+                    col.template = this.learningTypeTemplate();
                     break;
                 case 'skillType':
-                    col.template = this.emailTemplate;
+                    col.template = this.skillTypeTemplate();
                     break;
                 case 'level':
-                    col.template = this.deptTemplate;
+                    col.template = this.levelTemplate();
                     break;
                 case 'isActive':
-                    col.template = this.statusTemplate ?? undefined;
+                    col.template = this.statusTemplate() ?? undefined;
                     break;
                 case 'createTime':
-                    col.template = this.timeTemplate;
+                    col.template = this.timeTemplate();
                     break;
                 case 'actions':
-                    col.template = this.actionsTemplate;
+                    col.template = this.actionsTemplate();
                     break;
             }
 
             return col;
         });
 
+        // 組成最後的 TableBodyConfig
+        /**
+         * data 來源是 courses() 的 signal。
+         * trackByFn 用 courseId，效能佳、狀態穩定。
+         * 已選列加上 table-active 方便高亮。
+         */
         return {
             data: this.courses(),
-            trackByFn: (i: number, item: Course) => item.courseId,
+            trackByFn: this.trackByCourseId,
             showSelectColumn: this.permissions().delete,
             rowCssClass: (item: Course) => (this.isCourseSelected(item.courseId) ? 'table-active' : ''),
             columns: mapped,
@@ -650,17 +689,17 @@ export class CourseListComponent implements OnInit {
         }
 
         const params = this.buildParams(updates);
-        this.queryAndApply(params, undefined, '排序失敗');
+        this.updateSearchParams(params);
     }
 
     /** 處理表頭全選 checkbox（以目前頁面的 items 為準）。 */
     onTableSelectAll(checked: boolean): void {
-        const pageIds = this.courses().map((c) => c.courseId);
+        const pageIds = this.courses().map((c: Course) => c.courseId);
         const next = new Set(this.selectedCourses());
         if (checked) {
-            pageIds.forEach((id) => next.add(id));
+            pageIds.forEach((id: number) => next.add(id));
         } else {
-            pageIds.forEach((id) => next.delete(id));
+            pageIds.forEach((id: number) => next.delete(id));
         }
         this.selectedCourses.set(next);
     }
@@ -677,13 +716,19 @@ export class CourseListComponent implements OnInit {
 
     // 編輯/查看/刪除按鈕處理（可改為路由或 modal）
     onView(item: Course): void {
-        // TODO: 導航到查看頁或開啟 modal
+        // 檢視單筆資料的位置（建議實作）：
+        //  - Router 導覽： this.router.navigate([`/courses/${item.courseId}`])
+        //  - Modal： this.dialogService.open(CourseDetailComponent, { data: item })
+        // 目前以提示表示動作位置，待整合導覽或 modal 時替換此處。
         this.messageService.info(`查看課程 ${item.courseId}`);
     }
 
     // 編輯按鈕處理（可改為路由導航或開啟編輯 modal）
     onEdit(item: Course): void {
-        // TODO: 導航到編輯頁或開啟 modal
+        // 編輯流程建議實作：
+        //  - Router 導覽至編輯頁： this.router.navigate([`/courses/${item.courseId}/edit`])
+        //  - 或開啟編輯 modal： this.dialogService.open(CourseEditComponent, { data: item })
+        // 目前僅示意位置，保留提示讓整合時容易找到切入點。
         this.messageService.info(`編輯課程 ${item.courseId}`);
     }
 
@@ -693,7 +738,13 @@ export class CourseListComponent implements OnInit {
         const confirmed = confirm(`確定要刪除課程 ${item.courseId} - ${item.courseName} 嗎？`);
         if (!confirmed) return;
 
-        // TODO: 呼叫 courseService.deleteCourse(item.courseId) 並重新查詢或移除 local data
+        // 建議刪除流程：呼叫 service 並在成功後重新載入或更新本地列表。
+        // 範例：
+        // this.courseService.deleteCourse(item.courseId).subscribe({
+        //   next: () => this.updateSearchParams(this.currentSearchParams()),
+        //   error: () => this.messageService.error('刪除失敗')
+        // });
+        // 目前保留模擬提示，實際刪除請依專案 service API 實作
         this.messageService.info(`已執行刪除（模擬）：${item.courseId}`);
     }
 
