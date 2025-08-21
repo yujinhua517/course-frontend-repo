@@ -5,13 +5,7 @@
     display: contents !important;
 }
 
-// 或者如果上面不起作用，使用這個：
-// :host {
-//     display: table-header-group;
-//     width: 100%;
-// }
-
-// 表頭基本樣式 - 與 competency-list 原始樣式保持一致
+// 表頭基本樣式
 th {
     background-color: $brand-primary;
     color: $brand-bg;
@@ -21,7 +15,6 @@ th {
     border-bottom: 2px solid rgba($brand-gray, 0.1);
     vertical-align: middle;
     white-space: nowrap;
-    min-width: 120px;
     box-sizing: border-box;
 
     &:first-child {
@@ -98,83 +91,11 @@ th {
     text-align: right;
 }
 
-// 特定欄位寬度調整
-th {
-    &[style*="width"] {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        box-sizing: border-box !important;
-    }
-
-    &[style*="width: 5%"] {
-        min-width: 50px;
-        max-width: 5%;
-        width: 5% !important;
-    }
-
-    &[style*="width: 8%"] {
-        min-width: 60px;
-        max-width: 8%;
-        width: 8% !important;
-    }
-
-    &[style*="width: 12%"] {
-        min-width: 80px;
-        max-width: 12%;
-        width: 12% !important;
-    }
-
-    &[style*="width: 15%"] {
-        min-width: 80px;
-        max-width: 15%;
-        width: 15% !important;
-    }
-
-    &[style*="width: 18%"] {
-        min-width: 100px;
-        max-width: 18%;
-        width: 18% !important;
-    }
-
-    &[style*="width: 20%"] {
-        min-width: 100px;
-        max-width: 20%;
-        width: 20% !important;
-    }
-
-    &[style*="width: 25%"] {
-        min-width: 120px;
-        max-width: 25%;
-        width: 25% !important;
-    }
-
-    &[style*="width: 30%"] {
-        min-width: 120px;
-        max-width: 30%;
-        width: 30% !important;
-    }
-
-    &[style*="width: 10%"] {
-        min-width: 80px;
-        max-width: 10%;
-        width: 10% !important;
-    }
-}
-
 // 響應式設計
 @media (max-width: 768px) {
     th {
         padding: 0.75rem 0.5rem;
-        min-width: 80px;
         font-size: $text-body-sm;
-
-        // 確保寬度在小螢幕也固定
-        &[style*="width: 5%"] {
-            min-width: 50px;
-            max-width: 5%;
-            width: 5% !important;
-        }
 
         &.sortable-header {
             font-size: $text-body-sm;

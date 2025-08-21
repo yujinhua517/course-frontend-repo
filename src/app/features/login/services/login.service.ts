@@ -280,6 +280,13 @@ export class LoginService {
           action: 'read',
           description: 'course event read'
         },
+        {
+          id: '7',
+          name: PermissionName.COURSE_READ,
+          resource: 'course',
+          action: 'read',
+          description: 'course read'
+        },
       ];
     } else if (role === 'MANAGER') {
       // 一般員工只有讀取權限
