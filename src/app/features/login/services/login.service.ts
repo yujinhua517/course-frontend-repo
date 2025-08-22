@@ -360,6 +360,20 @@ export class LoginService {
           resource: 'department',
           action: 'read',
           description: 'department read'
+        },
+        {
+          id: '11',
+          name: PermissionName.COURSE_READ,
+          resource: 'course',
+          action: 'read',
+          description: 'course read'
+        },
+        {
+          id: '11',
+          name: PermissionName.COURSE_UPDATE,
+          resource: 'course',
+          action: 'update',
+          description: 'course update'
         }
       ];
     }

@@ -1,10 +1,7 @@
-// @use "../../../../../styles/variables" as *;
-// @use "sass:color";
-
 @use "../../../../../styles/variables" as *;
 @use "../../../../shared/styles/list-page" as list;
 
 
 .department-list-container {
-    @include list.complete-list-page-with-dynamic-table(10, 49px, 58px);
+    @include list.complete-list-page-with-dynamic-table(10, 48px, 58px);
 }

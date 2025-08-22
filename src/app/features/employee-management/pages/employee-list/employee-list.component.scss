@@ -2,5 +2,5 @@
 @use "../../../../shared/styles/list-page" as list;
 
 .employee-list-container {
-    @include list.complete-list-page-with-dynamic-table(10, 49px, 58px);
+    @include list.complete-list-page-with-dynamic-table(10, 48px, 58px);
 }

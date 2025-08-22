@@ -187,6 +187,7 @@
                 }
 
                 tbody {
+
                     // 保持正常的表格布局，不使用 display: block
                     tr {
                         height: $row-height; // 固定每行高度
@@ -221,9 +222,9 @@
 }
 
 // 固定高度表格樣式 (向後相容)
-@mixin fixed-height-table($rows: 10, $row-height: 49px, $header-height: 58px) {
+@mixin fixed-height-table($rows: 10, $row-height: 48px, $header-height: 58px) {
     @include dynamic-height-table($rows, $row-height, $header-height);
-    
+
     .table-container .table-responsive {
         height: calc($rows * $row-height + $header-height) !important;
     }
@@ -237,7 +238,7 @@
 }
 
 // 帶動態高度表格的完整列表頁面樣式 (推薦)
-@mixin complete-list-page-with-dynamic-table($max-rows: 10, $row-height: 49px, $header-height: 58px) {
+@mixin complete-list-page-with-dynamic-table($max-rows: 10, $row-height: 48px, $header-height: 58px) {
     @include page-container;
     @include page-header;
     @include table-container;
@@ -245,7 +246,7 @@
 }
 
 // 帶固定高度表格的完整列表頁面樣式 (向後相容)
-@mixin complete-list-page-with-fixed-table($rows: 10, $row-height: 49px, $header-height: 58px) {
+@mixin complete-list-page-with-fixed-table($rows: 10, $row-height: 48px, $header-height: 58px) {
     @include page-container;
     @include page-header;
     @include table-container;
