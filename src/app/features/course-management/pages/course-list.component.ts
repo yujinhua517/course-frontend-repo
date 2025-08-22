@@ -13,7 +13,11 @@ import { EmptyStateConfig, EmptyStateComponent } from '../../../shared/component
 import { TableHeaderComponent, TableHeaderConfig } from '../../../shared/components';
 import { TableBodyConfig, TableBodyComponent } from '../../../shared/components';
 import { ActionButtonConfig, ActionButtonGroupComponent } from '../../../shared/components';
+import { StatusBadgeComponent, StatusConfig } from '../../../shared/components/status-badge/status-badge.component';
+import { PaginationComponent, PaginationConfig } from '../../../shared/components/pagination/pagination.component'
+import { ConfirmationModalConfig, ConfirmationModalComponent } from '../../../shared/components/confirmation-modal/confirmation-modal.component';
 import { HighlightPipe } from '../../../shared/pipes/highlight.pipe';
+import { CourseFormComponent } from '../components/course-form/course-form.component';
 
 import { CourseService } from '../services/course.service';
 import { GlobalMessageService } from '../../../core/message/global-message.service';
@@ -36,7 +40,11 @@ import { PaginationUtil, QueryParamsBuilder } from '../../../core/utils/query.ut
         TableHeaderComponent,
         TableBodyComponent,
         ActionButtonGroupComponent,
-        HighlightPipe
+        StatusBadgeComponent,
+        PaginationComponent,
+        ConfirmationModalComponent,
+        CourseFormComponent,
+        HighlightPipe,
     ],
     templateUrl: './course-list.component.html',
     styleUrls: ['./course-list.component.scss'],
@@ -68,6 +76,22 @@ export class CourseListComponent {
     readonly currentSearchParams = signal<CourseSearchParams>({});
     readonly selectedCourses = signal<Set<number>>(new Set());
     readonly isInitialized = signal<boolean>(false);
+
+    readonly formMode = signal<'create' | 'edit'>('create'); // 用於控制表單模式（新增/編輯）
+    readonly showForm = signal<boolean>(false); // 控制表單顯示與隱藏
+    readonly selectedCourse = signal<Course | null>(null); // 用於編輯模式的課程資料
+
+    // ========== 簡化的操作狀態管理 ==========
+    readonly pendingAction = signal<{
+        type: 'status-toggle' | 'bulk-delete' | null; // 表示現在要做什麼事
+        target?: Course | null; // 可選屬性，代表操作的目標課程（如果是單筆狀態切換，就存該課程）。批量刪除時通常不需要，因為會有多個選取。
+        loading?: boolean; // 可選屬性，代表這個操作是否正在進行中。適合用來讓 UI 顯示「操作中 spinner」。
+    }>({ type: null }); // 預設狀態是「沒有任何操作」。
+
+    // 從 pendingAction 派生的計算屬性
+    readonly showStatusConfirm = computed(() => this.pendingAction().type === 'status-toggle');
+    readonly showBulkDeleteConfirm = computed(() => this.pendingAction().type === 'bulk-delete');
+    readonly isOperationLoading = computed(() => this.pendingAction().loading || false);
 
     /** 使用 resource() API 管理課程資料的取得與更新 */
     readonly coursesResource = resource({
@@ -256,7 +280,7 @@ export class CourseListComponent {
     readonly learningTypeTemplate = viewChild.required<TemplateRef<any>>('learningTypeTemplate');
     readonly skillTypeTemplate = viewChild.required<TemplateRef<any>>('skillTypeTemplate');
     readonly levelTemplate = viewChild.required<TemplateRef<any>>('levelTemplate');
-    readonly statusTemplate = viewChild.required<TemplateRef<any>>('statusTemplate');
+    readonly statusTemplate = viewChild.required<TemplateRef<any>>('statusTemplate');    // 可選：可能不存在
     readonly timeTemplate = viewChild.required<TemplateRef<any>>('timeTemplate');
     readonly actionsTemplate = viewChild.required<TemplateRef<any>>('actionsTemplate');
 
@@ -292,17 +316,6 @@ export class CourseListComponent {
         return this.withPageRange(resetFirst, 1, this.pageSize());
     }
 
-
-
-    /**
-     * 內部工具：根據 page 與 pageSize 計算 firstIndexInPage / lastIndexInPage（1-based）。
-     */
-    private setRangeByPage(page: number, pageSize: number, base: CourseSearchParams) {
-        const first = (page - 1) * pageSize + 1;
-        const last = page * pageSize;
-        return { ...base, firstIndexInPage: first, lastIndexInPage: last };
-    }
-
     /**
      * 更新查詢參數並觸發資源重新載入
      * 使用現代化的 resource API，無需手動管理 loading 和錯誤狀態
@@ -320,8 +333,8 @@ export class CourseListComponent {
 
     /** 使用者觸發搜尋（按搜尋或 Enter）：重置到第 1 頁並執行查詢。 */
     private performSearch(keyword: string): void {
-        const base = { ...this.currentSearchParams(), keyword };
-        const params = this.setRangeByPage(1, this.pageSize(), base);
+        const updates = { keyword };
+        const params = this.buildParams(updates);
         this.updateSearchParams(params);
     }
 
@@ -413,12 +426,16 @@ export class CourseListComponent {
         this.searchKeyword.set('');
         this.selectedCourses.set(new Set());
 
-        const base: CourseSearchParams = {
+        const updates: CourseSearchParams = {
             keyword: '',
             pageable: true,
             sortDirection: 'asc',
+            learningType: undefined,
+            skillType: undefined,
+            level: undefined,
+            isActive: undefined,
         };
-        const params = this.setRangeByPage(1, this.pageSize(), base);
+        const params = this.buildParams(updates);
         this.updateSearchParams(params, '已清除所有搜尋條件');
     }
 
@@ -525,12 +542,7 @@ export class CourseListComponent {
         }
 
         if (action === 'create-new') {
-            // 進入建立流程：在此實作導航或開啟 modal 的呼叫。
-            // 建議實作方式：
-            //  - 使用 Router 導到建立頁面： this.router.navigate(['/courses/create'])
-            //  - 或使用 DialogService 開啟建立 modal： this.dialogService.open(CourseEditComponent, { data: {} })
-            // 目前保留訊息提示，待整合導航或 modal 時替換此處。
-            this.messageService.info('請使用新增功能建立課程。');
+            this.onCreateCourse();
             return;
         }
 
@@ -648,7 +660,7 @@ export class CourseListComponent {
                     col.template = this.levelTemplate();
                     break;
                 case 'isActive':
-                    col.template = this.statusTemplate() ?? undefined;
+                    col.template = this.statusTemplate();
                     break;
                 case 'createTime':
                     col.template = this.timeTemplate();
@@ -714,40 +726,6 @@ export class CourseListComponent {
         this.selectedCourses.set(next);
     }
 
-    // 編輯/查看/刪除按鈕處理（可改為路由或 modal）
-    onView(item: Course): void {
-        // 檢視單筆資料的位置（建議實作）：
-        //  - Router 導覽： this.router.navigate([`/courses/${item.courseId}`])
-        //  - Modal： this.dialogService.open(CourseDetailComponent, { data: item })
-        // 目前以提示表示動作位置，待整合導覽或 modal 時替換此處。
-        this.messageService.info(`查看課程 ${item.courseId}`);
-    }
-
-    // 編輯按鈕處理（可改為路由導航或開啟編輯 modal）
-    onEdit(item: Course): void {
-        // 編輯流程建議實作：
-        //  - Router 導覽至編輯頁： this.router.navigate([`/courses/${item.courseId}/edit`])
-        //  - 或開啟編輯 modal： this.dialogService.open(CourseEditComponent, { data: item })
-        // 目前僅示意位置，保留提示讓整合時容易找到切入點。
-        this.messageService.info(`編輯課程 ${item.courseId}`);
-    }
-
-    // 刪除按鈕處理（示範）：確認後應呼叫 service 並刷新資料。
-    onDelete(item: Course): void {
-        // 若有 confirm API，可改用 confirmation dialog
-        const confirmed = confirm(`確定要刪除課程 ${item.courseId} - ${item.courseName} 嗎？`);
-        if (!confirmed) return;
-
-        // 建議刪除流程：呼叫 service 並在成功後重新載入或更新本地列表。
-        // 範例：
-        // this.courseService.deleteCourse(item.courseId).subscribe({
-        //   next: () => this.updateSearchParams(this.currentSearchParams()),
-        //   error: () => this.messageService.error('刪除失敗')
-        // });
-        // 目前保留模擬提示，實際刪除請依專案 service API 實作
-        this.messageService.info(`已執行刪除（模擬）：${item.courseId}`);
-    }
-
     getActionConfig(course: Course): ActionButtonConfig {
         return {
             buttons: [
@@ -770,5 +748,241 @@ export class CourseListComponent {
         };
     }
 
+    getStatusConfig(course: Course): StatusConfig {
+        return {
+            value: course.isActive,
+            activeValue: true,
+            inactiveValue: false,
+            activeText: '啟用',
+            inactiveText: '停用',
+            clickable: true,
+            size: 'sm'
+        };
+    }
 
+    // 派生文案：顯示在確認框內
+    readonly statusConfirmConfig = computed<ConfirmationModalConfig>(() => {
+        const target = this.pendingAction().target;
+        return {
+            title: '確認狀態變更',
+            message: `您確定要${target?.isActive ? '停用' : '啟用'}課程「${target?.courseName}」嗎？`,
+            icon: 'question-circle',
+            confirmText: target?.isActive ? '停用' : '啟用',
+            cancelText: '取消',
+            confirmButtonClass: target?.isActive ? 'btn-warning' : 'btn-success',
+        };
+    });
+
+    // 1) 進入確認流程（不直接改資料）
+    onToggleStatus(course: Course): void {
+        this.pendingAction.set({
+            type: 'status-toggle',
+            target: course
+        });
+    }
+
+    // 2) 取消
+    onToggleStatusCancel(): void {
+        this.pendingAction.set({ type: null });
+    }
+
+    // 3) 確認：呼叫後端 → 重查 → 關閉
+    async onToggleStatusConfirm(): Promise<void> {
+        const action = this.pendingAction();
+        const course = action.target;
+
+        if (!course || action.loading) return;
+
+        try {
+            // 標記為loading狀態
+            this.pendingAction.set({
+                ...action,
+                loading: true
+            });
+
+            const updated = await firstValueFrom(
+                this.courseService.updateCourseStatus(course.courseId)
+            );
+
+            if (updated) {
+                // 觸發 resource 重新載入以獲取最新資料
+                const params = this.currentSearchParams();
+                this.currentSearchParams.set({});
+                setTimeout(() => {
+                    this.currentSearchParams.set(params);
+                    this.messageService.success('狀態已更新');
+                }, 10);
+            }
+
+            this.pendingAction.set({ type: null });
+        } catch (e) {
+            this.messageService.warning('變更狀態失敗，請稍後再試');
+            this.pendingAction.set({ type: null });
+        }
+    }
+
+
+    // 分頁配置
+    readonly paginationConfig = computed<PaginationConfig>(() => ({
+        // 這四個值來自前面你定義的 computed（都是從 API response 推導出來的）。
+        currentPage: this.currentPage(),
+        totalPages: this.totalPages(),
+        totalCount: this.totalRecords(),
+        pageSize: this.pageSize(),
+
+        pageSizeOptions: [10, 25, 50, 100],
+
+        showPageSize: false,
+        showTotalCount: false,
+        showFirstLast: true,
+        showPrevNext: true,
+        maxVisiblePages: 7,
+
+        ariaLabel: '課程列表分頁',
+        disabled: this.loading()
+    }));
+
+    // 分頁
+    onPageChange(page: number): void {
+        // 當前頁面改變時，更新查詢參數並重新載入資料
+        /**
+         * this.currentSearchParams()
+         * 取得目前的搜尋條件（例如：關鍵字、排序方式、目前頁數...）。
+         * 這是一個 signal，呼叫 () 代表取值
+         * this.pageSize()
+         * 取得目前每頁顯示幾筆資料（例如 10 筆）。
+         * 也是一個 computed signal。
+         */
+        /** this.withPageRange(...)這是一個小工具函式，用來「根據 page 與 pageSize，算出這一頁的範圍」*/
+        const params = this.withPageRange(this.currentSearchParams(), page, this.pageSize());
+        /** 把剛剛算好的新查詢參數（params）存回去。 */
+        this.updateSearchParams(params, `已切換到第 ${page} 頁`);
+    }
+
+    // 批量刪除確認框配置
+    readonly deleteConfirmConfig = computed<ConfirmationModalConfig>(() => ({
+        title: '確認批量刪除',
+        message: `您確定要刪除選中的 ${this.selectedCourses().size} 個課程嗎？此操作無法復原。`,
+        icon: 'exclamation-triangle',
+        confirmText: '確認刪除',
+        cancelText: '取消',
+        confirmButtonClass: 'btn-danger',
+    }));
+
+    onBulkDelete(): void {
+        const selectedCount = this.selectedCourses().size;
+        if (selectedCount === 0) return;
+
+        this.pendingAction.set({
+            type: 'bulk-delete'
+        });
+    }
+
+    onBulkDeleteCancel(): void {
+        this.pendingAction.set({ type: null });
+    }
+
+    async onBulkDeleteConfirm(): Promise<void> {
+        const action = this.pendingAction();
+        const selectedIds = Array.from(this.selectedCourses());
+
+        if (selectedIds.length === 0 || action.loading) {
+            this.pendingAction.set({ type: null });
+            return;
+        }
+
+        try {
+            // 標記為loading狀態
+            this.pendingAction.set({
+                ...action,
+                loading: true
+            });
+
+            const result = await firstValueFrom(
+                this.courseService.bulkDeleteCourses(selectedIds)
+            );
+
+            if (result.success) {
+                // 重新載入資料，使用 resource 模式
+                const newParams = { ...this.currentSearchParams() };
+                this.currentSearchParams.set({});
+                setTimeout(() => {
+                    this.currentSearchParams.set(newParams);
+
+                    // 根據刪除結果顯示相應訊息
+                    if (result.deletedCount === result.totalCount) {
+                        this.messageService.success(`已成功刪除 ${result.deletedCount} 個課程`);
+                    } else {
+                        this.messageService.warning(`已刪除 ${result.deletedCount}/${result.totalCount} 個課程，部分項目可能已被刪除或權限不足`);
+                    }
+                }, 10);
+
+                // 清空選中項目
+                this.selectedCourses.set(new Set());
+            } else {
+                this.messageService.error('批量刪除失敗，請稍後再試');
+            }
+
+            this.pendingAction.set({ type: null });
+        } catch (error) {
+            this.messageService.error('批量刪除失敗，請稍後再試');
+            console.error('Bulk delete error:', error);
+            this.pendingAction.set({ type: null });
+        }
+    }
+
+    exportData(): void {
+        // TODO: Implement export functionality
+        this.messageService.info('Export data functionality to be implemented');
+    }
+
+    onCreateCourse(): void {
+        this.formMode.set('create');
+        this.selectedCourse.set(null);
+        this.showForm.set(true);
+    }
+
+    onViewCourse(course: Course): void {
+        this.messageService.info(`查看課程功能待實作：${course.courseName}`);
+    }
+
+    onEditCourse(course: Course): void {
+        this.formMode.set('edit');
+        this.selectedCourse.set(course);
+        this.showForm.set(true);
+    }
+
+    onFormSaved(course: Course): void {
+        const mode = this.formMode();
+        const successMessage = mode === 'create' 
+            ? `課程「${course.courseName}」建立成功` 
+            : `課程「${course.courseName}」更新成功`;
+        
+        this.messageService.success(successMessage);
+        this.onFormCancelled(); // 關閉表單
+        
+        // 重新載入資料
+        this.refreshData();
+    }
+
+    onFormCancelled(): void {
+        this.showForm.set(false);
+        this.selectedCourse.set(null);
+        this.formMode.set('create');
+    }
+
+    private refreshData(): void {
+        // 使用 resource 模式重新載入資料
+        const params = this.currentSearchParams();
+        this.currentSearchParams.set({});
+        setTimeout(() => {
+            this.currentSearchParams.set(params);
+        }, 10);
+    }
+
+    onDeleteCourse(course: Course): void {
+        // TODO: 實作單一課程刪除確認對話框
+        // 建議使用與批量刪除類似的確認機制
+        this.messageService.info(`單一課程刪除功能待實作：${course.courseName}`);
+    }
 }

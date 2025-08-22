@@ -1,0 +1,124 @@
+<app-base-modal [config]="modalConfig()" [show]="true" [loading]="loading()" (closed)="onCancel()">
+    <div slot="body">
+        <!-- 錯誤提示 -->
+        <app-error-alert [error]="error()" [showCloseButton]="true" (clearError)="clearError()">
+        </app-error-alert>
+
+        <!-- 表單 -->
+        <form [formGroup]="form" (ngSubmit)="onSubmit()" id="course-form" novalidate>
+            <div class="row">
+                <!-- 課程活動 ID -->
+                <div class="col-md-6">
+                    <app-form-field fieldId="courseEventId" [label]="fieldLabels['courseEventId']" icon="bi bi-hash"
+                        [required]="true" [error]="getFieldError('courseEventId')">
+                        <input type="number" id="courseEventId" formControlName="courseEventId"
+                            [class]="getInputClass('courseEventId')" placeholder="請輸入課程活動 ID" min="1"
+                            aria-describedby="courseEventId_help courseEventId_error">
+                        <div id="courseEventId_help" class="form-text">
+                            請輸入大於 0 的數字
+                        </div>
+                    </app-form-field>
+                </div>
+
+                <!-- 課程名稱 -->
+                <div class="col-md-6">
+                    <app-form-field fieldId="courseName" [label]="fieldLabels['courseName']" icon="bi bi-bookmark"
+                        [required]="true" [error]="getFieldError('courseName')">
+                        <input type="text" id="courseName" formControlName="courseName"
+                            [class]="getInputClass('courseName')" placeholder="請輸入課程名稱" maxlength="200"
+                            aria-describedby="courseName_error">
+                    </app-form-field>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- 學習類型 -->
+                <div class="col-md-4">
+                    <app-form-field fieldId="learningType" [label]="fieldLabels['learningType']"
+                        icon="bi bi-mortarboard" [required]="true" [error]="getFieldError('learningType')">
+                        <select id="learningType" formControlName="learningType"
+                            [class]="getSelectClass('learningType')" aria-describedby="learningType_error">
+                            <option value="">請選擇學習類型</option>
+                            @for (option of learningTypeOptions; track option.value) {
+                            <option [value]="option.value">{{ option.label }}</option>
+                            }
+                        </select>
+                    </app-form-field>
+                </div>
+
+                <!-- 技能類型 -->
+                <div class="col-md-4">
+                    <app-form-field fieldId="skillType" [label]="fieldLabels['skillType']" icon="bi bi-tools"
+                        [required]="true" [error]="getFieldError('skillType')">
+                        <select id="skillType" formControlName="skillType" [class]="getSelectClass('skillType')"
+                            aria-describedby="skillType_error">
+                            <option value="">請選擇技能類型</option>
+                            @for (option of skillTypeOptions; track option.value) {
+                            <option [value]="option.value">{{ option.label }}</option>
+                            }
+                        </select>
+                    </app-form-field>
+                </div>
+
+                <!-- 難易度 -->
+                <div class="col-md-4">
+                    <app-form-field fieldId="level" [label]="fieldLabels['level']" icon="bi bi-trophy" [required]="true"
+                        [error]="getFieldError('level')">
+                        <select id="level" formControlName="level" [class]="getSelectClass('level')"
+                            aria-describedby="level_error">
+                            <option value="">請選擇難易度</option>
+                            @for (option of levelOptions; track option.value) {
+                            <option [value]="option.value">{{ option.label }}</option>
+                            }
+                        </select>
+                    </app-form-field>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- 課程時數 -->
+                <div class="col-md-6">
+                    <app-form-field fieldId="hours" [label]="fieldLabels['hours']" icon="bi bi-clock"
+                        [error]="getFieldError('hours')">
+                        <input type="number" id="hours" formControlName="hours" [class]="getInputClass('hours')"
+                            placeholder="請輸入課程時數" min="0.5" max="999" step="0.5"
+                            aria-describedby="hours_help hours_error">
+                        <div id="hours_help" class="form-text">
+                            請輸入 0.5 到 999 之間的數字</div>
+                    </app-form-field>
+                </div>
+
+                <!-- 是否啟用 -->
+                <div class="col-md-6">
+                    <app-form-field fieldId="isActive" [label]="fieldLabels['isActive']" icon="bi bi-toggle-on"
+                        [required]="true" [error]="getFieldError('isActive')">
+                        <select id="isActive" formControlName="isActive" [class]="getSelectClass('isActive')"
+                            aria-describedby="isActive_error isActive_help">
+                            <option [value]="true">是</option>
+                            <option [value]="false">否</option>
+                        </select>
+                        <div id="isActive_help" class="form-text">
+                            是否啟用
+                        </div>
+                    </app-form-field>
+                </div>
+            </div>
+
+            <!-- 課程備註 -->
+            <app-form-field fieldId="remark" [label]="fieldLabels['remark']" icon="bi bi-chat-text"
+                [error]="getFieldError('remark')">
+                <textarea id="remark" formControlName="remark" [class]="getInputClass('remark')" placeholder="請輸入課程備註"
+                    rows="3" maxlength="500" aria-describedby="remark_help remark_error"></textarea>
+                <div id="remark_help" class="form-text">
+                    請輸入 500 字以內的課程備註
+                </div>
+            </app-form-field>
+        </form>
+    </div>
+
+    <div slot="footer">
+        <app-form-buttons [loading]="loading()" [submitDisabled]="form.invalid" [submitButtonText]="submitButtonText()"
+            cancelButtonText="ֈ" formId="course-form" (cancelled)="onCancel()">
+        </app-form-buttons>
+    </div>
+</app-base-modal>

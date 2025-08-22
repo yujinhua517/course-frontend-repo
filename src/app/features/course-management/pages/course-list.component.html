@@ -7,21 +7,21 @@
             課程主檔管理
         </h2>
         <div class="header-actions d-flex gap-2">
-            <!-- @if (selectedCourses().length > 0 && permissions().delete) {
+            @if (selectedCourses().size > 0 && permissions().delete) {
             <button type="button" class="btn btn-outline-danger" (click)="onBulkDelete()" aria-label="批量刪除">
                 <i class="bi bi-trash me-1"></i>
-                刪除選中項目 ({{ selectedCourses().length }})
+                刪除選中項目 ({{ selectedCourses().size }})
             </button>
-            } -->
+            }
             @if (permissions().create) {
-            <!-- <button type="button" class="btn btn-outline-secondary" (click)="exportData()" aria-label="匯出資料">
+            <button type="button" class="btn btn-outline-secondary" (click)="exportData()" aria-label="匯出資料">
                 <i class="bi bi-download me-1"></i>
                 匯出
-            </button> -->
-            <!-- <button type="button" class="btn btn-primary" (click)="onActionClick('create')" aria-label="新增部門">
+            </button>
+            <button type="button" class="btn btn-primary" (click)="onCreateCourse()" aria-label="新增課程">
                 <i class="bi bi-plus-circle me-1"></i>
                 新增課程
-            </button> -->
+            </button>
             }
         </div>
     </div>
@@ -158,11 +158,21 @@
         <span [innerHTML]="(course.level || '未指定') | highlight:searchKeyword()"></span>
     </ng-template>
 
-    <!-- <ng-template #statusTemplate let-course>
+    <ng-template #statusTemplate let-course>
         <app-status-badge [config]="getStatusConfig(course)" (statusToggled)="onToggleStatus(course)"
             [ariaLabel]="'切換 ' + course.courseName + ' 的狀態'">
         </app-status-badge>
-    </ng-template> -->
+    </ng-template>
+
+    <!-- 狀態切換確認模態框 -->
+    <app-confirmation-modal [config]="statusConfirmConfig()" [show]="showStatusConfirm()"
+        (confirmed)="onToggleStatusConfirm()" (cancelled)="onToggleStatusCancel()">
+    </app-confirmation-modal>
+
+    <!-- 批量刪除確認模態框 -->
+    <app-confirmation-modal [config]="deleteConfirmConfig()" [show]="showBulkDeleteConfirm()"
+        [loading]="isOperationLoading()" (confirmed)="onBulkDeleteConfirm()" (cancelled)="onBulkDeleteCancel()">
+    </app-confirmation-modal>
 
     <ng-template #timeTemplate let-course>
         {{ course.createTime | date:'yyyy/MM/dd HH:mm' }}
@@ -170,8 +180,8 @@
 
     <ng-template #actionsTemplate let-course>
         @defer (on viewport) {
-        <app-action-button-group [config]="getActionConfig(course)" (viewClicked)="onView(course)"
-            (editClicked)="onEdit(course)" (deleteClicked)="onDelete(course)">
+        <app-action-button-group [config]="getActionConfig(course)" (viewClicked)="onViewCourse(course)"
+            (editClicked)="onEditCourse(course)" (deleteClicked)="onDeleteCourse(course)">
         </app-action-button-group>
         } @placeholder {
         <div class="btn-group btn-group-sm placeholder-glow" role="group">
@@ -187,5 +197,17 @@
         </div>
         }
     </ng-template>
+
+    <!-- 分頁控制 -->
+    @if (getContentState() === 'data' && totalPages() > 1) {
+    <app-pagination [config]="paginationConfig()" (pageChanged)="onPageChange($event)">
+    </app-pagination>
+    }
+
+    <!-- 表單模態視窗 -->
+    @if (showForm()) {
+    <app-course-form [mode]="formMode()" [entity]="selectedCourse()" (saved)="onFormSaved($event)" (cancelled)="onFormCancelled()">
+    </app-course-form>
+    }
 
 </div>

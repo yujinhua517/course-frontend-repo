@@ -1,9 +1,10 @@
-import { Injectable, signal, computed } from '@angular/core';
-import { Observable, of, map, delay, catchError } from 'rxjs';
+import { Injectable, signal, computed, inject } from '@angular/core';
+import { Observable, of, map, delay, catchError, forkJoin } from 'rxjs';
 import { BaseQueryService } from '../../../core/services/base-query.service';
 import { ApiResponse, ServiceListResponse } from '../../../models/common.model';
 import { environment } from '../../../../environments/environment';
 import { MOCK_COURSES } from './mock-course.data';
+import { UserStore } from '../../../core/auth/user.store';
 import {
     Course,
     CourseSearchParams,
@@ -26,9 +27,11 @@ import {
  */
 @Injectable({ providedIn: 'root' })
 export class CourseService extends BaseQueryService<Course, CourseSearchParams> {
+    private userStore = inject(UserStore);
+
     // BaseQueryService 要求實作的屬性
     protected readonly apiUrl = `${environment.apiBaseUrl}/courses`;
-    protected readonly useMockData = false; // 開發階段使用模擬資料，正式環境改為 false
+    protected readonly useMockData = false;
     protected readonly defaultSortColumn = 'courseId'; // 在沒有傳入 sortColumn 時會自動生效。
     protected readonly mockData = MOCK_COURSES;
 
@@ -341,4 +344,135 @@ export class CourseService extends BaseQueryService<Course, CourseSearchParams> 
 
         return apiParams;
     }
+
+    /**
+     * Get current logged-in user's username
+     */
+    private getCurrentUser(): string {
+        const currentUser = this.userStore.user();
+        // return currentUser?.username || 'system';
+        return currentUser?.username || 'noname';
+    }
+
+    // 只需帶 courseId（updateUser 可選，預設取當前使用者）
+    updateCourseStatus(courseId: number, updateUser: string = this.getCurrentUser()): Observable<Course | null> {
+        this._operationLoading.set(true);
+
+        if (this.useMockData) {
+            const index = this.mockData.findIndex(c => c.courseId === courseId);
+            if (index === -1) {
+                this._operationLoading.set(false);
+                return of(null);
+            }
+
+            // 🔁 模擬後端「翻轉」：不要用傳入布林，直接自己切換
+            const prev = this.mockData[index];
+            const toggled = !prev.isActive;
+
+            const updatedCourse: Course = {
+                ...prev,
+                isActive: toggled,
+                updateTime: new Date().toISOString(),
+                updateUser
+            };
+
+            this.mockData[index] = updatedCourse;
+            this._currentCourse.set(updatedCourse);
+            this._operationLoading.set(false);
+            return of(updatedCourse).pipe(delay(300)); // 模擬 API 延遲
+        }
+
+        // 🌐 真實 API：呼叫你的 /toggle-status，只送 id（與 updateUser）
+        // 若後端採用 snake_case，改成 { course_id: courseId, update_user: updateUser }
+        return this.http.post<ApiResponse<Course>>(
+            `${this.apiUrl}/toggle-status`,
+            { courseId, updateUser }
+        ).pipe(
+            map(res => {
+                const course = res.code === 1000 ? (res.data ?? null) : null;
+                if (course) this._currentCourse.set(course);
+                this._operationLoading.set(false);
+                return course;
+            }),
+            catchError(err => {
+                this._operationLoading.set(false);
+                return this.httpErrorHandler.handleError<Course | null>('課程狀態切換', null)(err);
+            })
+        );
+    }
+
+    /**
+     * 批量刪除課程（逐一刪除方式）
+     * 由於後端目前沒有 bulk-delete API，使用逐一刪除的方式實現
+     * 
+     * @param courseIds 要刪除的課程ID陣列
+     * @returns 刪除結果 Observable，回傳成功刪除的數量和總數
+     */
+    bulkDeleteCourses(courseIds: number[]): Observable<{ success: boolean; deletedCount: number; totalCount: number }> {
+        this._operationLoading.set(true);
+
+        if (this.useMockData) {
+            // 模擬批量刪除
+            let deletedCount = 0;
+            courseIds.forEach(id => {
+                const index = this.mockData.findIndex(c => c.courseId === id);
+                if (index !== -1) {
+                    this.mockData.splice(index, 1);
+                    deletedCount++;
+                }
+            });
+
+            // 清除當前選中的課程（如果在被刪除的列表中）
+            const currentCourse = this._currentCourse();
+            if (currentCourse && courseIds.includes(currentCourse.courseId)) {
+                this._currentCourse.set(null);
+            }
+
+            this._operationLoading.set(false);
+            return of({
+                success: deletedCount > 0,
+                deletedCount,
+                totalCount: courseIds.length
+            }).pipe(delay(500));
+        }
+
+        // 真實API：逐一調用刪除接口
+        const deleteRequests = courseIds.map(courseId => 
+            this.deleteCourse(courseId).pipe(
+                catchError(error => {
+                    console.error(`刪除課程 ${courseId} 失敗:`, error);
+                    return of(false); // 個別失敗返回 false
+                })
+            )
+        );
+
+        return forkJoin(deleteRequests).pipe(
+            map(results => {
+                const deletedCount = results.filter(result => result === true).length;
+                const success = deletedCount > 0;
+
+                // 清除當前選中的課程（如果在被刪除的列表中）
+                const currentCourse = this._currentCourse();
+                if (success && currentCourse && courseIds.includes(currentCourse.courseId)) {
+                    this._currentCourse.set(null);
+                }
+
+                this._operationLoading.set(false);
+                return {
+                    success,
+                    deletedCount,
+                    totalCount: courseIds.length
+                };
+            }),
+            catchError(error => {
+                this._operationLoading.set(false);
+                return this.httpErrorHandler.handleError<{ success: boolean; deletedCount: number; totalCount: number }>('批量刪除課程', {
+                    success: false,
+                    deletedCount: 0,
+                    totalCount: courseIds.length
+                })(error);
+            })
+        );
+    }
+
 }
