@@ -280,6 +280,7 @@ export class CourseListComponent {
     readonly learningTypeTemplate = viewChild.required<TemplateRef<any>>('learningTypeTemplate');
     readonly skillTypeTemplate = viewChild.required<TemplateRef<any>>('skillTypeTemplate');
     readonly levelTemplate = viewChild.required<TemplateRef<any>>('levelTemplate');
+    readonly hoursTemplate = viewChild.required<TemplateRef<any>>('hoursTemplate');
     readonly statusTemplate = viewChild.required<TemplateRef<any>>('statusTemplate');    // 可選：可能不存在
     readonly timeTemplate = viewChild.required<TemplateRef<any>>('timeTemplate');
     readonly actionsTemplate = viewChild.required<TemplateRef<any>>('actionsTemplate');
@@ -338,17 +339,42 @@ export class CourseListComponent {
         this.updateSearchParams(params);
     }
 
+    // ================== 動態選項生成 ==================
+
+    /** 動態生成時長選項 */
+    private generateHoursOptions(min: number, max: number, step: number = 0.5) {
+        const options: { value: number; text: string }[] = [];
+        for (let i = min; i <= max; i += step) {
+            const value = Math.round(i * 10) / 10; // 確保數值精確度
+            options.push({ value, text: value.toString() });
+        }
+        return options;
+    }
+
     // ================== SearchFilterComponent 綁定 ==================
 
     /** 傳給 SearchFilterComponent 的設定（placeholder、filter、pageSize 等）。 */
     readonly searchFilterConfig = computed<SearchFilterConfig>(() => ({
-        searchPlaceholder: '請輸入課程名稱或關鍵字…',
+        searchPlaceholder: '請輸入課程名稱或課程編號',
         searchLabel: '課程搜尋',
         showPageSize: true,
         pageSizeOptions: [10, 25, 50, 100],
         showTotalCount: true,
-        totalCountLabel: '筆課程',
         showClearButton: true,
+        // 與搜尋框並排的篩選器
+        inlineFilters: [
+            {
+                key: 'hoursFrom',
+                label: '課程時長（起）',
+                options: this.generateHoursOptions(0.5, 50, 0.5),
+            },
+            {
+                key: 'hoursTo',
+                label: '課程時長（迄）',
+                options: this.generateHoursOptions(0.5, 50, 0.5),
+            },
+        ],
+        // 第二行的篩選器
         filters: [
             {
                 key: 'learningType',
@@ -380,6 +406,8 @@ export class CourseListComponent {
     readonly currentFilterValues = computed(() => {
         const p = this.currentSearchParams();
         return {
+            hoursFrom: p.hoursFrom ?? '',
+            hoursTo: p.hoursTo ?? '',
             learningType: p.learningType ?? '',
             skillType: p.skillType ?? '',
             level: p.level ?? '',
@@ -409,7 +437,7 @@ export class CourseListComponent {
                 : event.value;
 
         const params = this.buildParams(updates);
-        this.updateSearchParams(params, '篩選條件已套用');
+        this.updateSearchParams(params);
     }
 
     /** 處理 pageSize 改變：同步顯示並以新 pageSize 查詢（回到第 1 頁）。 */
@@ -430,6 +458,8 @@ export class CourseListComponent {
             keyword: '',
             pageable: true,
             sortDirection: 'asc',
+            hoursFrom: undefined,
+            hoursTo: undefined,
             learningType: undefined,
             skillType: undefined,
             level: undefined,
@@ -555,10 +585,11 @@ export class CourseListComponent {
         // 明確定義欄位陣列為 TableColumn[]，並為需要對齊或自訂樣式的欄位加上 cssClass
         const cols: any[] = [
             { key: 'courseId', label: 'No.', sortable: true, width: '8%' },
-            { key: 'courseName', label: '課程名稱', sortable: true, width: '20%' },
-            { key: 'learningType', label: '學習方式', sortable: true, width: '12%' },
-            { key: 'skillType', label: '技能類型', sortable: false, width: '12%' },
-            { key: 'level', label: '課程等級', sortable: false, width: '10%' },
+            { key: 'courseName', label: '課程名稱', sortable: true, width: '18%' },
+            { key: 'learningType', label: '學習方式', sortable: false, width: '8%' },
+            { key: 'skillType', label: '技能類型', sortable: false, width: '10%' },
+            { key: 'level', label: '課程等級', sortable: false, width: '8%' },
+            { key: 'hours', label: '課程時長', sortable: true, width: '10%' },
             { key: 'isActive', label: '狀態', sortable: false, align: 'center', width: '8%' },
             { key: 'createTime', label: '建立時間', sortable: true, width: '15%' },
             { key: 'actions', label: '操作', sortable: false, align: 'center', width: '15%' }
@@ -598,32 +629,37 @@ export class CourseListComponent {
             {
                 key: 'courseName',
                 cssClass: 'fw-medium text-primary',
-                width: '11%'
+                width: '18%'
             },
             {
                 key: 'learningType',
                 cssClass: 'fw-medium',
-                width: '16%'
+                width: '8%'
             },
             {
                 key: 'skillType',
                 cssClass: 'text-muted',
-                width: '17%'
+                width: '10%'
             },
             {
                 key: 'level',
                 cssClass: 'text-muted',
-                width: '11%'
+                width: '10%'
+            },
+            {
+                key: 'hours',
+                cssClass: 'text-muted',
+                width: '8%'
             },
             {
                 key: 'isActive',
                 align: 'center',
-                width: '10%'
+                width: '8%'
             },
             {
                 key: 'createTime',
                 cssClass: 'text-muted small',
-                width: '12%'
+                width: '15%'
             },
             {
                 key: 'actions',
@@ -658,6 +694,9 @@ export class CourseListComponent {
                     break;
                 case 'level':
                     col.template = this.levelTemplate();
+                    break;
+                case 'hours':
+                    col.template = this.hoursTemplate();
                     break;
                 case 'isActive':
                     col.template = this.statusTemplate();
@@ -954,13 +993,13 @@ export class CourseListComponent {
 
     onFormSaved(course: Course): void {
         const mode = this.formMode();
-        const successMessage = mode === 'create' 
-            ? `課程「${course.courseName}」建立成功` 
+        const successMessage = mode === 'create'
+            ? `課程「${course.courseName}」建立成功`
             : `課程「${course.courseName}」更新成功`;
-        
+
         this.messageService.success(successMessage);
         this.onFormCancelled(); // 關閉表單
-        
+
         // 重新載入資料
         this.refreshData();
     }

@@ -7,21 +7,8 @@
         <!-- 表單 -->
         <form [formGroup]="form" (ngSubmit)="onSubmit()" id="course-form" novalidate>
             <div class="row">
-                <!-- 課程活動 ID -->
-                <div class="col-md-6">
-                    <app-form-field fieldId="courseEventId" [label]="fieldLabels['courseEventId']" icon="bi bi-hash"
-                        [required]="true" [error]="getFieldError('courseEventId')">
-                        <input type="number" id="courseEventId" formControlName="courseEventId"
-                            [class]="getInputClass('courseEventId')" placeholder="請輸入課程活動 ID" min="1"
-                            aria-describedby="courseEventId_help courseEventId_error">
-                        <div id="courseEventId_help" class="form-text">
-                            請輸入大於 0 的數字
-                        </div>
-                    </app-form-field>
-                </div>
-
                 <!-- 課程名稱 -->
-                <div class="col-md-6">
+                <div class="col-md-12">
                     <app-form-field fieldId="courseName" [label]="fieldLabels['courseName']" icon="bi bi-bookmark"
                         [required]="true" [error]="getFieldError('courseName')">
                         <input type="text" id="courseName" formControlName="courseName"
@@ -30,7 +17,6 @@
                     </app-form-field>
                 </div>
             </div>
-
             <div class="row">
                 <!-- 學習類型 -->
                 <div class="col-md-4">
@@ -83,8 +69,6 @@
                         <input type="number" id="hours" formControlName="hours" [class]="getInputClass('hours')"
                             placeholder="請輸入課程時數" min="0.5" max="999" step="0.5"
                             aria-describedby="hours_help hours_error">
-                        <div id="hours_help" class="form-text">
-                            請輸入 0.5 到 999 之間的數字</div>
                     </app-form-field>
                 </div>
 
@@ -97,9 +81,6 @@
                             <option [value]="true">是</option>
                             <option [value]="false">否</option>
                         </select>
-                        <div id="isActive_help" class="form-text">
-                            是否啟用
-                        </div>
                     </app-form-field>
                 </div>
             </div>
@@ -118,7 +99,7 @@
 
     <div slot="footer">
         <app-form-buttons [loading]="loading()" [submitDisabled]="form.invalid" [submitButtonText]="submitButtonText()"
-            cancelButtonText="ֈ" formId="course-form" (cancelled)="onCancel()">
+            cancelButtonText="取消" formId="course-form" (cancelled)="onCancel()">
         </app-form-buttons>
     </div>
 </app-base-modal>

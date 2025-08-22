@@ -324,10 +324,21 @@ export class CourseService extends BaseQueryService<Course, CourseSearchParams> 
 
         const apiParams: Record<string, any> = {};
 
+        // 處理關鍵字搜尋：將關鍵字套用到課程名稱或課程編號欄位
+        if (params.keyword && params.keyword.trim()) {
+            const keyword = params.keyword.trim();
+            // 如果關鍵字是純數字，搜尋課程編號；否則搜尋課程名稱
+            if (/^\d+$/.test(keyword)) {
+                apiParams['courseId'] = parseInt(keyword, 10);
+            } else {
+                apiParams['courseName'] = keyword;
+            }
+        }
+
         // 課程特有的篩選條件
-        if (params.courseId) apiParams['courseId'] = params.courseId;
+        if (params.courseId && !params.keyword) apiParams['courseId'] = params.courseId;
         if (params.courseEventId) apiParams['courseEventId'] = params.courseEventId;
-        if (params.courseName) apiParams['courseName'] = params.courseName;
+        if (params.courseName && !params.keyword) apiParams['courseName'] = params.courseName;
         if (params.learningType) apiParams['learningType'] = params.learningType;
         if (params.skillType) apiParams['skillType'] = params.skillType;
         if (params.level) apiParams['level'] = params.level;
@@ -437,7 +448,7 @@ export class CourseService extends BaseQueryService<Course, CourseSearchParams> 
         }
 
         // 真實API：逐一調用刪除接口
-        const deleteRequests = courseIds.map(courseId => 
+        const deleteRequests = courseIds.map(courseId =>
             this.deleteCourse(courseId).pipe(
                 catchError(error => {
                     console.error(`刪除課程 ${courseId} 失敗:`, error);

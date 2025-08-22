@@ -2,6 +2,10 @@
 @use './styles/variables' as *;
 @use 'bootstrap/scss/bootstrap' as *;
 
+// 全域表單樣式（包含 .required::after 星號標記）
+@use './styles/form-controls' as *;
+@include form-styles;
+
 html,
 body {
     height: 100%;

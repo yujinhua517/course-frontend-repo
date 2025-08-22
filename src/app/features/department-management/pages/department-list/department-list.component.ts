@@ -117,7 +117,6 @@ export class DepartmentListComponent implements OnInit {
         showPageSize: true,
         pageSizeOptions: [10, 25, 50, 100],
         showTotalCount: true,
-        totalCountLabel: '筆部門資料',
         showClearButton: true
     }));
 

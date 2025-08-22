@@ -1,9 +1,12 @@
 <!-- 搜尋與篩選區 -->
 <div class="search-section card mb-4">
-    <div class="card-body">
+    <div class="card-body position-relative">
+        <div class="position-absolute top-0 end-0 p-3">
+            <button type="button" class="btn btn-outline-secondary btn-sm" (click)="onClearFilters()">清除篩選器</button>
+        </div>
         <div class="row g-3 align-items-end">
             <!-- 搜尋輸入框 -->
-            <div class="col-md-5">
+            <div class="col-md-6">
                 <label for="searchInput" class="form-label fw-medium">
                     {{ config().searchLabel || '關鍵字搜尋' }}
                 </label>
@@ -11,12 +14,10 @@
                     <input type="text" id="searchInput" class="form-control"
                         [placeholder]="config().searchPlaceholder || '搜尋...'" [(ngModel)]="currentSearchKeyword"
                         (keyup.enter)="onSearchEnter()" [disabled]="loading()" aria-label="搜尋關鍵字">
-
                     <button class="btn btn-outline-search" type="button" (click)="onSearch()" [disabled]="loading()"
                         aria-label="執行搜尋">
                         <i class="bi bi-search"></i>
                     </button>
-
                     @if (shouldShowClearButton()) {
                     <button class="btn btn-outline-clear" type="button" (click)="onClearSearch()" [disabled]="loading()"
                         aria-label="清除搜尋">
@@ -25,6 +26,26 @@
                     }
                 </div>
             </div>
+
+            <!-- 內嵌篩選器（與搜尋框並排） -->
+            @if (config().inlineFilters && config().inlineFilters!.length > 0) {
+            @for (filter of config().inlineFilters!; track filter.key) {
+            <div class="col-md-2">
+                <label [for]="getFilterId(filter.key)" class="form-label fw-medium">
+                    {{ filter.label }}
+                </label>
+                <select [id]="getFilterId(filter.key)" class="form-select" [value]="getFilterValue(filter.key)"
+                    (change)="onFilterChange(filter.key, $event)" [disabled]="loading()"
+                    [attr.aria-label]="getFilterAriaLabel(filter)">
+
+                    <option value="">全部</option>
+                    @for (option of filter.options; track option.value) {
+                    <option [value]="option.value">{{ option.text }}</option>
+                    }
+                </select>
+            </div>
+            }
+            }
         </div>
         <div class="row g-3 mt-3">
             <!-- 動態篩選器 -->
@@ -46,7 +67,7 @@
             </div>
             }
             }
-
+            <!-- 每頁筆數與清除按鈕在下方工具列（不要放在 select 裡） -->
             <!-- 每頁筆數選擇器 -->
             @if (config().showPageSize !== false) {
             <div class="col-md-2">
@@ -60,15 +81,12 @@
                 </select>
             </div>
             }
-
-            <!-- 總筆數顯示 -->
-            @if (config().showTotalCount !== false) {
-            <div class="col-md-2 d-flex flex-column justify-content-end align-items-end ms-auto">
-                <div class="text-muted small">
-                    {{ totalCountText() }}
-                </div>
-            </div>
-            }
         </div>
+        <!-- 總筆數顯示 與 清除按鈕（放在工具列右側） -->
+        @if (config().showTotalCount !== false) {
+        <div class="col-md-2 ms-auto d-flex justify-content-end align-items-end">
+            <div class="text-muted small">{{ totalCountText() }}</div>
+        </div>
+        }
     </div>
 </div>

@@ -158,6 +158,10 @@
         <span [innerHTML]="(course.level || '未指定') | highlight:searchKeyword()"></span>
     </ng-template>
 
+    <ng-template #hoursTemplate let-course>
+        <span [innerHTML]="(course.hours || '未說明') | highlight:searchKeyword()"></span>
+    </ng-template>
+
     <ng-template #statusTemplate let-course>
         <app-status-badge [config]="getStatusConfig(course)" (statusToggled)="onToggleStatus(course)"
             [ariaLabel]="'切換 ' + course.courseName + ' 的狀態'">
@@ -206,7 +210,8 @@
 
     <!-- 表單模態視窗 -->
     @if (showForm()) {
-    <app-course-form [mode]="formMode()" [entity]="selectedCourse()" (saved)="onFormSaved($event)" (cancelled)="onFormCancelled()">
+    <app-course-form [mode]="formMode()" [entity]="selectedCourse()" (saved)="onFormSaved($event)"
+        (cancelled)="onFormCancelled()">
     </app-course-form>
     }
 

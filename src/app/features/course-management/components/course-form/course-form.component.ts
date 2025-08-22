@@ -41,7 +41,6 @@ export class CourseFormComponent extends FormModalBaseComponent<Course, CourseCr
     private courseService = inject(CourseService);
     private messageService = inject(GlobalMessageService);
 
-
     override readonly fieldLabels: Record<string, string> = {
         courseEventId: '課程活動 ID',
         courseName: '課程名稱',
@@ -152,19 +151,19 @@ export class CourseFormComponent extends FormModalBaseComponent<Course, CourseCr
             const fieldLabel = this.getFieldLabel(fieldName);
 
             if (field.errors?.['required']) {
-                return `${fieldLabel}是必填欄位`;
+                return `這是必填欄位`;
             }
             if (field.errors?.['maxlength']) {
                 const maxLength = field.errors['maxlength'].requiredLength;
-                return `${fieldLabel}不能超過 ${maxLength} 個字元`;
+                return `不能超過 ${maxLength} 個字元`;
             }
             if (field.errors?.['min']) {
                 const min = field.errors['min'].min;
-                return `${fieldLabel}不能小於 ${min}`;
+                return `不能小於 ${min}`;
             }
             if (field.errors?.['max']) {
                 const max = field.errors['max'].max;
-                return `${fieldLabel}不能大於 ${max}`;
+                return `不能大於 ${max}`;
             }
         }
         return null;
@@ -182,5 +181,13 @@ export class CourseFormComponent extends FormModalBaseComponent<Course, CourseCr
         const baseClass = 'form-select';
         const invalidClass = this.isFieldInvalid(fieldName) ? 'is-invalid' : '';
         return `${baseClass} ${invalidClass}`.trim();
+    }
+
+    /**
+     * 對外公開的提交方法，可由父元件或測試呼叫以觸發建立/更新流程。
+     * 例如父元件可透過 @ViewChild 調用：this.courseForm.submit();
+     */
+    async submit(): Promise<void> {
+        await this.onSubmit();
     }
 }

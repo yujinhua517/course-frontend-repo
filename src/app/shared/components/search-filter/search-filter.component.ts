@@ -19,6 +19,7 @@ export interface SearchFilterConfig {
     searchPlaceholder?: string;
     searchLabel?: string;
     filters?: FilterOption[];
+    inlineFilters?: FilterOption[];  // 與搜尋框並排的篩選器
     showPageSize?: boolean;
     pageSizeOptions?: number[];
     showTotalCount?: boolean;
@@ -62,6 +63,7 @@ export class SearchFilterComponent {
     readonly filterChanged = output<{ key: string; value: any }>();
     readonly pageSizeChanged = output<number>();
     readonly searchCleared = output<void>();
+    readonly filtersCleared = output<void>();
 
     // 內部狀態
     protected readonly currentSearchKeyword = signal('');
@@ -137,6 +139,28 @@ export class SearchFilterComponent {
         const target = event.target as HTMLSelectElement;
         const pageSize = parseInt(target.value, 10);
         this.pageSizeChanged.emit(pageSize);
+    }
+
+    /**
+     * 清除所有篩選器（不含每頁筆數），會對每個 filter 發出 filterChanged({key, undefined})
+     */
+    protected onClearFilters(): void {
+        const cfg = this.config();
+
+        // 針對 inline filters 與第二行 filters 各別發出清除事件
+        const inline = cfg.inlineFilters || [];
+        for (const f of inline) {
+            this.filterChanged.emit({ key: f.key, value: undefined });
+        }
+
+        const filters = cfg.filters || [];
+        for (const f of filters) {
+            this.filterChanged.emit({ key: f.key, value: undefined });
+        }
+
+        // 發出方便父元件監聽的事件（保留相容性：也發出 searchCleared，讓現有父元件能繼續使用）
+        this.filtersCleared.emit();
+        this.searchCleared.emit();
     }
 
     /**

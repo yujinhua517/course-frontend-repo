@@ -116,7 +116,6 @@ export class EmployeeListComponent implements OnInit {
         showPageSize: true,
         pageSizeOptions: [10, 25, 50, 100],
         showTotalCount: true,
-        totalCountLabel: '筆員工資料',
         showClearButton: true
     }));
 

@@ -140,7 +140,6 @@ export class CourseEventListComponent implements OnInit {
         showPageSize: true,
         pageSizeOptions: [10, 25, 50, 100],
         showTotalCount: true,
-        totalCountLabel: '筆課程活動',
         showClearButton: true
     }));
 

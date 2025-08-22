@@ -236,7 +236,6 @@ export class JobRoleListComponent implements OnInit {
         showPageSize: true,
         pageSizeOptions: [10, 25, 50, 100],
         showTotalCount: true,
-        totalCountLabel: '筆職務資料',
         showClearButton: true
     }));
 
