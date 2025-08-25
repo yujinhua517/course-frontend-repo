@@ -1,4 +1,4 @@
-import { Component, inject, computed, effect } from '@angular/core';
+import { Component, inject, computed, effect, resource } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, Validators } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
@@ -13,6 +13,8 @@ import {
 } from '../../../../shared/components';
 
 import { CourseService } from '../../services/course.service';
+import { CourseEventService } from '../../../course-event-management/services/course-event.service';
+import { CourseEvent } from '../../../course-event-management/models/course-event.model';
 import { GlobalMessageService } from '../../../../core/message/global-message.service';
 import {
     Course,
@@ -39,10 +41,11 @@ import {
 })
 export class CourseFormComponent extends FormModalBaseComponent<Course, CourseCreateDto, CourseUpdateDto> {
     private courseService = inject(CourseService);
+    private courseEventService = inject(CourseEventService);
     private messageService = inject(GlobalMessageService);
 
     override readonly fieldLabels: Record<string, string> = {
-        courseEventId: '課程活動 ID',
+        courseEventId: '課程活動',
         courseName: '課程名稱',
         learningType: '學習類型',
         skillType: '技能類型',
@@ -61,10 +64,95 @@ export class CourseFormComponent extends FormModalBaseComponent<Course, CourseCr
         closeOnBackdropClick: false
     }));
 
-    // 課程選項
-    readonly learningTypeOptions = LEARNING_TYPE_OPTIONS;
-    readonly skillTypeOptions = SKILL_TYPE_OPTIONS;
-    readonly levelOptions = LEVEL_OPTIONS;
+    // 課程選項 - 從現有課程資料中動態提取
+    private readonly coursesForOptionsResource = resource({
+        loader: () => firstValueFrom(this.courseService.getPagedData({
+            pageable: true,
+            firstIndexInPage: 1,
+            lastIndexInPage: 1000
+        }))
+    });
+
+    readonly learningTypeOptions = computed(() => {
+        const response = this.coursesForOptionsResource.value();
+        if (!response?.data?.dataList) {
+            // 資料載入中或失敗時，使用靜態備用選項
+            return LEARNING_TYPE_OPTIONS;
+        }
+
+        const uniqueTypes = [...new Set(response.data.dataList
+            .map((course: Course) => course.learningType)
+            .filter(type => type)
+        )];
+        
+        // 如果沒有動態資料，使用靜態選項
+        if (uniqueTypes.length === 0) {
+            return LEARNING_TYPE_OPTIONS;
+        }
+        
+        return uniqueTypes.map(type => ({ value: type, label: type }));
+    });
+
+    readonly skillTypeOptions = computed(() => {
+        const response = this.coursesForOptionsResource.value();
+        if (!response?.data?.dataList) {
+            return SKILL_TYPE_OPTIONS;
+        }
+
+        const uniqueTypes = [...new Set(response.data.dataList
+            .map((course: Course) => course.skillType)
+            .filter(type => type)
+        )];
+        
+        if (uniqueTypes.length === 0) {
+            return SKILL_TYPE_OPTIONS;
+        }
+        
+        return uniqueTypes.map(type => ({ value: type, label: type }));
+    });
+
+    readonly levelOptions = computed(() => {
+        const response = this.coursesForOptionsResource.value();
+        if (!response?.data?.dataList) {
+            return LEVEL_OPTIONS;
+        }
+
+        const uniqueLevels = [...new Set(response.data.dataList
+            .map((course: Course) => course.level)
+            .filter(level => level)
+        )];
+        
+        if (uniqueLevels.length === 0) {
+            return LEVEL_OPTIONS;
+        }
+        
+        return uniqueLevels.map(level => ({ value: level, label: level }));
+    });
+
+
+    // 課程活動選項 - 使用 resource 動態載入
+    private readonly courseEventsResource = resource({
+        loader: () => firstValueFrom(this.courseEventService.getPagedData({
+            pageable: true,
+            firstIndexInPage: 1,
+            lastIndexInPage: 1000,
+            isActive: true // 只載入啟用的課程活動
+        }))
+    });
+
+    // 轉換為下拉選項格式
+    readonly courseEventOptions = computed(() => {
+        const response = this.courseEventsResource.value();
+        if (!response?.data?.dataList) {
+            // 資料載入中時，返回空陣列讓 HTML 中的預設 option 顯示
+            return [];
+        }
+
+        return response.data.dataList.map((event: CourseEvent) => ({
+            value: event.courseEventId || 0,
+            label: `${event.year} ${event.semester} - ${event.activityTitle}`
+        }));
+    });
 
     constructor() {
         super();
@@ -83,7 +171,7 @@ export class CourseFormComponent extends FormModalBaseComponent<Course, CourseCr
 
     protected override initializeForm(): void {
         this.form = this.fb.group({
-            courseEventId: [null, [Validators.required, Validators.min(1)]],
+            courseEventId: ['', [Validators.required]],
             courseName: ['', [Validators.required, Validators.maxLength(200)]],
             learningType: ['', [Validators.required]],
             skillType: ['', [Validators.required]],
@@ -95,6 +183,11 @@ export class CourseFormComponent extends FormModalBaseComponent<Course, CourseCr
     }
 
     protected override async performSubmit(data: CourseCreateDto | CourseUpdateDto): Promise<Course> {
+        // 開發用：當 courseName 被設定為特定值時，模擬伺服器錯誤以測試 UI 的錯誤顯示
+        if ((data as any).courseEventName === 'trigger-error') {
+            throw new Error('模擬錯誤：測試用，伺服器返回失敗');
+        }
+        // 根據模式呼叫相應的服務方法
         if (this.isEditMode()) {
             const updateData: CourseUpdateDto = {
                 ...data as CourseUpdateDto,
@@ -133,7 +226,7 @@ export class CourseFormComponent extends FormModalBaseComponent<Course, CourseCr
 
     private resetForm(): void {
         this.form.reset({
-            courseEventId: null,
+            courseEventId: '',
             courseName: '',
             learningType: '',
             skillType: '',

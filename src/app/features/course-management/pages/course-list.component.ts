@@ -108,6 +108,78 @@ export class CourseListComponent {
         }
     });
 
+    /** 用於篩選器選項的資料載入 */
+    private readonly filterOptionsResource = resource({
+        loader: () => firstValueFrom(this.courseService.getPagedData({
+            pageable: true,
+            firstIndexInPage: 1,
+            lastIndexInPage: 1000 // 載入大量資料以獲取所有可能的選項值
+        }))
+    });
+
+    /** 動態學習類型選項 */
+    private readonly dynamicLearningTypeOptions = computed(() => {
+        const response = this.filterOptionsResource.value();
+        if (!response?.data?.dataList) {
+            return LEARNING_TYPE_OPTIONS.map(o => ({ value: o.value, text: o.label }));
+        }
+
+        const types = response.data.dataList
+            .map((course: Course) => course.learningType)
+            .filter(type => type) // 過濾掉 null/undefined
+            .map(type => type!); // 非空斷言，因為已經過濾了
+            
+        const uniqueTypes = [...new Set(types)];
+        
+        if (uniqueTypes.length === 0) {
+            return LEARNING_TYPE_OPTIONS.map(o => ({ value: o.value, text: o.label }));
+        }
+        
+        return uniqueTypes.map(type => ({ value: type, text: type }));
+    });
+
+    /** 動態技能類型選項 */
+    private readonly dynamicSkillTypeOptions = computed(() => {
+        const response = this.filterOptionsResource.value();
+        if (!response?.data?.dataList) {
+            return SKILL_TYPE_OPTIONS.map(o => ({ value: o.value, text: o.label }));
+        }
+
+        const types = response.data.dataList
+            .map((course: Course) => course.skillType)
+            .filter(type => type) // 過濾掉 null/undefined
+            .map(type => type!); // 非空斷言，因為已經過濾了
+            
+        const uniqueTypes = [...new Set(types)];
+        
+        if (uniqueTypes.length === 0) {
+            return SKILL_TYPE_OPTIONS.map(o => ({ value: o.value, text: o.label }));
+        }
+        
+        return uniqueTypes.map(type => ({ value: type, text: type }));
+    });
+
+    /** 動態課程等級選項 */
+    private readonly dynamicLevelOptions = computed(() => {
+        const response = this.filterOptionsResource.value();
+        if (!response?.data?.dataList) {
+            return LEVEL_OPTIONS.map(o => ({ value: o.value, text: o.label }));
+        }
+
+        const levels = response.data.dataList
+            .map((course: Course) => course.level)
+            .filter(level => level) // 過濾掉 null/undefined
+            .map(level => level!); // 非空斷言，因為已經過濾了
+            
+        const uniqueLevels = [...new Set(levels)];
+        
+        if (uniqueLevels.length === 0) {
+            return LEVEL_OPTIONS.map(o => ({ value: o.value, text: o.label }));
+        }
+        
+        return uniqueLevels.map(level => ({ value: level, text: level }));
+    });
+
 
     /** 由 resource 推導出的唯讀值，方便畫面綁定
      * - courses: 課程清單
@@ -379,17 +451,17 @@ export class CourseListComponent {
             {
                 key: 'learningType',
                 label: '學習方式',
-                options: LEARNING_TYPE_OPTIONS.map((o) => ({ value: o.value, text: o.label })),
+                options: this.dynamicLearningTypeOptions(),
             },
             {
                 key: 'skillType',
                 label: '技能類型',
-                options: SKILL_TYPE_OPTIONS.map((o) => ({ value: o.value, text: o.label })),
+                options: this.dynamicSkillTypeOptions(),
             },
             {
                 key: 'level',
                 label: '課程等級',
-                options: LEVEL_OPTIONS.map((o) => ({ value: o.value, text: o.label })),
+                options: this.dynamicLevelOptions(),
             },
             {
                 key: 'isActive',

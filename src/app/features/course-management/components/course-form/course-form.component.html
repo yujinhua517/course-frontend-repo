@@ -8,12 +8,24 @@
         <form [formGroup]="form" (ngSubmit)="onSubmit()" id="course-form" novalidate>
             <div class="row">
                 <!-- 課程名稱 -->
-                <div class="col-md-12">
+                <div class="col-md-6">
                     <app-form-field fieldId="courseName" [label]="fieldLabels['courseName']" icon="bi bi-bookmark"
                         [required]="true" [error]="getFieldError('courseName')">
                         <input type="text" id="courseName" formControlName="courseName"
                             [class]="getInputClass('courseName')" placeholder="請輸入課程名稱" maxlength="200"
                             aria-describedby="courseName_error">
+                    </app-form-field>
+                </div>
+                <div class="col-md-6">
+                    <app-form-field fieldId="courseEventId" [label]="fieldLabels['courseEventId']"
+                        icon="bi bi-info-circle" [required]="true" [error]="getFieldError('courseEventId')">
+                        <select id="courseEventId" formControlName="courseEventId"
+                            [class]="getSelectClass('courseEventId')" aria-describedby="courseEventId_error">
+                            <option value="">請選擇課程活動</option>
+                            @for (option of courseEventOptions(); track option.value) {
+                            <option [value]="option.value">{{ option.label }}</option>
+                            }
+                        </select>
                     </app-form-field>
                 </div>
             </div>
@@ -25,7 +37,7 @@
                         <select id="learningType" formControlName="learningType"
                             [class]="getSelectClass('learningType')" aria-describedby="learningType_error">
                             <option value="">請選擇學習類型</option>
-                            @for (option of learningTypeOptions; track option.value) {
+                            @for (option of learningTypeOptions(); track option.value) {
                             <option [value]="option.value">{{ option.label }}</option>
                             }
                         </select>
@@ -39,7 +51,7 @@
                         <select id="skillType" formControlName="skillType" [class]="getSelectClass('skillType')"
                             aria-describedby="skillType_error">
                             <option value="">請選擇技能類型</option>
-                            @for (option of skillTypeOptions; track option.value) {
+                            @for (option of skillTypeOptions(); track option.value) {
                             <option [value]="option.value">{{ option.label }}</option>
                             }
                         </select>
@@ -53,7 +65,7 @@
                         <select id="level" formControlName="level" [class]="getSelectClass('level')"
                             aria-describedby="level_error">
                             <option value="">請選擇難易度</option>
-                            @for (option of levelOptions; track option.value) {
+                            @for (option of levelOptions(); track option.value) {
                             <option [value]="option.value">{{ option.label }}</option>
                             }
                         </select>

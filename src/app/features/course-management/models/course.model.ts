@@ -79,8 +79,9 @@ export interface CourseFilters {
 }
 export type CourseQueryOptions = QueryOptions<Course, CourseFilters>;
 
-/* ===================== 4) 列舉型欄位：常數 + 型別 ===================== */
+// /* ===================== 4) 列舉型欄位：常數 + 型別 ===================== */
 
+// 靜態常數 (已改為動態載入，但保留型別定義)
 export const LEARNING_TYPE_OPTIONS = [
     { value: '實體', label: '實體' },
     { value: '線上', label: '線上' },
