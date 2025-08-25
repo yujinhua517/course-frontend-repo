@@ -361,17 +361,17 @@ export class CourseListComponent {
         this.updateSearchParams(params);
     }
 
-    // ================== 動態選項生成 ==================
+    // ================== 靜態選項定義 ==================
 
-    /** 動態生成時長選項 */
-    private generateHoursOptions(min: number, max: number, step: number = 0.5) {
+    /** 預定義的小時選項（避免重複生成） */
+    private static readonly HOUR_OPTIONS: { value: number; text: string }[] = (() => {
         const options: { value: number; text: string }[] = [];
-        for (let i = min; i <= max; i += step) {
+        for (let i = 0.5; i <= 50; i += 0.5) {
             const value = Math.round(i * 10) / 10; // 確保數值精確度
             options.push({ value, text: value.toString() });
         }
         return options;
-    }
+    })();
 
     // ================== SearchFilterComponent 綁定 ==================
 
@@ -388,12 +388,12 @@ export class CourseListComponent {
             {
                 key: 'hoursFrom',
                 label: '課程時長（起）',
-                options: this.generateHoursOptions(0.5, 50, 0.5),
+                options: CourseListComponent.HOUR_OPTIONS,
             },
             {
                 key: 'hoursTo',
                 label: '課程時長（迄）',
-                options: this.generateHoursOptions(0.5, 50, 0.5),
+                options: CourseListComponent.HOUR_OPTIONS,
             },
         ],
         // 第二行的篩選器
@@ -538,10 +538,10 @@ export class CourseListComponent {
         size: 'md'
     }));
 
-    /** 清除頁面錯誤訊息（template 綁定）- 使用 resource 時會自動重試 */
+    /** 清除錯誤訊息並重新載入資料 */
     clearError(): void {
-        // 使用 resource API 時，可以觸發重新載入
-        // 或者簡單地等待下次參數變更時自動重試
+        // 觸發資料重新載入以清除錯誤狀態
+        this.refreshData();
     }
 
     // ================== 空狀態 ==================
@@ -867,12 +867,7 @@ export class CourseListComponent {
 
             if (updated) {
                 // 觸發 resource 重新載入以獲取最新資料
-                const params = this.currentSearchParams();
-                this.currentSearchParams.set({});
-                setTimeout(() => {
-                    this.currentSearchParams.set(params);
-                    this.messageService.success('狀態已更新');
-                }, 10);
+                this.refreshData('狀態已更新');
             }
 
             this.pendingAction.set({ type: null });
@@ -917,7 +912,7 @@ export class CourseListComponent {
         /** this.withPageRange(...)這是一個小工具函式，用來「根據 page 與 pageSize，算出這一頁的範圍」*/
         const params = this.withPageRange(this.currentSearchParams(), page, this.pageSize());
         /** 把剛剛算好的新查詢參數（params）存回去。 */
-        this.updateSearchParams(params, `已切換到第 ${page} 頁`);
+        this.updateSearchParams(params);
     }
 
     // 批量刪除確認框配置
@@ -964,19 +959,13 @@ export class CourseListComponent {
             );
 
             if (result.success) {
-                // 重新載入資料，使用 resource 模式
-                const newParams = { ...this.currentSearchParams() };
-                this.currentSearchParams.set({});
-                setTimeout(() => {
-                    this.currentSearchParams.set(newParams);
+                // 根據刪除結果顯示相應訊息並重新載入資料
+                const successMessage = result.deletedCount === result.totalCount
+                    ? `已成功刪除 ${result.deletedCount} 個課程`
+                    : `已刪除 ${result.deletedCount}/${result.totalCount} 個課程，部分項目可能已被刪除或權限不足`;
 
-                    // 根據刪除結果顯示相應訊息
-                    if (result.deletedCount === result.totalCount) {
-                        this.messageService.success(`已成功刪除 ${result.deletedCount} 個課程`);
-                    } else {
-                        this.messageService.warning(`已刪除 ${result.deletedCount}/${result.totalCount} 個課程，部分項目可能已被刪除或權限不足`);
-                    }
-                }, 10);
+                // 重新載入資料
+                this.refreshData(successMessage);
 
                 // 清空選中項目
                 this.selectedCourses.set(new Set());
@@ -1021,11 +1010,10 @@ export class CourseListComponent {
             ? `課程「${course.courseName}」建立成功`
             : `課程「${course.courseName}」更新成功`;
 
-        this.messageService.success(successMessage);
         this.onFormCancelled(); // 關閉表單
 
         // 重新載入資料
-        this.refreshData();
+        this.refreshData(successMessage);
     }
 
     onFormCancelled(): void {
@@ -1042,18 +1030,25 @@ export class CourseListComponent {
         this.selectedCourse.set(null);
     }
 
-    private refreshData(): void {
+    /**
+     * 統一的資料重新載入邏輯
+     * @param successMessage 可選的成功訊息
+     */
+    private refreshData(successMessage?: string): void {
         // 使用 resource 模式重新載入資料
         const params = this.currentSearchParams();
         this.currentSearchParams.set({});
         setTimeout(() => {
             this.currentSearchParams.set(params);
+            if (successMessage) {
+                this.messageService.success(successMessage);
+            }
         }, 10);
     }
 
     // 單獨刪除確認框配置（使用 pendingAction().target 作為顯示來源）
     readonly singleDeleteConfirmConfig = computed<ConfirmationModalConfig>(() => {
-        const target = this.pendingAction().target;
+        const target = this.pendingAction().target; // 拿出要刪除的課程
         return {
             title: '確認刪除',
             message: `您確定要刪除「${target?.courseName ?? ''}」課程嗎？此操作無法復原。`,
@@ -1068,7 +1063,7 @@ export class CourseListComponent {
         // 將目標 course 放入 pendingAction，讓確認框能正確顯示目標資訊
         this.pendingAction.set({
             type: 'single-delete',
-            target: course
+            target: course // 目標：要刪除的課程
         });
     }
 
@@ -1080,25 +1075,22 @@ export class CourseListComponent {
         const action = this.pendingAction();
         const course = action.target;
 
+        // 安全檢查
         if (!course || action.loading) {
             this.pendingAction.set({ type: null });
             return;
         }
 
         try {
-            // 標記為 loading
+            // 標記為 loading（按鈕會變成轉圈圈）
             this.pendingAction.set({ ...action, loading: true });
 
+            // 呼叫刪除API 
             const success = await firstValueFrom(this.courseService.deleteCourse(course.courseId));
 
             if (success) {
                 // 重新載入資料
-                const newParams = { ...this.currentSearchParams() };
-                this.currentSearchParams.set({});
-                setTimeout(() => {
-                    this.currentSearchParams.set(newParams);
-                    this.messageService.success(`已成功刪除課程「${course.courseName}」`);
-                }, 10);
+                this.refreshData(`已成功刪除課程「${course.courseName}」`);
 
                 // 從 selected 清除（如果選取的話）
                 const sel = new Set(this.selectedCourses());

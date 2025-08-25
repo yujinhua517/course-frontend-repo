@@ -46,8 +46,9 @@ src/app/features/course-management/
 - ✅ **狀態管理**: LoadingStateComponent, ErrorMessageComponent, EmptyStateComponent
 - ✅ **互動組件**: ConfirmationModalComponent, StatusBadgeComponent, ActionButtonGroupComponent
 
-### 動態資料管理
-- ✅ **動態選項載入**: learningType, skillType, level 選項完全從後端載入
+### 資料管理架構
+- ✅ **靜態選項管理**: learningType, skillType, level 使用預定義靜態選項，符合 spec 規格
+- ✅ **動態課程活動載入**: courseEvent 選項從後端動態載入，確保資料即時性
 - ✅ **三態顯示邏輯**: loading → error → success 完整狀態處理
 - ✅ **課程活動整合**: 與 course-event-management 模組無縫整合
 - ✅ **錯誤處理**: 統一的錯誤處理機制和使用者回饋
@@ -56,7 +57,7 @@ src/app/features/course-management/
 
 ### 🔍 課程列表查詢
 - **篩選條件**: 課程活動、課程名稱、學習類型、技能類型、等級、狀態
-- **動態選項**: 所有篩選選項從後端動態載入，確保資料一致性
+- **混合選項策略**: 課程活動選項動態載入，分類選項使用靜態定義
 - **搜尋功能**: 支援關鍵字搜尋和高亮顯示
 - **排序功能**: 多欄位排序，記住使用者偏好
 - **分頁控制**: 自訂頁數、跳頁、總數顯示
@@ -64,7 +65,7 @@ src/app/features/course-management/
 ### ➕ 課程新增
 - **模態視窗**: 使用模態視窗提供流暢的新增體驗
 - **表單驗證**: 完整的前端驗證和後端驗證整合
-- **動態選項**: 課程活動、學習類型等選項動態載入
+- **選項管理**: 課程活動動態載入，學習類型等使用靜態選項
 - **錯誤處理**: 詳細的驗證錯誤提示和修正引導
 
 ### ✏️ 課程編輯
@@ -93,9 +94,30 @@ src/app/features/course-management/
 
 ## 🛠️ 技術實現
 
-### 資料流架構
+### 選項管理策略
 ```typescript
-// 使用 resource() 管理資料載入
+// 靜態選項定義（符合 spec 規格）
+export const LEARNING_TYPE_OPTIONS = [
+  { value: '實體', label: '實體' },
+  { value: '線上', label: '線上' },
+  { value: '混合', label: '混合' }
+] as const;
+
+export const SKILL_TYPE_OPTIONS = [
+  { value: '軟體力', label: '軟體力' },
+  { value: '數據力', label: '數據力' },
+  { value: '雲', label: '雲' }
+] as const;
+
+export const LEVEL_OPTIONS = [
+  { value: '入門', label: '入門' },
+  { value: '初級', label: '初級' },
+  { value: '中級', label: '中級' },
+  { value: '高級', label: '高級' },
+  { value: '專家', label: '專家' }
+] as const;
+
+// 動態課程活動載入
 private readonly courseEventsResource = resource({
   loader: () => firstValueFrom(this.courseEventService.getPagedData({
     pageable: false,
@@ -103,7 +125,6 @@ private readonly courseEventsResource = resource({
   }))
 });
 
-// 使用 computed() 轉換資料
 readonly courseEventOptions = computed(() => {
   const response = this.courseEventsResource.value();
   if (!response?.data?.dataList) return [];
@@ -118,9 +139,19 @@ readonly courseEventOptions = computed(() => {
 ```typescript
 // 繼承 FormModalBaseComponent 統一表單邏輯
 export class CourseFormComponent extends FormModalBaseComponent<Course, CourseCreateDto, CourseUpdateDto> {
-  // 動態選項載入
-  readonly learningTypeOptions = computed(() => {
-    // 從現有課程資料動態提取選項
+  // 靜態選項引用
+  readonly learningTypeOptions = LEARNING_TYPE_OPTIONS;
+  readonly skillTypeOptions = SKILL_TYPE_OPTIONS;
+  readonly levelOptions = LEVEL_OPTIONS;
+  
+  // 動態課程活動選項
+  readonly courseEventOptions = computed(() => {
+    const response = this.courseEventsResource.value();
+    if (!response?.data?.dataList) return [];
+    return response.data.dataList.map((event: CourseEvent) => ({
+      value: event.courseEventId || 0,
+      label: `${event.year} ${event.semester} - ${event.activityTitle}`
+    }));
   });
 
   // 表單驗證和提交邏輯
@@ -128,6 +159,10 @@ export class CourseFormComponent extends FormModalBaseComponent<Course, CourseCr
     return {
       courseEventId: ['', [Validators.required]],
       courseName: ['', [Validators.required, Validators.maxLength(255)]],
+      learningType: ['', [Validators.required]],
+      skillType: ['', [Validators.required]],
+      level: ['', [Validators.required]],
+      hours: [0, [Validators.required, Validators.min(0.1), Validators.max(99.9)]],
       // ...其他欄位
     };
   }
@@ -196,6 +231,29 @@ export const environment = {
 };
 ```
 
+## 🎯 架構決策
+
+### 靜態 vs 動態選項策略
+
+基於 spec 規格要求和效能考量，採用混合選項管理策略：
+
+**靜態選項 (Static Options)**
+- **learningType**: 實體、線上、混合
+- **skillType**: 軟體力、數據力、雲  
+- **level**: 入門、初級、中級、高級、專家
+- **優勢**: 
+  - 符合 spec 預定義規格
+  - 減少網路請求，提升載入效能
+  - 避免選項載入錯誤影響表單使用
+  - 型別安全，編譯時檢查
+
+**動態選項 (Dynamic Options)**
+- **courseEvent**: 課程活動選項從後端即時載入
+- **優勢**:
+  - 確保活動資料即時性和正確性
+  - 支援管理員動態新增/修改活動
+  - 避免硬編碼活動資料
+
 ## 📊 效能優化
 
 ### 渲染優化
@@ -205,12 +263,14 @@ export const environment = {
 
 ### 資料載入優化
 - **resource()**: 使用 Angular 19+ resource API 管理非同步資料
+- **靜態選項優化**: learningType, skillType, level 使用靜態選項，減少不必要的 API 請求
 - **快取機制**: 適當的資料快取減少 API 呼叫
 - **分頁載入**: 大量資料的分頁載入機制
 
 ### 記憶體管理
 - **signals**: 使用 signals 自動管理訂閱和取消訂閱
 - **computed()**: 使用 computed 進行高效的衍生資料計算
+- **static constants**: 靜態選項常數減少物件建立和記憶體使用
 - **resource 清理**: 自動的資源清理和記憶體回收
 
 ## 🧪 測試策略

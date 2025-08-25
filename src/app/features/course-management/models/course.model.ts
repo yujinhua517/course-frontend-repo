@@ -4,8 +4,6 @@ import {
     QueryOptions // 如果你也想跟其他模組一樣提供 UI QueryOptions
 } from '../../../models/common.model';
 
-import { CourseEvent } from '../../course-event-management/models/course-event.model';
-
 /* ===================== 1) View/Domain Model ===================== */
 
 export interface Course {
