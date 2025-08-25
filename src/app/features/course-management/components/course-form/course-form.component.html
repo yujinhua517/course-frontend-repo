@@ -37,7 +37,7 @@
                         <select id="learningType" formControlName="learningType"
                             [class]="getSelectClass('learningType')" aria-describedby="learningType_error">
                             <option value="">請選擇學習類型</option>
-                            @for (option of learningTypeOptions(); track option.value) {
+                            @for (option of learningTypeOptions; track option.value) {
                             <option [value]="option.value">{{ option.label }}</option>
                             }
                         </select>
@@ -51,7 +51,7 @@
                         <select id="skillType" formControlName="skillType" [class]="getSelectClass('skillType')"
                             aria-describedby="skillType_error">
                             <option value="">請選擇技能類型</option>
-                            @for (option of skillTypeOptions(); track option.value) {
+                            @for (option of skillTypeOptions; track option.value) {
                             <option [value]="option.value">{{ option.label }}</option>
                             }
                         </select>
@@ -65,7 +65,7 @@
                         <select id="level" formControlName="level" [class]="getSelectClass('level')"
                             aria-describedby="level_error">
                             <option value="">請選擇難易度</option>
-                            @for (option of levelOptions(); track option.value) {
+                            @for (option of levelOptions; track option.value) {
                             <option [value]="option.value">{{ option.label }}</option>
                             }
                         </select>

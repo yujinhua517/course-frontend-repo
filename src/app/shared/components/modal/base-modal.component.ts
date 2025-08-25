@@ -218,25 +218,34 @@ export abstract class FormModalBaseComponent<TEntity = any, TCreateDto = any, TU
     }
 
     async onSubmit(): Promise<void> {
+        // 步驟1：檢查表單是否有效
         if (this.form.invalid) {
-            this.markAllFieldsAsTouched();
-            return;
+            this.markAllFieldsAsTouched(); // 顯示所有錯誤
+            return; // 停止！表單有錯誤
         }
 
+        // 步驟2：開始載入狀態
         this.loading.set(true);
         this.error.set(null);
 
         try {
+            // 步驟3：取得表單資料
             const formValue = this.form.getRawValue();
+
+            // 步驟4：呼叫實際的建立方法
             const result = await this.performSubmit(formValue);
-            this.saved.emit(result);
+
+            // 步驟5：成功！通知外界
+            this.saved.emit(result); // 發出「儲存成功」事件
         } catch (error: any) {
+            // 步驟6：失敗處理
             const errorMessage = this.isEditMode()
                 ? `更新${this.getEntityName()}失敗，請稍後再試`
                 : `建立${this.getEntityName()}失敗，請稍後再試`;
             this.error.set(errorMessage);
             console.error('Form submission error:', error);
         } finally {
+            // 步驟7：結束載入狀態
             this.loading.set(false);
         }
     }

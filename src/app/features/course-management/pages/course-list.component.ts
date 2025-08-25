@@ -17,7 +17,9 @@ import { StatusBadgeComponent, StatusConfig } from '../../../shared/components/s
 import { PaginationComponent, PaginationConfig } from '../../../shared/components/pagination/pagination.component'
 import { ConfirmationModalConfig, ConfirmationModalComponent } from '../../../shared/components/confirmation-modal/confirmation-modal.component';
 import { HighlightPipe } from '../../../shared/pipes/highlight.pipe';
+
 import { CourseFormComponent } from '../components/course-form/course-form.component';
+import { CourseViewComponent } from '../components/course-view/course-view.component';
 
 import { CourseService } from '../services/course.service';
 import { GlobalMessageService } from '../../../core/message/global-message.service';
@@ -44,6 +46,7 @@ import { PaginationUtil, QueryParamsBuilder } from '../../../core/utils/query.ut
         PaginationComponent,
         ConfirmationModalComponent,
         CourseFormComponent,
+        CourseViewComponent,
         HighlightPipe,
     ],
     templateUrl: './course-list.component.html',
@@ -79,11 +82,12 @@ export class CourseListComponent {
 
     readonly formMode = signal<'create' | 'edit'>('create'); // 用於控制表單模式（新增/編輯）
     readonly showForm = signal<boolean>(false); // 控制表單顯示與隱藏
-    readonly selectedCourse = signal<Course | null>(null); // 用於編輯模式的課程資料
+    readonly showView = signal<boolean>(false); // 控制檢視模態視窗顯示與隱藏
+    readonly selectedCourse = signal<Course | null>(null); // 用於編輯/檢視模式的課程資料
 
     // ========== 簡化的操作狀態管理 ==========
     readonly pendingAction = signal<{
-        type: 'status-toggle' | 'bulk-delete' | null; // 表示現在要做什麼事
+        type: 'status-toggle' | 'bulk-delete' | 'single-delete' | null; // 表示現在要做什麼事
         target?: Course | null; // 可選屬性，代表操作的目標課程（如果是單筆狀態切換，就存該課程）。批量刪除時通常不需要，因為會有多個選取。
         loading?: boolean; // 可選屬性，代表這個操作是否正在進行中。適合用來讓 UI 顯示「操作中 spinner」。
     }>({ type: null }); // 預設狀態是「沒有任何操作」。
@@ -91,6 +95,7 @@ export class CourseListComponent {
     // 從 pendingAction 派生的計算屬性
     readonly showStatusConfirm = computed(() => this.pendingAction().type === 'status-toggle');
     readonly showBulkDeleteConfirm = computed(() => this.pendingAction().type === 'bulk-delete');
+    readonly showDeleteConfirm = computed(() => this.pendingAction().type === 'single-delete');
     readonly isOperationLoading = computed(() => this.pendingAction().loading || false);
 
     /** 使用 resource() API 管理課程資料的取得與更新 */
@@ -108,77 +113,22 @@ export class CourseListComponent {
         }
     });
 
-    /** 用於篩選器選項的資料載入 */
-    private readonly filterOptionsResource = resource({
-        loader: () => firstValueFrom(this.courseService.getPagedData({
-            pageable: true,
-            firstIndexInPage: 1,
-            lastIndexInPage: 1000 // 載入大量資料以獲取所有可能的選項值
-        }))
-    });
+    // 靜態篩選選項（符合 spec 規格）
 
-    /** 動態學習類型選項 */
-    private readonly dynamicLearningTypeOptions = computed(() => {
-        const response = this.filterOptionsResource.value();
-        if (!response?.data?.dataList) {
-            return LEARNING_TYPE_OPTIONS.map(o => ({ value: o.value, text: o.label }));
-        }
+    /** 靜態學習類型選項 */
+    private readonly staticLearningTypeOptions = [
+        ...LEARNING_TYPE_OPTIONS.map(option => ({ value: option.value, text: option.label }))
+    ];
 
-        const types = response.data.dataList
-            .map((course: Course) => course.learningType)
-            .filter(type => type) // 過濾掉 null/undefined
-            .map(type => type!); // 非空斷言，因為已經過濾了
-            
-        const uniqueTypes = [...new Set(types)];
-        
-        if (uniqueTypes.length === 0) {
-            return LEARNING_TYPE_OPTIONS.map(o => ({ value: o.value, text: o.label }));
-        }
-        
-        return uniqueTypes.map(type => ({ value: type, text: type }));
-    });
+    /** 靜態技能類型選項 */
+    private readonly staticSkillTypeOptions = [
+        ...SKILL_TYPE_OPTIONS.map(option => ({ value: option.value, text: option.label }))
+    ];
 
-    /** 動態技能類型選項 */
-    private readonly dynamicSkillTypeOptions = computed(() => {
-        const response = this.filterOptionsResource.value();
-        if (!response?.data?.dataList) {
-            return SKILL_TYPE_OPTIONS.map(o => ({ value: o.value, text: o.label }));
-        }
-
-        const types = response.data.dataList
-            .map((course: Course) => course.skillType)
-            .filter(type => type) // 過濾掉 null/undefined
-            .map(type => type!); // 非空斷言，因為已經過濾了
-            
-        const uniqueTypes = [...new Set(types)];
-        
-        if (uniqueTypes.length === 0) {
-            return SKILL_TYPE_OPTIONS.map(o => ({ value: o.value, text: o.label }));
-        }
-        
-        return uniqueTypes.map(type => ({ value: type, text: type }));
-    });
-
-    /** 動態課程等級選項 */
-    private readonly dynamicLevelOptions = computed(() => {
-        const response = this.filterOptionsResource.value();
-        if (!response?.data?.dataList) {
-            return LEVEL_OPTIONS.map(o => ({ value: o.value, text: o.label }));
-        }
-
-        const levels = response.data.dataList
-            .map((course: Course) => course.level)
-            .filter(level => level) // 過濾掉 null/undefined
-            .map(level => level!); // 非空斷言，因為已經過濾了
-            
-        const uniqueLevels = [...new Set(levels)];
-        
-        if (uniqueLevels.length === 0) {
-            return LEVEL_OPTIONS.map(o => ({ value: o.value, text: o.label }));
-        }
-        
-        return uniqueLevels.map(level => ({ value: level, text: level }));
-    });
+    /** 靜態課程等級選項 */
+    private readonly staticLevelOptions = [
+        ...LEVEL_OPTIONS.map(option => ({ value: option.value, text: option.label }))
+    ];
 
 
     /** 由 resource 推導出的唯讀值，方便畫面綁定
@@ -451,17 +401,17 @@ export class CourseListComponent {
             {
                 key: 'learningType',
                 label: '學習方式',
-                options: this.dynamicLearningTypeOptions(),
+                options: this.staticLearningTypeOptions,
             },
             {
                 key: 'skillType',
                 label: '技能類型',
-                options: this.dynamicSkillTypeOptions(),
+                options: this.staticSkillTypeOptions,
             },
             {
                 key: 'level',
                 label: '課程等級',
-                options: this.dynamicLevelOptions(),
+                options: this.staticLevelOptions,
             },
             {
                 key: 'isActive',
@@ -1054,7 +1004,9 @@ export class CourseListComponent {
     }
 
     onViewCourse(course: Course): void {
-        this.messageService.info(`查看課程功能待實作：${course.courseName}`);
+        //this.messageService.info(`查看課程功能待實作：${course.courseName}`);
+        this.selectedCourse.set(course);
+        this.showView.set(true);
     }
 
     onEditCourse(course: Course): void {
@@ -1082,6 +1034,14 @@ export class CourseListComponent {
         this.formMode.set('create');
     }
 
+    /**
+     * 關閉檢視模態視窗
+     */
+    onViewClosed(): void {
+        this.showView.set(false);
+        this.selectedCourse.set(null);
+    }
+
     private refreshData(): void {
         // 使用 resource 模式重新載入資料
         const params = this.currentSearchParams();
@@ -1091,9 +1051,67 @@ export class CourseListComponent {
         }, 10);
     }
 
+    // 單獨刪除確認框配置（使用 pendingAction().target 作為顯示來源）
+    readonly singleDeleteConfirmConfig = computed<ConfirmationModalConfig>(() => {
+        const target = this.pendingAction().target;
+        return {
+            title: '確認刪除',
+            message: `您確定要刪除「${target?.courseName ?? ''}」課程嗎？此操作無法復原。`,
+            icon: 'exclamation-triangle',
+            confirmText: '確認刪除',
+            cancelText: '取消',
+            confirmButtonClass: 'btn-danger',
+        };
+    });
+
     onDeleteCourse(course: Course): void {
-        // TODO: 實作單一課程刪除確認對話框
-        // 建議使用與批量刪除類似的確認機制
-        this.messageService.info(`單一課程刪除功能待實作：${course.courseName}`);
+        // 將目標 course 放入 pendingAction，讓確認框能正確顯示目標資訊
+        this.pendingAction.set({
+            type: 'single-delete',
+            target: course
+        });
+    }
+
+    onDeleteCancel(): void {
+        this.pendingAction.set({ type: null });
+    }
+
+    async onDeleteConfirm(): Promise<void> {
+        const action = this.pendingAction();
+        const course = action.target;
+
+        if (!course || action.loading) {
+            this.pendingAction.set({ type: null });
+            return;
+        }
+
+        try {
+            // 標記為 loading
+            this.pendingAction.set({ ...action, loading: true });
+
+            const success = await firstValueFrom(this.courseService.deleteCourse(course.courseId));
+
+            if (success) {
+                // 重新載入資料
+                const newParams = { ...this.currentSearchParams() };
+                this.currentSearchParams.set({});
+                setTimeout(() => {
+                    this.currentSearchParams.set(newParams);
+                    this.messageService.success(`已成功刪除課程「${course.courseName}」`);
+                }, 10);
+
+                // 從 selected 清除（如果選取的話）
+                const sel = new Set(this.selectedCourses());
+                sel.delete(course.courseId);
+                this.selectedCourses.set(sel);
+            } else {
+                this.messageService.error('刪除失敗，請稍後再試');
+            }
+        } catch (error) {
+            console.error('Delete error:', error);
+            this.messageService.error('刪除失敗，請稍後再試');
+        } finally {
+            this.pendingAction.set({ type: null });
+        }
     }
 }

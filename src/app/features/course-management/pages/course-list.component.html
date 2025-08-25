@@ -173,6 +173,11 @@
         (confirmed)="onToggleStatusConfirm()" (cancelled)="onToggleStatusCancel()">
     </app-confirmation-modal>
 
+    <!-- 個別刪除確認模態框 -->
+    <app-confirmation-modal [config]="singleDeleteConfirmConfig()" [show]="showDeleteConfirm()"
+        [loading]="isOperationLoading()" (confirmed)="onDeleteConfirm()" (cancelled)="onDeleteCancel()">
+    </app-confirmation-modal>
+
     <!-- 批量刪除確認模態框 -->
     <app-confirmation-modal [config]="deleteConfirmConfig()" [show]="showBulkDeleteConfirm()"
         [loading]="isOperationLoading()" (confirmed)="onBulkDeleteConfirm()" (cancelled)="onBulkDeleteCancel()">
@@ -213,6 +218,12 @@
     <app-course-form [mode]="formMode()" [entity]="selectedCourse()" (saved)="onFormSaved($event)"
         (cancelled)="onFormCancelled()">
     </app-course-form>
+    }
+
+    <!-- 檢視模態視窗 -->
+    @if (showView()) {
+    <app-course-view [course]="selectedCourse()!" (closed)="onViewClosed()">
+    </app-course-view>
     }
 
 </div>

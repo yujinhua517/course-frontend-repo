@@ -1,0 +1,43 @@
+<!-- 模態背景 -->
+<div class="modal-backdrop fade show" (click)="onClose()"></div>
+
+<!-- 模態視窗 -->
+<div class="modal fade show d-block" tabindex="-1" role="dialog" aria-labelledby="viewModalTitle">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <!-- 模態標題 -->
+            <div class="modal-header">
+                <h4 id="viewModalTitle" class="modal-title fw-bold">
+                    <i class="bi bi-eye me-2"></i>
+                    課程詳細資訊
+                </h4>
+                <button type="button" class="btn-close" (click)="onClose()" aria-label="關閉">
+                </button>
+            </div>
+
+            <!-- 檢視內容 -->
+            <div class="modal-body">
+                <div class="course-details">
+                    @if (infoReady()) {
+                    <!-- 基本資訊 -->
+                    <app-info-display [config]="basicInfoConfig()" class="mb-4"></app-info-display>
+                    <!-- 課程描述 -->
+                    <app-info-display [config]="descriptionConfig()" class="mb-4"></app-info-display>
+                    <!-- 系統資訊 -->
+                    <app-info-display [config]="systemInfoConfig()"></app-info-display>
+                    } @else {
+                    <app-loading-state [config]="loadingStateConfig"></app-loading-state>
+                    }
+                </div>
+            </div>
+
+            <!-- 按鈕區域 -->
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="onClose()">
+                    <i class="bi bi-x-circle me-1"></i>
+                    關閉
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

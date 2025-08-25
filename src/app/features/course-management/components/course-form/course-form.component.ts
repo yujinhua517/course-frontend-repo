@@ -1,4 +1,4 @@
-import { Component, inject, computed, effect, resource } from '@angular/core';
+import { Component, inject, computed, effect, resource, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, Validators } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
@@ -28,6 +28,7 @@ import {
 @Component({
     selector: 'app-course-form',
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [
         CommonModule,
         ReactiveFormsModule,
@@ -64,70 +65,13 @@ export class CourseFormComponent extends FormModalBaseComponent<Course, CourseCr
         closeOnBackdropClick: false
     }));
 
-    // 課程選項 - 從現有課程資料中動態提取
-    private readonly coursesForOptionsResource = resource({
-        loader: () => firstValueFrom(this.courseService.getPagedData({
-            pageable: true,
-            firstIndexInPage: 1,
-            lastIndexInPage: 1000
-        }))
-    });
+    // 靜態選項資料（符合 spec 規格）
 
-    readonly learningTypeOptions = computed(() => {
-        const response = this.coursesForOptionsResource.value();
-        if (!response?.data?.dataList) {
-            // 資料載入中或失敗時，使用靜態備用選項
-            return LEARNING_TYPE_OPTIONS;
-        }
+    readonly learningTypeOptions = LEARNING_TYPE_OPTIONS;
 
-        const uniqueTypes = [...new Set(response.data.dataList
-            .map((course: Course) => course.learningType)
-            .filter(type => type)
-        )];
-        
-        // 如果沒有動態資料，使用靜態選項
-        if (uniqueTypes.length === 0) {
-            return LEARNING_TYPE_OPTIONS;
-        }
-        
-        return uniqueTypes.map(type => ({ value: type, label: type }));
-    });
+    readonly skillTypeOptions = SKILL_TYPE_OPTIONS;
 
-    readonly skillTypeOptions = computed(() => {
-        const response = this.coursesForOptionsResource.value();
-        if (!response?.data?.dataList) {
-            return SKILL_TYPE_OPTIONS;
-        }
-
-        const uniqueTypes = [...new Set(response.data.dataList
-            .map((course: Course) => course.skillType)
-            .filter(type => type)
-        )];
-        
-        if (uniqueTypes.length === 0) {
-            return SKILL_TYPE_OPTIONS;
-        }
-        
-        return uniqueTypes.map(type => ({ value: type, label: type }));
-    });
-
-    readonly levelOptions = computed(() => {
-        const response = this.coursesForOptionsResource.value();
-        if (!response?.data?.dataList) {
-            return LEVEL_OPTIONS;
-        }
-
-        const uniqueLevels = [...new Set(response.data.dataList
-            .map((course: Course) => course.level)
-            .filter(level => level)
-        )];
-        
-        if (uniqueLevels.length === 0) {
-            return LEVEL_OPTIONS;
-        }
-        
-        return uniqueLevels.map(level => ({ value: level, label: level }));
-    });
+    readonly levelOptions = LEVEL_OPTIONS;
 
 
     // 課程活動選項 - 使用 resource 動態載入
@@ -155,15 +99,21 @@ export class CourseFormComponent extends FormModalBaseComponent<Course, CourseCr
     });
 
     constructor() {
-        super();
+        super(); //先執行父類別的建構子
         this.initializeForm();
 
         // 監聽表單變化
         effect(() => {
-            const entity = this.entity();
+            const entity = this.entity(); // 檢查：「現在有資料要處理嗎？」
+            /**
+             * 有資料 (entity)
+             * 在編輯模式 (this.isEditMode())
+             * 行動：把資料填入表單 (this.populateForm(entity))
+             */
             if (entity && this.isEditMode()) {
                 this.populateForm(entity);
             } else if (!this.isEditMode()) {
+                // 在新增模式時，重設表單
                 this.resetForm();
             }
         });
@@ -184,7 +134,7 @@ export class CourseFormComponent extends FormModalBaseComponent<Course, CourseCr
 
     protected override async performSubmit(data: CourseCreateDto | CourseUpdateDto): Promise<Course> {
         // 開發用：當 courseName 被設定為特定值時，模擬伺服器錯誤以測試 UI 的錯誤顯示
-        if ((data as any).courseEventName === 'trigger-error') {
+        if ((data as any).courseName === 'trigger-error') {
             throw new Error('模擬錯誤：測試用，伺服器返回失敗');
         }
         // 根據模式呼叫相應的服務方法
@@ -211,6 +161,7 @@ export class CourseFormComponent extends FormModalBaseComponent<Course, CourseCr
         return '課程';
     }
 
+    //把舊資料填進表單
     private populateForm(course: Course): void {
         this.form.patchValue({
             courseEventId: course.courseEventId,
