@@ -134,7 +134,6 @@ export class CourseEventFormComponent extends FormModalBaseComponent<CourseEvent
             }
 
             console.debug('Normalized formattedData:', formattedData);
-
             if (this.isEditMode()) {
                 const currentEntity = this.entity();
                 if (!currentEntity?.courseEventId) {

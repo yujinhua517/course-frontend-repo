@@ -11,7 +11,7 @@ export interface ModalConfig {
 }
 
 /**
- * 錯誤提示元件
+ * 錯誤提示元件(顯示紅色錯誤訊息條，支援右上角關閉鈕。)
  */
 @Component({
     selector: 'app-error-alert',
