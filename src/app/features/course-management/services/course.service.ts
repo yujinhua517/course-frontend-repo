@@ -485,5 +485,4 @@ export class CourseService extends BaseQueryService<Course, CourseSearchParams> 
             })
         );
     }
-
 }
